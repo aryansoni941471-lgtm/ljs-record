@@ -1,14 +1,19 @@
 const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_KEY || '';
 
-if (!supabaseUrl || !supabaseKey) {
-    console.error('CRITICAL: SUPABASE_URL or SUPABASE_KEY missing in .env');
+let supabase = null;
+if (supabaseUrl && supabaseKey) {
+    try {
+        supabase = createClient(supabaseUrl, supabaseKey);
+    } catch (e) {
+        console.error('Supabase client init error:', e.message);
+    }
+} else {
+    console.error('CRITICAL: SUPABASE_URL or SUPABASE_KEY missing in environment variables.');
 }
-
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 const db = {
     serialize: function(cb) {
@@ -61,6 +66,10 @@ const db = {
 };
 
 async function handleQuery(sql, params) {
+    if (!supabase) {
+        console.error('Supabase client is not initialized. Please set SUPABASE_URL and SUPABASE_KEY.');
+        return [];
+    }
     const cleanSql = sql.trim().replace(/\s+/g, ' ');
 
     // 1. SELECT * FROM customers ORDER BY id DESC
@@ -436,6 +445,10 @@ async function handleQuery(sql, params) {
 }
 
 async function handleRun(sql, params) {
+    if (!supabase) {
+        console.error('Supabase client is not initialized. Please set SUPABASE_URL and SUPABASE_KEY.');
+        return { lastID: 0, changes: 0 };
+    }
     const cleanSql = sql.trim().replace(/\s+/g, ' ');
 
     // 0. CREATE TABLE
