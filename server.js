@@ -34,6 +34,11 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Serve index.html on root route
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 console.log('Connected to Supabase Cloud Database.');
 
 // Initialize interest_ledger table for permanent audit tracking
