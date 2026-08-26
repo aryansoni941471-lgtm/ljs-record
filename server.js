@@ -405,99 +405,87 @@ app.get('/api/pawns/:pawnId/payments', (req, res) => {
 });
 
 // Get Dashboard Analytics
-app.get('/api/reports/dashboard', (req, res) => {
-    const data = {
-        totalActivePrincipal: 0,
-        totalInterestCollected: 0, // In MVP, just partial interest payments
-        totalReleasedItems: 0,
-        overdueAccounts: []
-    };
+app.get('/api/reports/dashboard', async (req, res) => {
+    try {
+        const data = {
+            totalActivePrincipal: 0,
+            totalInterestCollected: 0,
+            totalReleasedItems: 0,
+            overdueAccounts: [],
+            highRiskAccounts: [],
+            goldRate: 0,
+            silverRate: 0
+        };
 
-    db.serialize(() => {
-        // 1. Total Active Principal
-        db.get(`SELECT SUM(amount) as total FROM pawn_records WHERE status = 'Active'`, [], (err, row) => {
-            if (row && row.total) data.totalActivePrincipal = row.total;
-            
-            // 2. Total Released Items
-            db.get(`SELECT COUNT(*) as count FROM pawn_records WHERE status = 'Released'`, [], (err, row) => {
-                if (row && row.count) data.totalReleasedItems = row.count;
-
-                // 3. Overdue Accounts (> 6 months approx)
-                // 6 months = roughly 180 days. Using SQLite date functions
-                const sixMonthsAgo = new Date();
-                sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-                const isoSixMonthsAgo = sixMonthsAgo.toISOString();
-
-                db.all(`
-                    SELECT p.*, c.name as customer_name, c.phone as customer_phone 
-                    FROM pawn_records p 
-                    JOIN customers c ON p.customer_id = c.id 
-                    WHERE p.status = 'Active' AND p.date_added < ?
-                `, [isoSixMonthsAgo], (err, rows) => {
-                    if (rows) data.overdueAccounts = rows;
-
-                    // 4. Total Collected (from all payments + released items interest)
-                    db.all(`SELECT * FROM pawn_records WHERE status = 'Released'`, [], (err, releasedRows) => {
-                        let releasedInterest = 0;
-                        if (releasedRows) {
-                            releasedRows.forEach(p => {
-                                releasedInterest += calcServerPawnInterest(p.amount, p.interest_rate, p.date_added, 'Released', p.release_date);
-                            });
-                        }
-
-                        db.get(`SELECT SUM(amount) as total FROM pawn_payments`, [], (err, row) => {
-                            data.totalInterestCollected = Math.round(releasedInterest);
-                            
-                            // 5. High Risk Accounts & Rates
-                        db.all(`SELECT key, value FROM settings WHERE key IN ('gold_rate', 'silver_rate')`, [], (err, rows) => {
-                            data.goldRate = 0;
-                            data.silverRate = 0;
-                            if (rows) {
-                                rows.forEach(r => {
-                                    if (r.key === 'gold_rate') data.goldRate = parseFloat(r.value);
-                                    if (r.key === 'silver_rate') data.silverRate = parseFloat(r.value);
-                                });
-                            }
-                            
-                            db.all(`
-                                SELECT p.*, c.name as customer_name, c.phone as customer_phone,
-                                       COALESCE((SELECT SUM(amount) FROM pawn_payments WHERE pawn_id = p.id), 0) as total_jama
-                                FROM pawn_records p 
-                                JOIN customers c ON p.customer_id = c.id 
-                                WHERE p.status = 'Active' AND p.item_weight_grams > 0
-                            `, [], (err, rows) => {
-                                data.highRiskAccounts = [];
-                                if (rows) {
-                                    rows.forEach(p => {
-                                        // Calculate interest using calcServerPawnInterest
-                                        const interest = calcServerPawnInterest(p.amount, p.interest_rate, p.date_added, p.status, p.release_date);
-                                        const baki = (parseFloat(p.amount) + interest) - parseFloat(p.total_jama);
-                                        
-                                        // Pick correct metal rate (default to Gold)
-                                        const metalType = (p.item_metal_type || 'Gold').trim();
-                                        let rateToUse = 0;
-                                        if (metalType === 'Silver') rateToUse = data.silverRate;
-                                        else rateToUse = data.goldRate;
-
-                                        const marketValue = parseFloat(p.item_weight_grams) * rateToUse;
-
-                                        // Only flag as risk if we have a rate AND baki > market value
-                                        if (rateToUse > 0 && baki > marketValue) {
-                                            p.baki = baki;
-                                            p.marketValue = marketValue;
-                                            data.highRiskAccounts.push(p);
-                                        }
-                                    });
-                                }
-                                res.json(data);
-                            });
-                        });
-                    });
-                    });
-                });
-            });
+        // Helper to promisify db.get
+        const dbGet = (sql, params) => new Promise((resolve, reject) => {
+            db.get(sql, params, (err, row) => err ? reject(err) : resolve(row));
         });
-    });
+        const dbAll = (sql, params) => new Promise((resolve, reject) => {
+            db.all(sql, params, (err, rows) => err ? reject(err) : resolve(rows || []));
+        });
+
+        // 1. Total Active Principal
+        const principalRow = await dbGet(`SELECT SUM(amount) as total FROM pawn_records WHERE status = 'Active'`, []);
+        if (principalRow && principalRow.total) data.totalActivePrincipal = principalRow.total;
+
+        // 2. Total Released Items
+        const releasedRow = await dbGet(`SELECT COUNT(*) as count FROM pawn_records WHERE status = 'Released'`, []);
+        if (releasedRow && releasedRow.count) data.totalReleasedItems = releasedRow.count;
+
+        // 3. Overdue Accounts (> 6 months)
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        const isoSixMonthsAgo = sixMonthsAgo.toISOString();
+        const overdueRows = await dbAll(`
+            SELECT p.*, c.name as customer_name, c.phone as customer_phone 
+            FROM pawn_records p 
+            JOIN customers c ON p.customer_id = c.id 
+            WHERE p.status = 'Active' AND p.date_added < ?
+        `, [isoSixMonthsAgo]);
+        data.overdueAccounts = overdueRows;
+
+        // 4. Total Interest Collected (from released items)
+        const releasedRows = await dbAll(`SELECT * FROM pawn_records WHERE status = 'Released'`, []);
+        let releasedInterest = 0;
+        releasedRows.forEach(p => {
+            releasedInterest += calcServerPawnInterest(p.amount, p.interest_rate, p.date_added, 'Released', p.release_date);
+        });
+        data.totalInterestCollected = Math.round(releasedInterest);
+
+        // 5. Gold & Silver Rates
+        const rateRows = await dbAll(`SELECT key, value FROM settings WHERE key IN ('gold_rate', 'silver_rate')`, []);
+        rateRows.forEach(r => {
+            if (r.key === 'gold_rate') data.goldRate = parseFloat(r.value);
+            if (r.key === 'silver_rate') data.silverRate = parseFloat(r.value);
+        });
+
+        // 6. High Risk Accounts
+        const highRiskRows = await dbAll(`
+            SELECT p.*, c.name as customer_name, c.phone as customer_phone,
+                   COALESCE((SELECT SUM(amount) FROM pawn_payments WHERE pawn_id = p.id), 0) as total_jama
+            FROM pawn_records p 
+            JOIN customers c ON p.customer_id = c.id 
+            WHERE p.status = 'Active' AND p.item_weight_grams > 0
+        `, []);
+        highRiskRows.forEach(p => {
+            const interest = calcServerPawnInterest(p.amount, p.interest_rate, p.date_added, p.status, p.release_date);
+            const baki = (parseFloat(p.amount) + interest) - parseFloat(p.total_jama);
+            const metalType = (p.item_metal_type || 'Gold').trim();
+            const rateToUse = metalType === 'Silver' ? data.silverRate : data.goldRate;
+            const marketValue = parseFloat(p.item_weight_grams) * rateToUse;
+            if (rateToUse > 0 && baki > marketValue) {
+                p.baki = baki;
+                p.marketValue = marketValue;
+                data.highRiskAccounts.push(p);
+            }
+        });
+
+        res.json(data);
+    } catch (err) {
+        console.error('Dashboard error:', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // Get Daily Rokad
