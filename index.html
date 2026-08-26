@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LJS Jewellers - Customer Records & Pawn Management</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Top Luxury Header -->
+    <header class="brand-header">
+        <div class="brand-header-inner">
+            <div class="brand-title-wrap">
+                <div class="brand-logo-icon">
+                    <span>💎</span>
+                </div>
+                <div>
+                    <h1>LJS JEWELLERS</h1>
+                    <p>Customer Records & Pawn Management</p>
+                </div>
+            </div>
+
+            <!-- Live Metal Rates Ticker -->
+            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                <div class="metal-rates-bar">
+                    <div class="rate-item">
+                        <span class="rate-label">⚡ Gold Rate:</span>
+                        <div class="rate-input-wrap">
+                            <input type="number" id="dashGoldRate" placeholder="e.g. 6000">
+                            <button id="saveGoldRateBtn" class="btn-rate-save">Save</button>
+                        </div>
+                    </div>
+                    <div class="rate-divider"></div>
+                    <div class="rate-item">
+                        <span class="rate-label">🪙 Silver Rate:</span>
+                        <div class="rate-input-wrap">
+                            <input type="number" id="dashSilverRate" placeholder="e.g. 80">
+                            <button id="saveSilverRateBtn" class="btn-rate-save">Save</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="commonQrBtn" style="padding: 0.6rem 1.1rem; background: var(--gold-gradient); color: var(--navy-header); font-family: var(--font-body); font-weight: 800; font-size: 0.85rem; border: none; border-radius: var(--radius-pill); cursor: pointer; display: flex; align-items: center; gap: 0.4rem; box-shadow: var(--shadow-gold);">
+                    🎴 Common Counter QR
+                </button>
+
+                <!-- Role Mode Switcher Badge -->
+                <div id="roleSwitcherWrap" style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.15); padding: 0.35rem 0.85rem; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.2);">
+                    <span id="roleIndicator" style="font-weight: 800; font-size: 0.85rem; color: #fff;">👑 Mode: Admin Owner</span>
+                    <button id="switchRoleBtn" style="padding: 0.3rem 0.75rem; font-size: 0.78rem; font-weight: 800; border: none; border-radius: var(--radius-pill); cursor: pointer; background: var(--gold-gradient); color: var(--navy-header);">Switch to Staff</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Segmented Navigation Tabs -->
+        <nav class="nav-bar">
+            <button id="navDashboardBtn" class="nav-btn active-tab">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+                Dashboard & Customers
+            </button>
+            <button id="navRokadBtn" class="nav-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                Daily Rokad (Cashbook)
+            </button>
+            <button id="navAnalyticsBtn" class="nav-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                Advanced Analytics
+            </button>
+            <button id="navKhaataBtn" class="nav-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M12 6v12"/></svg>
+                Customer Khaata & Pawns
+            </button>
+            <a href="interest-ledger.html" id="navInterestLedgerBtn" class="nav-btn" style="text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:18px;height:18px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                📜 Permanent Interest Ledger
+            </a>
+        </nav>
+
+        <!-- DASHBOARD VIEW -->
+        <div id="dashboardView">
+
+            <!-- KPI Dashboard Summary Cards -->
+            <div id="kpiCardsWrap" class="dashboard-cards">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">Active Market Amount</span>
+                        <div class="stat-icon-wrap">💼</div>
+                    </div>
+                    <p id="dashTotalPrincipal" class="stat-value">₹0</p>
+                </div>
+                <div class="stat-card stat-success">
+                    <div class="stat-header">
+                        <span class="stat-title">Interest Collected</span>
+                        <div class="stat-icon-wrap" style="background: var(--success-bg); color: var(--success);">📈</div>
+                    </div>
+                    <p id="dashTotalInterest" class="stat-value" style="color: var(--success);">₹0</p>
+                    <div style="margin-top: 0.4rem;">
+                        <a href="interest-ledger.html" style="font-size:0.78rem; color:var(--success); font-weight:800; text-decoration:underline;">📜 View Full Interest History →</a>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">Released Items</span>
+                        <div class="stat-icon-wrap">🔓</div>
+                    </div>
+                    <p id="dashTotalReleased" class="stat-value">0</p>
+                </div>
+            </div>
+
+            <!-- Pending Admin Approvals Section (Visible in Admin Mode) -->
+            <div id="pendingApprovalsBox" class="alert-card" style="background: #fff; border: 2px dashed #f59e0b; margin-bottom: 1.5rem;">
+                <div class="card-header">
+                    <h2 style="color: #b45309; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>🚨</span> Pending Staff Approvals
+                    </h2>
+                    <span id="pendingApprovalsCount" class="badge" style="background: #fef3c7; color: #b45309; font-weight: 800;">0</span>
+                </div>
+                <div class="table-container">
+                    <table id="pendingApprovalsTable">
+                        <thead>
+                            <tr>
+                                <th>Date / Staff</th>
+                                <th>Type</th>
+                                <th>Submitted Entry Details</th>
+                                <th style="text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingApprovalsList">
+                            <!-- Injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="pendingApprovalsEmptyState" class="empty-state">
+                    <p style="color: var(--success); font-weight: 600;">✅ All staff entries approved! No pending requests.</p>
+                </div>
+            </div>
+
+            <!-- High Risk Accounts Section -->
+            <div class="alert-card high-risk-box">
+                <div class="card-header">
+                    <h2>⚠️ High Risk Accounts (Loan > Value)</h2>
+                    <span id="highRiskCount" class="badge badge-error">0</span>
+                </div>
+                <div class="table-container">
+                    <table id="highRiskTable">
+                        <thead>
+                            <tr>
+                                <th>Customer</th>
+                                <th>Gehna Details</th>
+                                <th>Total Baki</th>
+                                <th>Market Value</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="highRiskList">
+                            <tr id="highRiskEmptyState">
+                                <td colspan="5" class="empty-state">No high risk accounts found.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Overdue Accounts Section -->
+            <div class="alert-card overdue-box">
+                <div class="card-header">
+                    <h2 style="color: var(--warning);">🚨 Overdue Accounts (> 6 Months)</h2>
+                    <span id="overdueCount" class="badge badge-warning">0</span>
+                </div>
+                <div class="table-container">
+                    <table id="overdueTable">
+                        <thead>
+                            <tr>
+                                <th>Customer</th>
+                                <th>Date Added</th>
+                                <th>Amount</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="overdueList">
+                            <!-- Overdue rows injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="overdueEmptyState" class="empty-state">
+                    <p>No overdue accounts right now.</p>
+                </div>
+            </div>
+
+            <!-- Main Content Layout (Add Form + Customer Table) -->
+            <div class="main-content">
+                <!-- Add Customer Card -->
+                <section class="card">
+                    <div class="card-header" style="padding-left: 0; padding-top: 0;">
+                        <h2>👤 Add New Customer</h2>
+                    </div>
+                    <form id="customerForm">
+                        <div class="form-group">
+                            <label for="name">Full Name *</label>
+                            <input type="text" id="name" required placeholder="e.g. Ramesh Kumar">
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Phone Number *</label>
+                            <input type="tel" id="phone" required placeholder="e.g. 9876543210">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email Address</label>
+                            <input type="email" id="email" placeholder="e.g. ramesh@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="dob">Date of Birth</label>
+                            <input type="date" id="dob">
+                        </div>
+                        <div class="form-group">
+                            <label for="aadharPhoto">Aadhar Card Photo (Optional)</label>
+                            <input type="file" id="aadharPhoto" accept="image/*">
+                        </div>
+                        <button type="submit" class="btn-primary btn-gold">
+                            <span>✨</span> Save Customer Record
+                        </button>
+                    </form>
+                </section>
+
+                <!-- Customer Database Card -->
+                <section class="card">
+                    <div class="card-header" style="padding-left:0; padding-top:0;">
+                        <h2>👥 Customer Database</h2>
+                        <span id="customerCount" class="badge">0</span>
+                    </div>
+
+                    <div class="search-container">
+                        <input type="text" id="customerSearch" placeholder="Search by customer name or phone...">
+                    </div>
+
+                    <div class="table-container">
+                        <table id="customerTable">
+                            <thead>
+                                <tr>
+                                    <th>Photo</th>
+                                    <th>Name</th>
+                                    <th>Phone</th>
+                                    <th>Login PIN</th>
+                                    <th>Email</th>
+                                    <th>D.O.B</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="customerList">
+                                <!-- Populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="emptyState" class="empty-state">
+                        <p>No customers added yet.</p>
+                    </div>
+                </section>
+            </div>
+        </div> <!-- End Dashboard View -->
+
+        <!-- DAILY ROKAD VIEW -->
+        <div id="rokadView" style="display: none;">
+            <div class="card">
+                <div class="card-header" style="flex-wrap: wrap; gap: 1rem;">
+                    <h2>📔 Daily Rokad (Cashbook)</h2>
+                    <div style="display: flex; gap: 0.75rem; align-items: center; margin-left: auto;">
+                        <input type="date" id="rokadDateInput" style="width: auto;">
+                        <button id="fetchRokadBtn" class="btn-primary" style="width: auto; padding: 0.6rem 1.2rem;">Fetch Rokad</button>
+                        <button id="downloadRokadBtn" class="btn-primary" style="width: auto; padding: 0.6rem 1.2rem; background: var(--success);">📥 Excel</button>
+                    </div>
+                </div>
+
+                <div class="rokad-grid" style="margin-top: 1rem;">
+                    <!-- Jama (Income) -->
+                    <div class="rokad-column jama-side">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <h3 style="color: var(--success); font-size: 1.15rem; font-weight: 700;">Jama (Income / Received)</h3>
+                            <span id="rokadTotalJama" style="font-size: 1.4rem; font-weight: 800; color: var(--success);">₹0</span>
+                        </div>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">* Full payments on released items & partial interest payments</p>
+                        
+                        <div class="table-container" style="max-height: 420px; overflow-y: auto;">
+                            <table id="rokadJamaTable">
+                                <thead>
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th>Description</th>
+                                        <th style="text-align: right;">Amount (₹)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rokadJamaList">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Naame (Expense) -->
+                    <div class="rokad-column naame-side">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <h3 style="color: var(--error); font-size: 1.15rem; font-weight: 700;">Naame (Expense / Given)</h3>
+                            <span id="rokadTotalNaame" style="font-size: 1.4rem; font-weight: 800; color: var(--error);">₹0</span>
+                        </div>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">* Money given out for new pawned items kept today</p>
+
+                        <div class="table-container" style="max-height: 420px; overflow-y: auto;">
+                            <table id="rokadNaameTable">
+                                <thead>
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th>Description</th>
+                                        <th style="text-align: right;">Amount (₹)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rokadNaameList">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Net Cash Flow Widget -->
+                <div class="net-flow-widget">
+                    <span style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted);">Net Cash Flow For Selected Date</span>
+                    <div id="rokadNetFlow" style="font-size: 2.5rem; font-weight: 800; margin-top: 0.25rem;">₹0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADVANCED ANALYTICS VIEW -->
+        <div id="analyticsView" style="display: none;">
+            <div class="card">
+                <div class="card-header" style="flex-wrap: wrap; gap: 1rem;">
+                    <h2>📊 Advanced Analytics</h2>
+                    <div style="display: flex; gap: 0.75rem; align-items: center; margin-left: auto; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <label for="analyticsStartDate" style="margin:0; font-size: 0.8rem;">From:</label>
+                            <input type="date" id="analyticsStartDate" style="width: 140px;">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <label for="analyticsEndDate" style="margin:0; font-size: 0.8rem;">To:</label>
+                            <input type="date" id="analyticsEndDate" style="width: 140px;">
+                        </div>
+                        <button id="fetchAnalyticsBtn" class="btn-primary" style="width: auto; padding: 0.6rem 1.2rem;">Apply Filter</button>
+                        <button id="downloadAnalyticsBtn" class="btn-primary" style="width: auto; padding: 0.6rem 1.2rem; background: var(--success);">📥 Excel</button>
+                    </div>
+                </div>
+
+                <!-- Analytics Summary Cards -->
+                <div class="dashboard-cards" style="margin-top: 1rem;">
+                    <div class="stat-card stat-success">
+                        <span class="stat-title">Total Money In (Jama)</span>
+                        <p id="analyticsTotalJama" class="stat-value" style="color: var(--success); margin-top: 0.5rem;">₹0</p>
+                    </div>
+                    <div class="stat-card stat-error">
+                        <span class="stat-title">Total Money Out (Naame)</span>
+                        <p id="analyticsTotalNaame" class="stat-value" style="color: var(--error); margin-top: 0.5rem;">₹0</p>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-title">Net Flow</span>
+                        <p id="analyticsNetFlow" class="stat-value" style="margin-top: 0.5rem;">₹0</p>
+                    </div>
+                </div>
+
+                <!-- Chart Canvas Container -->
+                <div style="position: relative; height: 380px; width: 100%; margin: 1.5rem 0;">
+                    <canvas id="analyticsChart"></canvas>
+                </div>
+
+                <!-- Analytics Table -->
+                <div class="table-container" style="max-height: 380px; overflow-y: auto;">
+                    <table id="analyticsTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th style="color: var(--success); text-align: right;">Money In (Jama)</th>
+                                <th style="color: var(--error); text-align: right;">Money Out (Naame)</th>
+                                <th style="color: var(--navy-header); text-align: right;">Net Flow</th>
+                            </tr>
+                        </thead>
+                        <tbody id="analyticsTableBody">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- CUSTOMER KHAATA & PAWNS FULL PAGE VIEW -->
+        <div id="khaataView" style="display: none;">
+            <!-- Top Search & Customer Selector Banner -->
+            <div class="card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; border: none; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <h2 style="color: #f8fafc; font-family: var(--font-heading); margin: 0; font-size: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>📖</span> Customer Khaata & Gehna Ledger
+                        </h2>
+                        <p style="color: #94a3b8; font-size: 0.88rem; margin-top: 0.25rem;">Select or search customer account to manage pawns & transactions</p>
+                    </div>
+
+                    <!-- Customer Search & Switch Pad -->
+                    <div style="position: relative; width: 340px; max-width: 100%;">
+                        <input type="text" id="khaataCustomerSearch" placeholder="🔍 Search customer name or phone..." style="width: 100%; padding: 0.65rem 1rem; font-size: 0.9rem; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white;">
+                        <div id="khaataCustomerDropdown" style="display: none; position: absolute; top: 110%; left: 0; right: 0; background: white; color: var(--text-main); border-radius: var(--radius-md); box-shadow: 0 10px 30px rgba(0,0,0,0.25); max-height: 250px; overflow-y: auto; z-index: 100; border: 1px solid var(--gray-border);">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State when no customer is selected -->
+            <div id="khaataNoCustomerState" class="card empty-state" style="padding: 4rem 2rem; text-align: center;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">👤</div>
+                <h3 style="color: var(--navy-header); font-size: 1.3rem; margin-bottom: 0.5rem;">No Customer Account Selected</h3>
+                <p style="color: var(--text-muted); max-width: 450px; margin: 0 auto 1.5rem;">Please select a customer from the search bar above or click <strong>📖 Open Khaata</strong> on any customer in the Dashboard database.</p>
+            </div>
+
+            <!-- Main Khaata Content Area -->
+            <div id="khaataContentArea" style="display: none;">
+                <!-- Full Width Customer Info Banner -->
+                <div class="card" style="margin-bottom: 1.5rem; border-top: 4px solid var(--accent-blue);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1.25rem;">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                                <h1 id="fullKhaataCustomerName" style="font-family: var(--font-heading); color: var(--navy-header); font-size: 1.8rem; margin: 0;">-</h1>
+                                <span id="fullKhaataLoginPinBadge" class="badge" style="background:#fffbeb; color:#b45309; font-weight:800; font-family:monospace; font-size:0.95rem; padding: 0.35rem 0.75rem;">🔑 PIN: -</span>
+                            </div>
+                            <p id="fullKhaataCustomerDetails" style="color: var(--text-muted); font-size: 0.95rem; font-weight: 500; margin-top: 0.5rem;">Phone: - | Email: - | D.O.B: -</p>
+                        </div>
+
+                        <!-- Action Toolbar -->
+                        <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+                            <button id="fullKhaataAddPawnBtn" class="btn-primary" style="width: auto; padding: 0.65rem 1.2rem; background: var(--accent-blue); font-weight: 700;">➕ Add New Pawn</button>
+                            <button id="fullKhaataQrBtn" class="btn-primary" style="width: auto; padding: 0.65rem 1.1rem; background: var(--success); font-weight: 700;">📱 Customer QR</button>
+                            <button id="fullKhaataCardBtn" class="btn-primary" style="width: auto; padding: 0.65rem 1.1rem; background: #f59e0b; font-weight: 700;">🎴 Passbook Card</button>
+                            <button id="fullKhaataWhatsappBtn" class="btn-primary" style="width: auto; padding: 0.65rem 1.1rem; background: #6366f1; font-weight: 700;">💬 Send PIN</button>
+                            <button id="backToDashBtn" class="btn-primary" style="width: auto; padding: 0.65rem 1.1rem; background: #64748b; font-weight: 700;">🔙 Dashboard</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Financial KPI Cards & Kalam Search Pad -->
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem;">
+                        <div style="flex: 1; min-width: 280px;">
+                            <label style="font-size: 0.85rem; font-weight: 700; color: var(--navy-header); display: block; margin-bottom: 0.4rem;">🔍 Kalam Search Pad</label>
+                            <input type="text" id="fullKalamSearchInput" placeholder="Search kalam by item name, metal, weight, amount..." style="width: 100%; padding: 0.65rem 1rem; font-size: 0.95rem; border: 1px solid var(--gray-border); border-radius: var(--radius-sm);">
+                        </div>
+                        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+                            <div style="background: #f1f5f9; padding: 0.75rem 1.25rem; border-radius: var(--radius-md); text-align: center;">
+                                <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Active Kalam</span>
+                                <p id="fullKhaataTotalKalam" style="font-size: 1.4rem; font-weight: 800; color: var(--accent-blue); margin-top: 0.2rem;">0</p>
+                            </div>
+                            <div style="background: #fef2f2; padding: 0.75rem 1.25rem; border-radius: var(--radius-md); text-align: center;">
+                                <span style="font-size: 0.8rem; color: #991b1b; font-weight: 600;">Total Outstanding Baki</span>
+                                <p id="fullKhaataTotalBaki" style="font-size: 1.4rem; font-weight: 800; color: #dc2626; margin-top: 0.2rem;">₹0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pawn Items Table -->
+                <div class="card">
+                    <div class="card-header" style="padding-left:0; padding-top:0;">
+                        <h2>📋 Gehna & Pawn Records</h2>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="pawnTable">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Kalam / Gehna Description</th>
+                                    <th>Principal (₹)</th>
+                                    <th>Interest (₹)</th>
+                                    <th>Paid (Jama)</th>
+                                    <th>Balance (Baki)</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pawnList">
+                                <!-- Populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="pawnEmptyState" class="empty-state" style="display: none;">
+                        <p>No pawn records found for this customer.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> <!-- End Container -->
+
+    <!-- MODAL 1: Add Pawn Receipt -->
+    <div id="addPawnModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="closeAddPawn">&times;</span>
+            <h2 style="margin-bottom: 1.25rem;">📄 Add Pawn Receipt</h2>
+            <form id="addPawnForm">
+                <input type="hidden" id="pawnCustomerId">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; background: #f8fafc; padding: 0.75rem; border-radius: 8px;">
+                    <input type="checkbox" id="pawnIsUdhari" style="width: auto;">
+                    <label for="pawnIsUdhari" style="margin: 0; cursor: pointer;">Unsecured Udhari (No Gehna)</label>
+                </div>
+                <div class="form-group">
+                    <label for="pawnAmount">Amount Given (₹) *</label>
+                    <input type="number" id="pawnAmount" required placeholder="e.g. 50000">
+                </div>
+                <div class="form-group">
+                    <label for="pawnDescription">Item Description *</label>
+                    <textarea id="pawnDescription" required rows="2" placeholder="e.g. 2 Gold Bangles, 1 Ring"></textarea>
+                </div>
+                <div id="pawnItemDetailsGroup">
+                    <div style="display: flex; gap: 1rem;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="itemMetalType">Metal Type</label>
+                            <select id="itemMetalType">
+                                <option value="Gold">Gold</option>
+                                <option value="Silver">Silver</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="itemWeight">Weight (grams)</label>
+                            <input type="number" id="itemWeight" step="0.01" placeholder="e.g. 15.5">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="itemPhoto">Item Photo (Optional)</label>
+                        <input type="file" id="itemPhoto" accept="image/*">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="pawnInterestRate">Interest Rate (% per month) *</label>
+                    <input type="number" id="pawnInterestRate" required placeholder="e.g. 2" step="0.1" value="2">
+                </div>
+                <button type="submit" class="btn-primary btn-gold">Save Pawn Receipt</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: Melt Pawn -->
+    <div id="meltModal" class="modal">
+        <div class="modal-content" style="max-width: 420px;">
+            <span class="close-modal" id="closeMeltModal">&times;</span>
+            <h2 style="color: var(--error); margin-bottom: 0.5rem;">🔥 Melt Gehna</h2>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">Record the pure weight extracted after melting.</p>
+            <form id="meltForm">
+                <input type="hidden" id="meltPawnId">
+                <input type="hidden" id="meltCustomerId">
+                <div class="form-group">
+                    <label for="meltPureWeight">Pure Weight Recovered (grams) *</label>
+                    <input type="number" step="0.01" id="meltPureWeight" required placeholder="e.g. 8.50">
+                </div>
+                <div class="form-group">
+                    <label for="meltNotes">Notes (Optional)</label>
+                    <textarea id="meltNotes" rows="2" placeholder="e.g. Sent to factory"></textarea>
+                </div>
+                <button type="submit" class="btn-primary" style="background: var(--error);">Confirm Melt</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: Customer Khaata Hub & Pawn Receipts -->
+    <div id="viewPawnModal" class="modal">
+        <div class="modal-content modal-large" style="max-width: 950px; border-radius: var(--radius-lg); padding: 1.75rem;">
+            <span class="close-modal" id="closeViewPawn">&times;</span>
+            
+            <!-- Khaata Header Banner -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; border-bottom: 2px solid var(--gray-border); padding-bottom: 1.25rem; margin-bottom: 1.25rem;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                        <h2 id="viewPawnCustomerName" style="font-family: var(--font-heading); color: var(--navy-header); margin: 0; font-size: 1.6rem;">Customer Khaata</h2>
+                        <span id="khaataLoginPinBadge" class="badge" style="background:#fffbeb; color:#b45309; font-weight:800; font-family:monospace; font-size:0.9rem;">🔑 PIN: -</span>
+                    </div>
+                    <p id="viewPawnCustomerDetails" style="color: var(--text-muted); font-weight: 500; margin-top: 0.35rem; font-size: 0.95rem;">Phone: - | Email: -</p>
+                </div>
+
+                <!-- Customer Action Toolbar inside Khaata -->
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button id="khaataAddPawnBtn" class="btn-primary" style="width: auto; padding: 0.55rem 1rem; font-size: 0.85rem; background: var(--accent-blue);">➕ Add New Pawn</button>
+                    <button id="khaataQrBtn" class="btn-primary" style="width: auto; padding: 0.55rem 1rem; font-size: 0.85rem; background: var(--success);">📱 QR Code</button>
+                    <button id="khaataCardBtn" class="btn-primary" style="width: auto; padding: 0.55rem 1rem; font-size: 0.85rem; background: #f59e0b;">🎴 Passbook Card</button>
+                    <button id="khaataWhatsappBtn" class="btn-primary" style="width: auto; padding: 0.55rem 1rem; font-size: 0.85rem; background: #6366f1;">💬 Send PIN</button>
+                </div>
+            </div>
+
+            <!-- Kalam Search & Account Summary Pad -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; background: #f8fafc; padding: 0.85rem 1.1rem; border-radius: var(--radius-md); border: 1px solid #e2e8f0; margin-bottom: 1.25rem;">
+                <div style="flex: 1; min-width: 250px;">
+                    <input type="text" id="kalamSearchInput" placeholder="🔍 Search kalam (item, weight, amount...)" style="width: 100%; padding: 0.5rem 0.85rem; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: var(--radius-sm);">
+                </div>
+                <div style="display: flex; gap: 1.25rem; font-size: 0.9rem; font-weight: 700;">
+                    <span style="color: var(--navy-header);">📦 Total Kalam: <span id="khaataTotalKalam" style="color: var(--accent-blue);">0</span></span>
+                    <span style="color: var(--navy-header);">💼 Total Baki: <span id="khaataTotalBaki" style="color: #dc2626;">₹0</span></span>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="pawnTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Principal (₹)</th>
+                            <th>Interest (₹)</th>
+                            <th>Paid (Jama)</th>
+                            <th>Balance (Baki)</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pawnList">
+                        <!-- Populated via JS -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="pawnEmptyState" class="empty-state" style="display: none;">
+                <p>No pawn receipts found for this customer.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Khaata Customer Select Modal -->
+    <div id="quickKhaataModal" class="modal">
+        <div class="modal-content" style="max-width: 520px; border-radius: var(--radius-lg); padding: 1.75rem;">
+            <span class="close-modal" id="closeQuickKhaata">&times;</span>
+            <h2 style="font-family: var(--font-heading); color: var(--navy-header); margin-bottom: 0.5rem;">📖 Select Customer Khaata</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">Search customer by name or phone number to open account:</p>
+
+            <input type="text" id="quickCustomerSearch" placeholder="🔍 Type customer name or phone..." style="width: 100%; padding: 0.75rem 1rem; font-size: 0.95rem; border: 1px solid var(--gray-border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
+
+            <div id="quickCustomerList" style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;">
+                <!-- Populated via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: Make Payment -->
+    <div id="paymentModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="closePayment">&times;</span>
+            <h2 style="margin-bottom: 1.25rem;">💰 Make Partial Payment</h2>
+            <form id="paymentForm">
+                <input type="hidden" id="payPawnId">
+                <div class="form-group">
+                    <label for="payAmount">Amount Received (₹) *</label>
+                    <input type="number" id="payAmount" required placeholder="e.g. 1000">
+                </div>
+                <div class="form-group">
+                    <label for="payType">Notes / Description *</label>
+                    <input type="text" id="payType" required placeholder="e.g. Received cash from son">
+                </div>
+                <button type="submit" class="btn-primary btn-gold">Save Payment</button>
+            </form>
+
+            <h3 style="margin-top: 1.5rem; font-size: 0.95rem; font-weight: 700;">Payment History</h3>
+            <div style="max-height: 180px; overflow-y: auto; margin-top: 0.5rem;">
+                <table style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Notes</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="paymentHistoryList"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 5: Visiting Card Pawn Receipt -->
+    <div id="cardReceiptModal" class="modal">
+        <div class="modal-content" style="max-width: 480px;">
+            <span class="close-modal" id="closeCardReceipt">&times;</span>
+            <h2 style="text-align: center; margin-bottom: 1rem;">🎴 Visiting Card Receipt</h2>
+
+            <div id="visitingCardPreview" class="visiting-card">
+                <div class="card-header-print">
+                    <h1 class="brand-title">LJS JEWELLERS</h1>
+                    <p class="brand-subtitle">Trusted Since Generations</p>
+                </div>
+                <div class="card-body-print">
+                    <h3 class="receipt-title">PAWN RECEIPT</h3>
+                    <form id="cardReceiptForm">
+                        <input type="hidden" id="cardCustomerId">
+                        <div class="card-row">
+                            <span class="card-label">Date:</span>
+                            <input type="date" id="cardDate" class="card-input" required>
+                        </div>
+                        <div class="card-row">
+                            <span class="card-label">Customer:</span>
+                            <span id="cardCustomerName" style="font-weight: 700;"></span>
+                        </div>
+                        <div class="card-row">
+                            <span class="card-label">Phone:</span>
+                            <span id="cardCustomerPhone"></span>
+                        </div>
+                        <div class="card-divider"></div>
+                        <div class="card-row">
+                            <span class="card-label">Item Details:</span>
+                            <input type="text" id="cardDescription" class="card-input" placeholder="e.g. 2 Gold Bangles" required>
+                        </div>
+                        <div class="card-row">
+                            <span class="card-label">Weight (g):</span>
+                            <input type="number" step="0.01" id="cardWeight" class="card-input" placeholder="e.g. 15.5">
+                        </div>
+                        <div class="card-row">
+                            <span class="card-label">Metal:</span>
+                            <select id="cardMetal" class="card-input">
+                                <option value="Gold">Gold</option>
+                                <option value="Silver">Silver</option>
+                            </select>
+                        </div>
+                        <div class="card-row">
+                            <span class="card-label">Interest Rate:</span>
+                            <div style="display:flex; align-items:center;">
+                                <input type="number" step="0.1" id="cardRate" class="card-input" value="2" required style="width: 50px; text-align:right;">
+                                <span style="margin-left:4px; font-size: 0.8rem;">% / mo</span>
+                            </div>
+                        </div>
+                        <div class="card-divider"></div>
+                        <div class="card-row highlight-row">
+                            <span class="card-label">Amount:</span>
+                            <div style="display:flex; align-items:center;">
+                                <span class="currency-symbol">₹</span>
+                                <input type="number" id="cardAmount" class="card-input amount-input" placeholder="0" required>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 1.25rem;">
+                <button type="button" id="savePrintCardBtn" class="btn-primary btn-gold" style="font-size: 1rem; padding: 0.85rem;">
+                    💾 Save & 🖨️ Print Receipt Card
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 6: Customer QR Passbook Modal -->
+    <div id="customerQrModal" class="modal">
+        <div class="modal-content" style="max-width: 440px; text-align: center;">
+            <span class="close-modal" id="closeCustomerQr">&times;</span>
+            <h2 style="margin-bottom: 0.25rem;">📱 Customer Digital QR Pass</h2>
+            <p id="qrCustomerName" style="font-weight: 700; color: var(--navy-header); font-size: 1.1rem; margin-bottom: 0.25rem;"></p>
+            <p id="qrCustomerPhone" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;"></p>
+
+            <div style="margin-bottom: 1rem;">
+                <span id="qrStatusBadge" class="badge" style="padding: 0.4rem 1rem; font-size: 0.85rem; border-radius: 9999px;">🟢 Active Pass</span>
+            </div>
+
+            <!-- QR Code Render Container -->
+            <div id="qrCodeContainer" style="display: flex; justify-content: center; align-items: center; padding: 1.25rem; background: #ffffff; border: 2px solid var(--gold-primary); border-radius: 12px; width: 220px; height: 220px; margin: 0 auto 1.25rem auto; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.15);">
+            </div>
+
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+                Customer can scan this QR code using their mobile camera to view their complete Gehna, Byaaj & Payment ledger.
+            </p>
+
+            <div style="display: flex; flex-direction: column; gap: 0.65rem;">
+                <button id="toggleQrStatusBtn" class="btn-primary" style="background: var(--error);">
+                    🔴 Deactivate QR Pass
+                </button>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="shareQrWaBtn" class="btn-primary" style="background: #25D366; flex: 1;">
+                        💬 WhatsApp Link
+                    </button>
+                    <button id="copyQrLinkBtn" class="btn-primary" style="background: var(--accent-blue); flex: 1;">
+                        🔗 Copy Link
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 7: Common Counter QR Poster Modal -->
+    <div id="commonQrModal" class="modal">
+        <div class="modal-content" style="max-width: 480px; text-align: center;">
+            <span class="close-modal" id="closeCommonQr">&times;</span>
+            <h2 style="font-family: var(--font-heading); margin-bottom: 0.25rem;">💎 LJS JEWELLERS</h2>
+            <p style="font-size: 0.85rem; color: var(--gold-hover); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem;">Shop Counter QR Code Poster</p>
+
+            <div style="background: #fffdf5; border: 2px solid var(--gold-primary); border-radius: 16px; padding: 1.5rem; box-shadow: 0 4px 20px rgba(212, 175, 55, 0.15); margin-bottom: 1.25rem;" id="commonQrPrintArea">
+                <h3 style="font-size: 1.1rem; color: var(--navy-header); font-weight: 800; margin-bottom: 0.35rem;">SCAN TO VIEW YOUR KHATA</h3>
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Gehna, Loan, Byaaj & Jama Balance Live Portal</p>
+
+                <div id="commonQrContainer" style="display: flex; justify-content: center; align-items: center; padding: 1rem; background: #ffffff; border: 1px solid var(--gold-border); border-radius: 12px; width: 220px; height: 220px; margin: 0 auto 1rem auto;">
+                </div>
+
+                <div style="font-size: 0.85rem; color: var(--navy-header); font-weight: 700;">
+                    Username: <span style="color: var(--accent-blue);">Your Phone Number</span> <br>
+                    Password: <span style="color: var(--warning);">Your Secret 6-Digit PIN</span>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem;">
+                <button id="printCommonQrBtn" class="btn-primary btn-gold" style="flex: 1;">
+                    🖨️ Print Counter Poster
+                </button>
+                <button id="copyCommonQrLinkBtn" class="btn-primary" style="background: var(--accent-blue); flex: 1;">
+                    🔗 Copy Portal URL
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Print Container -->
+    <div id="printBillContainer" style="display: none;">
+        <div style="text-align: center; border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 15px;">
+            <h1 style="margin: 0; font-size: 24px; font-family: 'Cinzel', serif;">LJS JEWELLERS</h1>
+            <p style="margin: 5px 0 0; font-size: 14px;">Trusted Since Generations</p>
+        </div>
+        <h2 style="text-align: center; font-size: 18px; margin-bottom: 20px; text-decoration: underline;">PAWN RECEIPT</h2>
+        <table style="width: 100%; margin-bottom: 20px; font-size: 14px; line-height: 1.5;">
+            <tr>
+                <td width="40%"><strong>Date:</strong></td>
+                <td id="printDate"></td>
+            </tr>
+            <tr>
+                <td><strong>Customer:</strong></td>
+                <td id="printCustomer"></td>
+            </tr>
+            <tr>
+                <td><strong>Phone:</strong></td>
+                <td id="printPhone"></td>
+            </tr>
+            <tr>
+                <td colspan="2"><hr style="border-top: 1px solid #ccc; margin: 10px 0;"></td>
+            </tr>
+            <tr>
+                <td><strong>Description:</strong></td>
+                <td id="printDesc"></td>
+            </tr>
+            <tr>
+                <td><strong>Interest Rate:</strong></td>
+                <td id="printRate"></td>
+            </tr>
+            <tr>
+                <td colspan="2"><hr style="border-top: 1px solid #ccc; margin: 10px 0;"></td>
+            </tr>
+            <tr>
+                <td style="font-size: 18px;"><strong>Amount Given:</strong></td>
+                <td style="font-size: 18px; font-weight: bold;" id="printAmount"></td>
+            </tr>
+        </table>
+        <div style="text-align: center; margin-top: 40px; font-size: 12px; color: #555;">
+            <p>Signature / Stamp</p>
+            <p style="margin-top: 20px; border-top: 1px solid #000; display: inline-block; padding-top: 5px;">Customer Signature</p>
+            <br><br>
+            <p>Thank you for choosing LJS Jewellers!</p>
+        </div>
+    </div>
+
+    <!-- Chart.js, QRCode.js and script.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>

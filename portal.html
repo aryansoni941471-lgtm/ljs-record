@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LJS Jewellers - Customer Portal Login</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #0f172a;
+            --surface-card: #ffffff;
+            --navy-header: #0f172a;
+            --gold-primary: #d4af37;
+            --gold-gradient: linear-gradient(135deg, #d4af37 0%, #f59e0b 100%);
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --accent-blue: #2563eb;
+            --card-border: #e2e8f0;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-pill: 9999px;
+            --font-heading: 'Cinzel', serif;
+            --font-body: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: #f8fafc;
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            padding-bottom: 3rem;
+        }
+
+        .header {
+            background: var(--navy-header);
+            color: #ffffff;
+            padding: 1.5rem 1rem;
+            text-align: center;
+            border-bottom: 3px solid var(--gold-primary);
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.15);
+        }
+
+        .header h1 {
+            font-family: var(--font-heading);
+            font-size: 1.75rem;
+            letter-spacing: 0.05em;
+            background: linear-gradient(135deg, #ffffff 30%, var(--gold-primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-top: 0.25rem;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        /* Login Card */
+        .login-card {
+            background: var(--surface-card);
+            border-radius: var(--radius-lg);
+            padding: 2rem 1.5rem;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+        }
+
+        .login-card h2 {
+            text-align: center;
+            font-size: 1.35rem;
+            color: var(--navy-header);
+            margin-bottom: 0.5rem;
+        }
+
+        .login-subtitle {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--navy-header);
+        }
+
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: var(--radius-md);
+            color: var(--navy-header);
+            font-family: var(--font-body);
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            background: #ffffff;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        .btn-login {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+            padding: 0.9rem 1.5rem;
+            background: var(--gold-gradient);
+            color: var(--navy-header);
+            border: none;
+            border-radius: var(--radius-md);
+            font-family: var(--font-body);
+            font-size: 1rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.25);
+            margin-top: 0.5rem;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(212, 175, 55, 0.4);
+        }
+
+        .alert-box {
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-md);
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 1.25rem;
+            display: none;
+        }
+
+        .alert-error {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        /* Ledger View Styling */
+        .customer-header-card {
+            background: var(--surface-card);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+            margin-bottom: 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .summary-box {
+            background: var(--surface-card);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-md);
+            padding: 1rem 0.75rem;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+        }
+
+        .summary-box.highlight {
+            background: linear-gradient(135deg, var(--navy-header) 0%, #1e293b 100%);
+            color: #ffffff;
+            border: 1px solid var(--gold-primary);
+        }
+
+        .summary-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .summary-box.highlight .summary-label { color: var(--gold-primary); }
+
+        .summary-val {
+            font-size: 1.25rem;
+            font-weight: 800;
+            margin-top: 0.35rem;
+        }
+
+        .item-card {
+            background: var(--surface-card);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--card-border);
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .item-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; bottom: 0;
+            width: 4px;
+            background: var(--gold-gradient);
+        }
+
+        .item-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+
+        .badge-status {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: var(--radius-pill);
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .badge-active { background: #dbeafe; color: #1e40af; }
+        .badge-released { background: #d1fae5; color: #065f46; }
+
+        .financial-breakdown {
+            background: #f8fafc;
+            border-radius: var(--radius-md);
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .fin-row {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .fin-row.total-row {
+            border-top: 1px dashed var(--card-border);
+            padding-top: 0.4rem;
+            margin-top: 0.2rem;
+            font-weight: 800;
+            font-size: 0.95rem;
+            color: var(--navy-header);
+        }
+
+        .btn-logout {
+            background: #f1f5f9;
+            color: var(--error);
+            border: 1px solid var(--card-border);
+            padding: 0.4rem 0.85rem;
+            border-radius: var(--radius-pill);
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-logout:hover {
+            background: #fee2e2;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <h1>💎 LJS JEWELLERS</h1>
+        <p>Customer Self-Service Portal</p>
+    </header>
+
+    <div class="container" id="portalContainer">
+        <!-- LOGIN SECTION -->
+        <div id="loginView" class="login-card">
+            <h2>🔐 Customer Login</h2>
+            <p class="login-subtitle">Enter your Phone Number & PIN to view your ledger</p>
+
+            <div id="loginAlert" class="alert-box alert-error"></div>
+
+            <form id="portalLoginForm">
+                <div class="form-group">
+                    <label for="loginUsername">Username / Phone Number *</label>
+                    <input type="text" id="loginUsername" required placeholder="e.g. 9876543210" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password / Secret PIN *</label>
+                    <input type="password" id="loginPassword" required placeholder="e.g. 6-digit PIN" autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn-login">
+                    🔑 Login to View Khata
+                </button>
+            </form>
+            <div style="margin-top: 1.5rem; text-align: center; font-size: 0.8rem; color: var(--text-muted);">
+                * Don't have your PIN? Ask the shopkeeper at the counter to get your secret PIN.
+            </div>
+        </div>
+
+        <!-- LEDGER SECTION (Hidden by default) -->
+        <div id="ledgerView" style="display: none;">
+            <div class="customer-header-card">
+                <div>
+                    <div id="custName" style="font-size: 1.25rem; font-weight: 800; color: var(--navy-header);"></div>
+                    <div id="custPhone" style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;"></div>
+                </div>
+                <button id="logoutBtn" class="btn-logout">🚪 Logout</button>
+            </div>
+
+            <div class="summary-grid">
+                <div class="summary-box">
+                    <div class="summary-label">Kitna Liya</div>
+                    <div id="sumPrincipal" class="summary-val" style="color: var(--navy-header);">₹0</div>
+                </div>
+                <div class="summary-box">
+                    <div class="summary-label">Total Byaaj</div>
+                    <div id="sumInterest" class="summary-val" style="color: var(--warning);">₹0</div>
+                </div>
+                <div class="summary-box highlight">
+                    <div class="summary-label">Net Baki</div>
+                    <div id="sumNet" class="summary-val" style="color: #ffffff;">₹0</div>
+                </div>
+            </div>
+
+            <div style="font-size: 1rem; font-weight: 700; margin-bottom: 0.85rem; color: var(--navy-header);">
+                💎 Gehna & Loan Records
+            </div>
+
+            <div id="pawnsListContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginView = document.getElementById('loginView');
+            const ledgerView = document.getElementById('ledgerView');
+            const loginForm = document.getElementById('portalLoginForm');
+            const loginAlert = document.getElementById('loginAlert');
+            const logoutBtn = document.getElementById('logoutBtn');
+
+            // Auto-check if session saved in localStorage
+            const savedData = localStorage.getItem('ljs_customer_session');
+            if (savedData) {
+                try {
+                    const data = JSON.parse(savedData);
+                    renderLedger(data);
+                } catch(e) { localStorage.removeItem('ljs_customer_session'); }
+            }
+
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                loginAlert.style.display = 'none';
+
+                const username = document.getElementById('loginUsername').value;
+                const password = document.getElementById('loginPassword').value;
+
+                try {
+                    const res = await fetch('/api/portal/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+                    const data = await res.json();
+
+                    if (!res.ok) {
+                        loginAlert.innerText = data.error || 'Login failed.';
+                        loginAlert.style.display = 'block';
+                        return;
+                    }
+
+                    // Save session & render
+                    localStorage.setItem('ljs_customer_session', JSON.stringify(data));
+                    renderLedger(data);
+                } catch (err) {
+                    console.error(err);
+                    loginAlert.innerText = 'Unable to connect to server. Please try again.';
+                    loginAlert.style.display = 'block';
+                }
+            });
+
+            logoutBtn.addEventListener('click', () => {
+                localStorage.removeItem('ljs_customer_session');
+                ledgerView.style.display = 'none';
+                loginView.style.display = 'block';
+                loginForm.reset();
+            });
+
+            function renderLedger(data) {
+                const c = data.customer || {};
+                const pawns = data.pawns || [];
+
+                document.getElementById('custName').textContent = c.name || 'Customer';
+                document.getElementById('custPhone').textContent = `📞 ${c.phone || ''}`;
+
+                document.getElementById('sumPrincipal').innerText = '₹' + (data.totalPrincipal || 0).toLocaleString('en-IN');
+                document.getElementById('sumInterest').innerText = '₹' + (data.totalInterest || 0).toLocaleString('en-IN');
+                document.getElementById('sumNet').innerText = '₹' + (data.netBalance || 0).toLocaleString('en-IN');
+
+                const container = document.getElementById('pawnsListContainer');
+                if (pawns.length === 0) {
+                    container.innerHTML = `<div style="text-align:center; padding: 2rem; background:#fff; border-radius:12px; color:var(--text-muted);">No pawn records found.</div>`;
+                } else {
+                    container.innerHTML = pawns.map(p => {
+                        const statusClass = p.status === 'Released' ? 'badge-released' : 'badge-active';
+                        const photoImg = p.item_photo ? `<img src="${p.item_photo}" style="width:55px;height:55px;object-fit:cover;border-radius:8px;border:1px solid #cbd5e1;">` : '';
+                        const udhariBadge = p.is_udhari ? `<span style="color:var(--warning); font-size:0.75rem; font-weight:700;">(Unsecured Udhari)</span>` : '';
+
+                        return `
+                            <div class="item-card">
+                                <div class="item-card-header">
+                                    <div>
+                                        <div style="font-size:1.05rem; font-weight:700; color:var(--navy-header);">${escapeHtml(p.description)} ${udhariBadge}</div>
+                                        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Date: ${formatDate(p.date_added)}</div>
+                                    </div>
+                                    <span class="badge-status ${statusClass}">${p.status}</span>
+                                </div>
+
+                                <div style="display:flex; gap:1rem; font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.85rem;">
+                                    ${photoImg}
+                                    <div>
+                                        <div><strong>Metal:</strong> ${p.item_metal_type || 'Gold'}</div>
+                                        <div><strong>Weight:</strong> ${p.item_weight_grams ? p.item_weight_grams + 'g' : 'N/A'}</div>
+                                        <div><strong>Interest Rate:</strong> ${p.interest_rate}% / month</div>
+                                    </div>
+                                </div>
+
+                                <div class="financial-breakdown">
+                                    <div class="fin-row">
+                                        <span>Kitna Liya (Principal):</span>
+                                        <strong>₹${p.amount.toLocaleString('en-IN')}</strong>
+                                    </div>
+                                    <div class="fin-row">
+                                        <span>Kitni Byaaj (Interest):</span>
+                                        <span style="color:var(--warning); font-weight:700;">+ ₹${p.calculated_interest.toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <div class="fin-row">
+                                        <span>Jama (Paid):</span>
+                                        <span style="color:var(--success); font-weight:700;">- ₹${p.paid.toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <div class="fin-row total-row">
+                                        <span>Net Baki (Balance):</span>
+                                        <span style="color:var(--error);">₹${p.baki.toLocaleString('en-IN')}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                loginView.style.display = 'none';
+                ledgerView.style.display = 'block';
+            }
+
+            function escapeHtml(unsafe) {
+                if (!unsafe) return '';
+                return unsafe.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            }
+
+            function formatDate(dateStr) {
+                if (!dateStr) return 'N/A';
+                try {
+                    return new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                } catch(e) { return dateStr; }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interest Ledger (Byaaj History) | LJS Record</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            padding-bottom: 3rem;
+        }
+
+        .ledger-header {
+            background: var(--navy-header);
+            color: #fff;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-md);
+            border-bottom: 2px solid var(--gold-primary);
+        }
+
+        .ledger-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .ledger-brand h1 {
+            font-family: var(--font-heading);
+            font-size: 1.5rem;
+            color: var(--gold-primary);
+            letter-spacing: 1px;
+            margin: 0;
+        }
+
+        .ledger-brand p {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .btn-back {
+            background: var(--gold-gradient);
+            color: var(--navy-header);
+            font-weight: 700;
+            padding: 0.55rem 1.25rem;
+            border-radius: var(--radius-pill);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: var(--shadow-gold);
+            font-size: 0.88rem;
+            border: none;
+            cursor: pointer;
+            transition: var(--transition-fast);
+        }
+
+        .btn-back:hover {
+            transform: translateY(-2px);
+            opacity: 0.95;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            background: var(--surface-card);
+            border-radius: var(--radius-lg);
+            padding: 1.35rem 1.5rem;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--card-border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--gold-primary);
+        }
+
+        .kpi-card.success::before {
+            background: var(--success);
+        }
+
+        .kpi-card.blue::before {
+            background: var(--accent-blue);
+        }
+
+        .kpi-card.warning::before {
+            background: var(--warning);
+        }
+
+        .kpi-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .kpi-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--navy-header);
+        }
+
+        .kpi-subtext {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .controls-card {
+            background: var(--surface-card);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem 1.5rem;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--card-border);
+            margin-bottom: 1.5rem;
+        }
+
+        .controls-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .search-wrap {
+            flex: 1;
+            min-width: 260px;
+            position: relative;
+        }
+
+        .search-wrap input {
+            width: 100%;
+            padding: 0.65rem 1rem 0.65rem 2.5rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--card-border);
+            font-size: 0.9rem;
+            background: #f8fafc;
+            color: var(--text-primary);
+        }
+
+        .search-wrap input:focus {
+            outline: none;
+            border-color: var(--gold-primary);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.85rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .date-filters {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .date-input-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .date-input-group label {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .date-input-group input {
+            padding: 0.55rem 0.75rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--card-border);
+            font-size: 0.85rem;
+            background: #f8fafc;
+        }
+
+        .btn-action {
+            padding: 0.6rem 1.1rem;
+            border-radius: var(--radius-md);
+            font-weight: 700;
+            font-size: 0.85rem;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: var(--transition-fast);
+        }
+
+        .btn-filter {
+            background: var(--navy-header);
+            color: #fff;
+        }
+
+        .btn-filter:hover {
+            background: var(--navy-card);
+        }
+
+        .btn-reset {
+            background: #e2e8f0;
+            color: var(--text-primary);
+        }
+
+        .btn-reset:hover {
+            background: #cbd5e1;
+        }
+
+        .btn-export {
+            background: var(--gold-gradient);
+            color: var(--navy-header);
+            box-shadow: var(--shadow-gold);
+        }
+
+        .table-card {
+            background: var(--surface-card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--card-border);
+            overflow: hidden;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: #f1f5f9;
+            color: var(--navy-header);
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 0.78rem;
+            letter-spacing: 0.5px;
+            padding: 1rem 1.25rem;
+            border-bottom: 2px solid var(--card-border);
+        }
+
+        td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #f1f5f9;
+            color: var(--text-primary);
+        }
+
+        tr:hover td {
+            background: #fafafa;
+        }
+
+        .badge-type {
+            display: inline-block;
+            padding: 0.25rem 0.65rem;
+            border-radius: var(--radius-pill);
+            font-size: 0.75rem;
+            font-weight: 800;
+        }
+
+        .badge-release {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid var(--success-border);
+        }
+
+        .badge-partial {
+            background: var(--warning-bg);
+            color: var(--warning);
+            border: 1px solid var(--warning-border);
+        }
+
+        .amount-interest {
+            font-weight: 800;
+            color: var(--success);
+            font-size: 1rem;
+        }
+
+        .permanent-note {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1e40af;
+            padding: 0.85rem 1.25rem;
+            border-radius: var(--radius-md);
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        @media print {
+            .ledger-header, .controls-card, .btn-back, .permanent-note {
+                display: none !important;
+            }
+            body {
+                background: #fff;
+                padding: 0;
+            }
+            .container {
+                max-width: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            .table-card {
+                box-shadow: none;
+                border: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="ledger-header">
+        <div class="ledger-brand">
+            <span style="font-size:1.8rem;">📜</span>
+            <div>
+                <h1>Permanent Interest Ledger</h1>
+                <p>Ab tak ki sabhi byaaj ki rashi ka surakshit aalekh (Audit History)</p>
+            </div>
+        </div>
+        <a href="index.html" class="btn-back">
+            <span>←</span> Back to Dashboard
+        </a>
+    </header>
+
+    <div class="container">
+        
+        <div class="permanent-note">
+            <span style="font-size: 1.2rem;">🔒</span>
+            <div>
+                <strong>Permanent Record Protection:</strong> Yeh ledger saare byaaj ki aavak ko permanently save rakhta hai. Gar aap kisi customer ko main list se delete bhi kar dete hain, tab bhi us customer se aayi byaaj ka record yahan surakshit rahega.
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card success">
+                <div class="kpi-title">
+                    <span>Kul Byaaj Aavak (All Time)</span>
+                    <span>💰</span>
+                </div>
+                <div id="totalAllTimeInterest" class="kpi-value" style="color: var(--success);">₹0</div>
+                <div class="kpi-subtext">Ab tak ki kul praapt byaaj</div>
+            </div>
+
+            <div class="kpi-card blue">
+                <div class="kpi-title">
+                    <span>Is Mahine Ki Byaaj</span>
+                    <span>📅</span>
+                </div>
+                <div id="totalMonthInterest" class="kpi-value" style="color: var(--accent-blue);">₹0</div>
+                <div class="kpi-subtext">Current month interest total</div>
+            </div>
+
+            <div class="kpi-card warning">
+                <div class="kpi-title">
+                    <span>Aaj Ki Byaaj</span>
+                    <span>☀️</span>
+                </div>
+                <div id="totalTodayInterest" class="kpi-value" style="color: var(--warning);">₹0</div>
+                <div class="kpi-subtext">Today's interest collections</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-title">
+                    <span>Total Transactions</span>
+                    <span>🧾</span>
+                </div>
+                <div id="totalTxnnsCount" class="kpi-value">0</div>
+                <div class="kpi-subtext">Entries in interest log</div>
+            </div>
+        </div>
+
+        <!-- Filter & Search Controls -->
+        <div class="controls-card">
+            <div class="controls-row">
+                <div class="search-wrap">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" placeholder="Search by customer name, phone or item description...">
+                </div>
+
+                <div class="date-filters">
+                    <div class="date-input-group">
+                        <label for="startDate">From:</label>
+                        <input type="date" id="startDate">
+                    </div>
+                    <div class="date-input-group">
+                        <label for="endDate">To:</label>
+                        <input type="date" id="endDate">
+                    </div>
+
+                    <button id="filterBtn" class="btn-action btn-filter">Filter</button>
+                    <button id="resetBtn" class="btn-action btn-reset">Reset</button>
+                    <button id="exportBtn" class="btn-action btn-export">📥 Export CSV</button>
+                    <button id="printBtn" class="btn-action btn-reset" onclick="window.print()">🖨️ Print</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table View -->
+        <div class="table-card">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Date & Time</th>
+                            <th>Customer Name</th>
+                            <th>Phone</th>
+                            <th>Item Description</th>
+                            <th>Collection Type</th>
+                            <th>Principal (₹)</th>
+                            <th>Byaaj Rashi (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ledgerTableBody">
+                        <tr>
+                            <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading interest ledger data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://' + window.location.hostname + ':3001/api';
+        let allLedgerData = [];
+
+        function formatDate(isoStr) {
+            if (!isoStr) return '-';
+            try {
+                const d = new Date(isoStr);
+                return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' +
+                       d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            } catch (e) {
+                return isoStr;
+            }
+        }
+
+        function checkRoleAccess() {
+            const role = localStorage.getItem('user_role') || 'admin';
+            if (role === 'staff') {
+                const pin = prompt('🔒 Restricted Access: Staff Mode me Interest Ledger view blocked hai!\n\nKripya Master Security PIN daalein to view Interest Ledger:');
+                if (pin && pin.trim() === '1234') {
+                    localStorage.setItem('user_role', 'admin');
+                    return true;
+                } else {
+                    alert('❌ Access Denied: Staff users cannot view Interest Ledger.');
+                    window.location.href = 'index.html';
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        async function loadInterestLedger() {
+            if (!checkRoleAccess()) return;
+            try {
+                const response = await fetch(`${API_URL}/reports/interest-ledger`);
+                const result = await response.json();
+                
+                if (!response.ok) throw new Error(result.error || 'Failed to fetch interest ledger');
+
+                allLedgerData = result.ledger || [];
+
+                document.getElementById('totalAllTimeInterest').innerText = '₹' + (result.totalAllTime || 0).toLocaleString('en-IN');
+                document.getElementById('totalMonthInterest').innerText = '₹' + (result.totalMonth || 0).toLocaleString('en-IN');
+                document.getElementById('totalTodayInterest').innerText = '₹' + (result.totalToday || 0).toLocaleString('en-IN');
+                document.getElementById('totalTxnnsCount').innerText = (allLedgerData.length).toLocaleString('en-IN');
+
+                renderTable(allLedgerData);
+            } catch (err) {
+                console.error('Error loading interest ledger:', err);
+                document.getElementById('ledgerTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="8" style="text-align:center; color:var(--error); padding: 2rem;">
+                            ⚠️ Data load nahi ho saka. Kripya server (npm start) running hone ki janch karein.
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('ledgerTableBody');
+            if (!data || data.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                            Koi byaaj entry nahi mili.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = data.map((item, index) => {
+                const typeClass = item.payment_type && item.payment_type.includes('Release') ? 'badge-release' : 'badge-partial';
+                return `
+                    <tr>
+                        <td style="font-weight: 700; color: var(--text-muted);">${index + 1}</td>
+                        <td style="white-space: nowrap;">${formatDate(item.payment_date)}</td>
+                        <td><strong>${escapeHtml(item.customer_name || 'N/A')}</strong></td>
+                        <td>${escapeHtml(item.customer_phone || '-')}</td>
+                        <td>${escapeHtml(item.item_description || 'N/A')}</td>
+                        <td><span class="badge-type ${typeClass}">${escapeHtml(item.payment_type || 'Interest Payment')}</span></td>
+                        <td>₹${parseFloat(item.principal_amount || 0).toLocaleString('en-IN')}</td>
+                        <td class="amount-interest">+ ₹${parseFloat(item.interest_amount || 0).toLocaleString('en-IN')}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Filters
+        function applyFilters() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            const startVal = document.getElementById('startDate').value;
+            const endVal = document.getElementById('endDate').value;
+
+            const filtered = allLedgerData.filter(item => {
+                // Text search
+                const name = (item.customer_name || '').toLowerCase();
+                const phone = (item.customer_phone || '').toLowerCase();
+                const desc = (item.item_description || '').toLowerCase();
+                const matchesSearch = !query || name.includes(query) || phone.includes(query) || desc.includes(query);
+
+                // Date filter
+                let matchesDate = true;
+                if (item.payment_date) {
+                    const pDate = item.payment_date.substring(0, 10);
+                    if (startVal && pDate < startVal) matchesDate = false;
+                    if (endVal && pDate > endVal) matchesDate = false;
+                }
+
+                return matchesSearch && matchesDate;
+            });
+
+            renderTable(filtered);
+        }
+
+        document.getElementById('searchInput').addEventListener('input', applyFilters);
+        document.getElementById('filterBtn').addEventListener('click', applyFilters);
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            renderTable(allLedgerData);
+        });
+
+        // Export CSV
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            if (!allLedgerData || allLedgerData.length === 0) {
+                alert('Export karne ke liye koi data nahi hai!');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "S.No,Date & Time,Customer Name,Phone,Item Description,Collection Type,Principal (INR),Interest Amount (INR)\n";
+
+            allLedgerData.forEach((item, index) => {
+                const dateStr = item.payment_date ? item.payment_date.replace(',', '') : '';
+                const row = [
+                    index + 1,
+                    `"${dateStr}"`,
+                    `"${item.customer_name || ''}"`,
+                    `"${item.customer_phone || ''}"`,
+                    `"${item.item_description || ''}"`,
+                    `"${item.payment_type || ''}"`,
+                    parseFloat(item.principal_amount || 0),
+                    parseFloat(item.interest_amount || 0)
+                ];
+                csvContent += row.join(",") + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Interest_Ledger_${new Date().toISOString().substring(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        document.addEventListener('DOMContentLoaded', loadInterestLedger);
+    </script>
+</body>
+</html>

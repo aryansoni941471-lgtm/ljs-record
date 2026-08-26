@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LJS Jewellers - Customer Digital Passbook</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #f8fafc;
+            --surface-card: #ffffff;
+            --navy-header: #0f172a;
+            --gold-primary: #d4af37;
+            --gold-gradient: linear-gradient(135deg, #d4af37 0%, #f59e0b 100%);
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --card-border: #e2e8f0;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-pill: 9999px;
+            --font-heading: 'Cinzel', serif;
+            --font-body: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            padding-bottom: 3rem;
+        }
+
+        .header {
+            background: var(--navy-header);
+            color: #ffffff;
+            padding: 1.5rem 1rem;
+            text-align: center;
+            border-bottom: 3px solid var(--gold-primary);
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.15);
+        }
+
+        .header h1 {
+            font-family: var(--font-heading);
+            font-size: 1.75rem;
+            letter-spacing: 0.05em;
+            background: linear-gradient(135deg, #ffffff 30%, var(--gold-primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-top: 0.25rem;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 1.25rem auto;
+            padding: 0 1rem;
+        }
+
+        .customer-card {
+            background: var(--surface-card);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+            margin-bottom: 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .customer-name {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--navy-header);
+        }
+
+        .customer-phone {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .summary-box {
+            background: var(--surface-card);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-md);
+            padding: 1rem 0.75rem;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+        }
+
+        .summary-box.highlight {
+            background: linear-gradient(135deg, var(--navy-header) 0%, #1e293b 100%);
+            color: #ffffff;
+            border: 1px solid var(--gold-primary);
+        }
+
+        .summary-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .summary-box.highlight .summary-label {
+            color: var(--gold-primary);
+        }
+
+        .summary-val {
+            font-size: 1.25rem;
+            font-weight: 800;
+            margin-top: 0.35rem;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 0.85rem;
+            color: var(--navy-header);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .item-card {
+            background: var(--surface-card);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--card-border);
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .item-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; bottom: 0;
+            width: 4px;
+            background: var(--gold-gradient);
+        }
+
+        .item-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+
+        .item-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--navy-header);
+        }
+
+        .badge-status {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: var(--radius-pill);
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: #e2e8f0;
+            color: var(--navy-header);
+        }
+
+        .badge-active { background: #dbeafe; color: #1e40af; }
+        .badge-released { background: #d1fae5; color: #065f46; }
+
+        .item-details-row {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.85rem;
+        }
+
+        .item-img {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 1px solid var(--card-border);
+        }
+
+        .financial-breakdown {
+            background: #f8fafc;
+            border-radius: var(--radius-md);
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .fin-row {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .fin-row.total-row {
+            border-top: 1px dashed var(--card-border);
+            padding-top: 0.4rem;
+            margin-top: 0.2rem;
+            font-weight: 800;
+            font-size: 0.95rem;
+            color: var(--navy-header);
+        }
+
+        .deactivated-screen {
+            background: var(--surface-card);
+            border-radius: var(--radius-lg);
+            padding: 3rem 1.5rem;
+            text-align: center;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            margin-top: 2rem;
+        }
+
+        .deactivated-icon {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .deactivated-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--error);
+            margin-bottom: 0.5rem;
+        }
+
+        .deactivated-msg {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <h1>💎 LJS JEWELLERS</h1>
+        <p>Live Customer Digital Passbook</p>
+    </header>
+
+    <div class="container" id="passbookApp">
+        <div style="text-align: center; padding: 3rem 0;" id="loadingState">
+            <p style="color: var(--text-secondary); font-size: 1.1rem; font-weight: 600;">Loading Digital Passbook...</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const app = document.getElementById('passbookApp');
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+
+            if (!token) {
+                renderDeactivated('Invalid or Missing Passbook Link', 'Please ask LJS Jewellers to share your valid QR passbook link.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/passbook/${token}`);
+                const data = await response.json();
+
+                if (!data.active) {
+                    renderDeactivated('🔒 Passbook Deactivated', data.message || 'This passbook has been temporarily deactivated by LJS Jewellers for privacy & security.');
+                    return;
+                }
+
+                renderPassbook(data);
+            } catch (err) {
+                console.error(err);
+                renderDeactivated('Error Loading Passbook', 'Unable to fetch passbook details at this moment. Please try again later.');
+            }
+
+            function renderDeactivated(title, msg) {
+                app.innerHTML = `
+                    <div class="deactivated-screen">
+                        <div class="deactivated-icon">🛡️</div>
+                        <h2 class="deactivated-title">${title}</h2>
+                        <p class="deactivated-msg">${msg}</p>
+                        <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--card-border);">
+                            <p style="font-weight: 700; color: var(--navy-header); font-size: 0.9rem;">LJS JEWELLERS</p>
+                            <p style="font-size: 0.8rem; color: var(--text-muted);">Trusted Customer Service</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function renderPassbook(data) {
+                const c = data.customer;
+                const pawns = data.pawns || [];
+
+                let pawnsHtml = '';
+                if (pawns.length === 0) {
+                    pawnsHtml = `<div style="text-align:center; padding: 2rem; background:#fff; border-radius:12px; color:var(--text-muted);">No pawn records found.</div>`;
+                } else {
+                    pawnsHtml = pawns.map(p => {
+                        const statusClass = p.status === 'Released' ? 'badge-released' : 'badge-active';
+                        const photoImg = p.item_photo ? `<img src="${p.item_photo}" class="item-img">` : '';
+                        const udhariBadge = p.is_udhari ? `<span style="color:var(--warning); font-size:0.75rem; font-weight:700;">(Unsecured Udhari)</span>` : '';
+
+                        return `
+                            <div class="item-card">
+                                <div class="item-card-header">
+                                    <div>
+                                        <div class="item-title">${escapeHtml(p.description)} ${udhariBadge}</div>
+                                        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Date: ${formatDate(p.date_added)}</div>
+                                    </div>
+                                    <span class="badge-status ${statusClass}">${p.status}</span>
+                                </div>
+
+                                <div class="item-details-row">
+                                    ${photoImg}
+                                    <div>
+                                        <div><strong>Metal:</strong> ${p.item_metal_type || 'Gold'}</div>
+                                        <div><strong>Weight:</strong> ${p.item_weight_grams ? p.item_weight_grams + 'g' : 'N/A'}</div>
+                                        <div><strong>Interest Rate:</strong> ${p.interest_rate}% / month</div>
+                                    </div>
+                                </div>
+
+                                <div class="financial-breakdown">
+                                    <div class="fin-row">
+                                        <span>Kitna Liya (Principal):</span>
+                                        <strong>₹${p.amount.toLocaleString('en-IN')}</strong>
+                                    </div>
+                                    <div class="fin-row">
+                                        <span>Kitni Byaaj (Interest):</span>
+                                        <span style="color:var(--warning); font-weight:700;">+ ₹${p.calculated_interest.toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <div class="fin-row">
+                                        <span>Jama (Paid):</span>
+                                        <span style="color:var(--success); font-weight:700;">- ₹${p.paid.toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <div class="fin-row total-row">
+                                        <span>Net Baki (Balance):</span>
+                                        <span style="color:var(--error);">₹${p.baki.toLocaleString('en-IN')}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                app.innerHTML = `
+                    <div class="customer-card">
+                        <div>
+                            <div class="customer-name">${escapeHtml(c.name)}</div>
+                            <div class="customer-phone">📞 ${escapeHtml(c.phone)}</div>
+                        </div>
+                        <div style="font-size: 1.8rem;">👤</div>
+                    </div>
+
+                    <div class="summary-grid">
+                        <div class="summary-box">
+                            <div class="summary-label">Kitna Liya</div>
+                            <div class="summary-val" style="color: var(--navy-header);">₹${data.totalPrincipal.toLocaleString('en-IN')}</div>
+                        </div>
+                        <div class="summary-box">
+                            <div class="summary-label">Total Byaaj</div>
+                            <div class="summary-val" style="color: var(--warning);">₹${data.totalInterest.toLocaleString('en-IN')}</div>
+                        </div>
+                        <div class="summary-box highlight">
+                            <div class="summary-label">Net Baki</div>
+                            <div class="summary-val" style="color: #ffffff;">₹${data.netBalance.toLocaleString('en-IN')}</div>
+                        </div>
+                    </div>
+
+                    <div class="section-title">
+                        <span>💎</span> Gehna & Account Ledger
+                    </div>
+
+                    ${pawnsHtml}
+
+                    <div class="footer">
+                        <p><strong>LJS JEWELLERS</strong> - Trusted Since Generations</p>
+                        <p>For any queries, please visit or call our shop counter.</p>
+                    </div>
+                `;
+            }
+
+            function escapeHtml(unsafe) {
+                if (!unsafe) return '';
+                return unsafe.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            }
+
+            function formatDate(dateStr) {
+                if (!dateStr) return 'N/A';
+                try {
+                    return new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                } catch(e) { return dateStr; }
+            }
+        });
+    </script>
+</body>
+</html>
