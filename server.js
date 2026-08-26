@@ -1304,9 +1304,13 @@ app.put('/api/customers/:id/portal-status', (req, res) => {
     });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-    const ip = getLocalIpAddress();
-    console.log(`Server is running locally at http://localhost:${PORT}`);
-    console.log(`Mobile/Network access URL: http://${ip}:${PORT}`);
-});
+if (require.main === module) {
+    app.listen(PORT, '0.0.0.0', () => {
+        const ip = getLocalIpAddress();
+        console.log(`Server is running locally at http://localhost:${PORT}`);
+        console.log(`Mobile/Network access URL: http://${ip}:${PORT}`);
+    });
+}
+
+module.exports = app;
 
