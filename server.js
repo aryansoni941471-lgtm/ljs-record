@@ -10,7 +10,7 @@ require('dotenv').config();
 const { db, supabase } = require('./supabase-db');
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 function getLocalIpAddress() {
     const interfaces = os.networkInterfaces();
