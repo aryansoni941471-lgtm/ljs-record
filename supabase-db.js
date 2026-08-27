@@ -544,9 +544,21 @@ async function handleRun(sql, params) {
     }
 
     // 5. UPDATE pending_approvals SET status = ? WHERE id = ?
-    if (/UPDATE pending_approvals SET status = \?/i.test(cleanSql)) {
-        const status = params[0];
-        const id = params[1];
+    //    OR UPDATE pending_approvals SET status = 'Approved'/'Rejected' WHERE id = ? (hardcoded)
+    if (/UPDATE pending_approvals SET status/i.test(cleanSql)) {
+        let status, id;
+        // Case A: status is a parameter -> SET status = ? WHERE id = ?
+        if (/SET status = \?/i.test(cleanSql)) {
+            status = params[0];
+            id = params[1];
+        }
+        // Case B: status is hardcoded -> SET status = 'Approved' WHERE id = ?
+        else {
+            const statusMatch = cleanSql.match(/SET status = '([^']+)'/i);
+            status = statusMatch ? statusMatch[1] : null;
+            id = params[0];
+        }
+        if (!status || !id) return { lastID: 0, changes: 0 };
         const { error } = await supabase.from('pending_approvals').update({ status }).eq('id', id);
         if (error) throw error;
         return { lastID: 0, changes: 1 };
