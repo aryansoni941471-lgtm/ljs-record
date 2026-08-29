@@ -263,6 +263,103 @@
             font-size: 0.8rem;
             color: var(--text-muted);
         }
+
+        .filter-card {
+            background: var(--surface-card);
+            border-radius: var(--radius-lg);
+            padding: 1.1rem 1.25rem;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+            margin-bottom: 1.25rem;
+        }
+
+        .filter-card-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--navy-header);
+            margin-bottom: 0.65rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.65rem;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 0.6rem 0.85rem;
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-md);
+            font-size: 0.9rem;
+            font-family: var(--font-body);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: var(--gold-primary);
+        }
+
+        .btn-filter {
+            padding: 0.6rem 1rem;
+            background: var(--navy-header);
+            color: #ffffff;
+            border: none;
+            border-radius: var(--radius-md);
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn-filter:hover {
+            opacity: 0.9;
+        }
+
+        .btn-reset-filter {
+            padding: 0.6rem 0.85rem;
+            background: #f1f5f9;
+            color: var(--text-secondary);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .chips-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+        }
+
+        .amount-chip {
+            padding: 0.4rem 0.85rem;
+            border-radius: var(--radius-pill);
+            font-size: 0.8rem;
+            font-weight: 700;
+            background: #f1f5f9;
+            color: var(--text-secondary);
+            border: 1px solid var(--card-border);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .amount-chip:hover {
+            background: #e2e8f0;
+        }
+
+        .amount-chip.active {
+            background: var(--gold-gradient);
+            color: var(--navy-header);
+            border-color: var(--gold-primary);
+            box-shadow: 0 2px 8px rgba(212, 175, 55, 0.25);
+        }
     </style>
 </head>
 
@@ -322,56 +419,139 @@
                 const c = data.customer;
                 const pawns = data.pawns || [];
 
-                let pawnsHtml = '';
-                if (pawns.length === 0) {
-                    pawnsHtml = `<div style="text-align:center; padding: 2rem; background:#fff; border-radius:12px; color:var(--text-muted);">No pawn records found.</div>`;
-                } else {
-                    pawnsHtml = pawns.map(p => {
-                        const statusClass = p.status === 'Released' ? 'badge-released' : 'badge-active';
-                        const photoImg = p.item_photo ? `<img src="${p.item_photo}" class="item-img">` : '';
-                        const udhariBadge = p.is_udhari ? `<span style="color:var(--warning); font-size:0.75rem; font-weight:700;">(Unsecured Udhari)</span>` : '';
+                // Extract unique amounts sorted descending
+                const uniqueAmounts = Array.from(new Set(pawns.map(p => p.amount))).sort((a, b) => b - a);
 
-                        return `
-                            <div class="item-card">
-                                <div class="item-card-header">
-                                    <div>
-                                        <div class="item-title">${escapeHtml(p.description)} ${udhariBadge}</div>
-                                        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Date: ${formatDate(p.date_added)}</div>
-                                    </div>
-                                    <span class="badge-status ${statusClass}">${p.status}</span>
-                                </div>
+                function updatePassbookView(filterAmount) {
+                    const listContainer = document.getElementById('pawnsListContainer');
+                    const sumP = document.getElementById('sumPrincipal');
+                    const sumI = document.getElementById('sumInterest');
+                    const sumN = document.getElementById('sumNetBalance');
 
-                                <div class="item-details-row">
-                                    ${photoImg}
-                                    <div>
-                                        <div><strong>Metal:</strong> ${p.item_metal_type || 'Gold'}</div>
-                                        <div><strong>Weight:</strong> ${p.item_weight_grams ? p.item_weight_grams + 'g' : 'N/A'}</div>
-                                        <div><strong>Interest Rate:</strong> ${p.interest_rate}% / month</div>
-                                    </div>
-                                </div>
+                    // If no amount selected/entered
+                    if (!filterAmount) {
+                        if (sumP) sumP.textContent = '₹0';
+                        if (sumI) sumI.textContent = '₹0';
+                        if (sumN) sumN.textContent = '₹0';
 
-                                <div class="financial-breakdown">
-                                    <div class="fin-row">
-                                        <span>Kitna Liya (Principal):</span>
-                                        <strong>₹${p.amount.toLocaleString('en-IN')}</strong>
-                                    </div>
-                                    <div class="fin-row">
-                                        <span>Kitni Byaaj (Interest):</span>
-                                        <span style="color:var(--warning); font-weight:700;">+ ₹${p.calculated_interest.toLocaleString('en-IN')}</span>
-                                    </div>
-                                    <div class="fin-row">
-                                        <span>Jama (Paid):</span>
-                                        <span style="color:var(--success); font-weight:700;">- ₹${p.paid.toLocaleString('en-IN')}</span>
-                                    </div>
-                                    <div class="fin-row total-row">
-                                        <span>Net Baki (Balance):</span>
-                                        <span style="color:var(--error);">₹${p.baki.toLocaleString('en-IN')}</span>
-                                    </div>
+                        // Update Active Chip UI
+                        document.querySelectorAll('.amount-chip').forEach(btn => btn.classList.remove('active'));
+
+                        if (listContainer) {
+                            listContainer.innerHTML = `
+                                <div style="text-align:center; padding: 2.5rem 1rem; background:#fff; border-radius:16px; border: 1px solid var(--card-border); color:var(--text-secondary);">
+                                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔒</div>
+                                    <p style="font-weight: 700; color: var(--navy-header); font-size: 1.05rem;">Rakam Select Karein</p>
+                                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.35rem;">
+                                        Kripya upar rakam enter karein ya niche diye gaye (₹) button par click karke apna lenden dekhein.
+                                    </p>
                                 </div>
+                            `;
+                        }
+                        return;
+                    }
+
+                    const numericFilter = parseFloat(filterAmount);
+                    const filteredPawns = pawns.filter(p => {
+                        if (!isNaN(numericFilter)) {
+                            return p.amount === numericFilter || p.amount.toString().includes(filterAmount.toString());
+                        }
+                        return false;
+                    });
+
+                    // Recalculate summary totals for filtered pawns
+                    let fPrincipal = 0, fInterest = 0, fJama = 0;
+                    filteredPawns.forEach(p => {
+                        if (p.status === 'Active') {
+                            fPrincipal += p.amount;
+                            fInterest += p.calculated_interest;
+                            fJama += p.paid;
+                        }
+                    });
+                    const fNetBalance = Math.max(0, Math.round((fPrincipal + fInterest) - fJama));
+
+                    // Update Summary Boxes
+                    if (sumP) sumP.textContent = `₹${Math.round(fPrincipal).toLocaleString('en-IN')}`;
+                    if (sumI) sumI.textContent = `₹${Math.round(fInterest).toLocaleString('en-IN')}`;
+                    if (sumN) sumN.textContent = `₹${fNetBalance.toLocaleString('en-IN')}`;
+
+                    // Update Active Chip UI
+                    const chipBtns = document.querySelectorAll('.amount-chip');
+                    chipBtns.forEach(btn => {
+                        const val = btn.getAttribute('data-amount');
+                        if (val === String(filterAmount)) {
+                            btn.classList.add('active');
+                        } else {
+                            btn.classList.remove('active');
+                        }
+                    });
+
+                    // Render Pawns List
+                    if (!listContainer) return;
+
+                    if (filteredPawns.length === 0) {
+                        listContainer.innerHTML = `
+                            <div style="text-align:center; padding: 2.5rem 1rem; background:#fff; border-radius:16px; border: 1px solid var(--card-border); color:var(--text-secondary);">
+                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔍</div>
+                                <p style="font-weight: 700; color: var(--navy-header); font-size: 1rem;">Koi lenden record nahi mila</p>
+                                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+                                    ₹${filterAmount} ki koi rakam record mei nahi mili. Kripya sahi rakam select karein.
+                                </p>
                             </div>
                         `;
-                    }).join('');
+                    } else {
+                        listContainer.innerHTML = filteredPawns.map(p => {
+                            const statusClass = p.status === 'Released' ? 'badge-released' : 'badge-active';
+                            const photoImg = p.item_photo ? `<img src="${p.item_photo}" class="item-img">` : '';
+                            const udhariBadge = p.is_udhari ? `<span style="color:var(--warning); font-size:0.75rem; font-weight:700;">(Unsecured Udhari)</span>` : '';
+
+                            return `
+                                <div class="item-card">
+                                    <div class="item-card-header">
+                                        <div>
+                                            <div class="item-title">${escapeHtml(p.description)} ${udhariBadge}</div>
+                                            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Date: ${formatDate(p.date_added)}</div>
+                                        </div>
+                                        <span class="badge-status ${statusClass}">${p.status}</span>
+                                    </div>
+
+                                    <div class="item-details-row">
+                                        ${photoImg}
+                                        <div>
+                                            <div><strong>Metal:</strong> ${p.item_metal_type || 'Gold'}</div>
+                                            <div><strong>Weight:</strong> ${p.item_weight_grams ? p.item_weight_grams + 'g' : 'N/A'}</div>
+                                            <div><strong>Interest Rate:</strong> ${p.interest_rate}% / month</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="financial-breakdown">
+                                        <div class="fin-row">
+                                            <span>Kitna Liya (Principal):</span>
+                                            <strong>₹${p.amount.toLocaleString('en-IN')}</strong>
+                                        </div>
+                                        <div class="fin-row">
+                                            <span>Kitni Byaaj (Interest):</span>
+                                            <span style="color:var(--warning); font-weight:700;">+ ₹${p.calculated_interest.toLocaleString('en-IN')}</span>
+                                        </div>
+                                        <div class="fin-row">
+                                            <span>Jama (Paid):</span>
+                                            <span style="color:var(--success); font-weight:700;">- ₹${p.paid.toLocaleString('en-IN')}</span>
+                                        </div>
+                                        <div class="fin-row total-row">
+                                            <span>Net Baki (Balance):</span>
+                                            <span style="color:var(--error);">₹${p.baki.toLocaleString('en-IN')}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
                 }
+
+                // Render main shell
+                const chipsHtml = uniqueAmounts.map(amt => `
+                    <button class="amount-chip" data-amount="${amt}">₹${amt.toLocaleString('en-IN')}</button>
+                `).join('');
 
                 app.innerHTML = `
                     <div class="customer-card">
@@ -382,18 +562,38 @@
                         <div style="font-size: 1.8rem;">👤</div>
                     </div>
 
+                    <!-- Amount Search & Filter Section -->
+                    <div class="filter-card">
+                        <div class="filter-card-title">
+                            <span>🔍 Rakam Se Record Dekhein</span>
+                            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">Select Amount</span>
+                        </div>
+                        <div class="search-row">
+                            <input type="number" id="amountSearchInput" class="search-input" placeholder="Enter amount (e.g. 25000)">
+                            <button id="searchAmountBtn" class="btn-filter">Search</button>
+                        </div>
+                        ${uniqueAmounts.length > 0 ? `
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; margin-top: 0.5rem;">
+                                Select Rakam:
+                            </div>
+                            <div class="chips-container">
+                                ${chipsHtml}
+                            </div>
+                        ` : ''}
+                    </div>
+
                     <div class="summary-grid">
                         <div class="summary-box">
                             <div class="summary-label">Kitna Liya</div>
-                            <div class="summary-val" style="color: var(--navy-header);">₹${data.totalPrincipal.toLocaleString('en-IN')}</div>
+                            <div class="summary-val" id="sumPrincipal" style="color: var(--navy-header);">₹0</div>
                         </div>
                         <div class="summary-box">
                             <div class="summary-label">Total Byaaj</div>
-                            <div class="summary-val" style="color: var(--warning);">₹${data.totalInterest.toLocaleString('en-IN')}</div>
+                            <div class="summary-val" id="sumInterest" style="color: var(--warning);">₹0</div>
                         </div>
                         <div class="summary-box highlight">
                             <div class="summary-label">Net Baki</div>
-                            <div class="summary-val" style="color: #ffffff;">₹${data.netBalance.toLocaleString('en-IN')}</div>
+                            <div class="summary-val" id="sumNetBalance" style="color: #ffffff;">₹0</div>
                         </div>
                     </div>
 
@@ -401,13 +601,51 @@
                         <span>💎</span> Gehna & Account Ledger
                     </div>
 
-                    ${pawnsHtml}
+                    <div id="pawnsListContainer"></div>
 
                     <div class="footer">
                         <p><strong>LJS JEWELLERS</strong> - Trusted Since Generations</p>
                         <p>For any queries, please visit or call our shop counter.</p>
                     </div>
                 `;
+
+                // Add Event Listeners for Search & Chips
+                const searchInput = document.getElementById('amountSearchInput');
+                const searchBtn = document.getElementById('searchAmountBtn');
+
+                if (searchBtn && searchInput) {
+                    searchBtn.addEventListener('click', () => {
+                        const val = searchInput.value.trim();
+                        updatePassbookView(val);
+                    });
+
+                    searchInput.addEventListener('keyup', (e) => {
+                        if (e.key === 'Enter') {
+                            const val = searchInput.value.trim();
+                            updatePassbookView(val);
+                        }
+                    });
+                }
+
+                document.querySelectorAll('.amount-chip').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const amt = e.currentTarget.getAttribute('data-amount');
+                        if (searchInput) searchInput.value = amt;
+                        updatePassbookView(amt);
+                    });
+                });
+
+                // Initial view load: If URL parameter passed or single amount exists
+                const urlAmount = new URLSearchParams(window.location.search).get('amount');
+                if (urlAmount && searchInput) {
+                    searchInput.value = urlAmount;
+                    updatePassbookView(urlAmount);
+                } else if (uniqueAmounts.length === 1) {
+                    if (searchInput) searchInput.value = uniqueAmounts[0];
+                    updatePassbookView(uniqueAmounts[0]);
+                } else {
+                    updatePassbookView(null);
+                }
             }
 
             function escapeHtml(unsafe) {

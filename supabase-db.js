@@ -564,11 +564,37 @@ async function handleRun(sql, params) {
         return { lastID: 0, changes: 1 };
     }
 
-    // 6. UPDATE customers SET username = ?, password = ? WHERE id = ?
-    if (/UPDATE customers SET username = \?, password = \? WHERE id = \?/i.test(cleanSql)) {
-        const { error } = await supabase.from('customers').update({ username: params[0], password: params[1] }).eq('id', params[2]);
-        if (error) throw error;
-        return { lastID: 0, changes: 1 };
+    // 6. UPDATE customers SET ... WHERE id = ?
+    if (/UPDATE customers SET/i.test(cleanSql)) {
+        const setMatch = cleanSql.match(/UPDATE customers SET (.+) WHERE id = \?/i);
+        if (setMatch) {
+            const setClause = setMatch[1];
+            const updates = {};
+            let paramIdx = 0;
+
+            const assignments = setClause.split(',');
+            assignments.forEach(assign => {
+                const parts = assign.split('=').map(s => s.trim());
+                if (parts.length === 2) {
+                    const col = parts[0];
+                    const val = parts[1];
+                    if (val === '?') {
+                        updates[col] = params[paramIdx++];
+                    } else {
+                        let literalVal = val.replace(/^'|'$/g, '');
+                        if (!isNaN(parseFloat(literalVal)) && isFinite(literalVal)) {
+                            literalVal = Number(literalVal);
+                        }
+                        updates[col] = literalVal;
+                    }
+                }
+            });
+
+            const id = params[params.length - 1];
+            const { error } = await supabase.from('customers').update(updates).eq('id', id);
+            if (error) throw error;
+            return { lastID: 0, changes: 1 };
+        }
     }
 
     // 7. DELETE FROM customers WHERE id = ?
@@ -602,20 +628,6 @@ async function handleRun(sql, params) {
         const key = params[0];
         const value = params[1];
         const { error } = await supabase.from('settings').upsert({ key, value });
-        if (error) throw error;
-        return { lastID: 0, changes: 1 };
-    }
-
-    // 11. UPDATE customers SET qr_active = ? WHERE id = ?
-    if (/UPDATE customers SET qr_active = \?/i.test(cleanSql)) {
-        const { error } = await supabase.from('customers').update({ qr_active: params[0] }).eq('id', params[1]);
-        if (error) throw error;
-        return { lastID: 0, changes: 1 };
-    }
-
-    // 12. UPDATE customers SET portal_active = ? WHERE id = ?
-    if (/UPDATE customers SET portal_active = \?/i.test(cleanSql)) {
-        const { error } = await supabase.from('customers').update({ portal_active: params[0] }).eq('id', params[1]);
         if (error) throw error;
         return { lastID: 0, changes: 1 };
     }
