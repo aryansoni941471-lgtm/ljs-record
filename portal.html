@@ -440,13 +440,11 @@
             <div class="filter-card">
                 <div class="filter-card-title">
                     <span>🔍 Rakam Se Record Dekhein</span>
-                    <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">Select Amount</span>
                 </div>
                 <div class="search-row">
                     <input type="number" id="portalAmountSearchInput" class="search-input" placeholder="Enter amount (e.g. 25000)">
                     <button id="portalSearchAmountBtn" class="btn-filter">Search</button>
                 </div>
-                <div id="portalChipsWrapper"></div>
             </div>
 
             <div class="summary-grid">
@@ -536,24 +534,7 @@
 
                 const uniqueAmounts = Array.from(new Set(pawns.map(p => p.amount))).sort((a, b) => b - a);
 
-                const chipsWrapper = document.getElementById('portalChipsWrapper');
-                if (chipsWrapper) {
-                    if (uniqueAmounts.length > 0) {
-                        const chipsHtml = uniqueAmounts.map(amt => `
-                            <button class="amount-chip" data-amount="${amt}">₹${amt.toLocaleString('en-IN')}</button>
-                        `).join('');
-                        chipsWrapper.innerHTML = `
-                            <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; margin-top: 0.5rem;">
-                                Select Rakam:
-                            </div>
-                            <div class="chips-container">
-                                ${chipsHtml}
-                            </div>
-                        `;
-                    } else {
-                        chipsWrapper.innerHTML = '';
-                    }
-                }
+
 
                 function updatePortalView(filterAmount) {
                     const container = document.getElementById('pawnsListContainer');
@@ -566,15 +547,13 @@
                         if (sumI) sumI.innerText = '₹0';
                         if (sumN) sumN.innerText = '₹0';
 
-                        document.querySelectorAll('#ledgerView .amount-chip').forEach(btn => btn.classList.remove('active'));
-
                         if (container) {
                             container.innerHTML = `
                                 <div style="text-align:center; padding: 2.5rem 1rem; background:#fff; border-radius:16px; border: 1px solid var(--card-border); color:var(--text-secondary);">
                                     <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔒</div>
-                                    <p style="font-weight: 700; color: var(--navy-header); font-size: 1.05rem;">Rakam Select Karein</p>
+                                    <p style="font-weight: 700; color: var(--navy-header); font-size: 1.05rem;">Rakam Search Karein</p>
                                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.35rem;">
-                                        Kripya upar rakam enter karein ya niche diye gaye (₹) button par click karke apna lenden dekhein.
+                                        Kripya upar rakam enter karke Search button par click karein aur apna lenden dekhein.
                                     </p>
                                 </div>
                             `;
@@ -605,16 +584,7 @@
                     if (sumI) sumI.innerText = '₹' + Math.round(fInterest).toLocaleString('en-IN');
                     if (sumN) sumN.innerText = '₹' + fNetBalance.toLocaleString('en-IN');
 
-                    // Update Active Chip UI
-                    const chipBtns = document.querySelectorAll('#ledgerView .amount-chip');
-                    chipBtns.forEach(btn => {
-                        const val = btn.getAttribute('data-amount');
-                        if (val === String(filterAmount)) {
-                            btn.classList.add('active');
-                        } else {
-                            btn.classList.remove('active');
-                        }
-                    });
+
 
                     if (!container) return;
 
@@ -695,13 +665,7 @@
                     };
                 }
 
-                document.querySelectorAll('#ledgerView .amount-chip').forEach(btn => {
-                    btn.onclick = (e) => {
-                        const amt = e.currentTarget.getAttribute('data-amount');
-                        if (searchInput) searchInput.value = amt;
-                        updatePortalView(amt);
-                    };
-                });
+
 
                 if (uniqueAmounts.length === 1) {
                     if (searchInput) searchInput.value = uniqueAmounts[0];
