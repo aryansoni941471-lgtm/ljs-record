@@ -53,6 +53,10 @@
                     <span id="roleIndicator" style="font-weight: 800; font-size: 0.85rem; color: #fff;">👑 Mode: Admin Owner</span>
                     <button id="switchRoleBtn" style="padding: 0.3rem 0.75rem; font-size: 0.78rem; font-weight: 800; border: none; border-radius: var(--radius-pill); cursor: pointer; background: var(--gold-gradient); color: var(--navy-header);">Switch to Staff</button>
                 </div>
+
+                <button id="adminLogoutBtn" onclick="localStorage.removeItem('ljs_session_role'); window.location.href='/portal.html';" style="padding: 0.5rem 1rem; background: rgba(244, 63, 94, 0.2); color: #fecdd3; border: 1px solid rgba(244, 63, 94, 0.4); font-family: var(--font-body); font-weight: 800; font-size: 0.8rem; border-radius: var(--radius-pill); cursor: pointer; display: flex; align-items: center; gap: 0.4rem;">
+                    🚪 Logout
+                </button>
             </div>
         </div>
     </header>

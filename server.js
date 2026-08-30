@@ -34,9 +34,9 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Serve index.html on root route
+// Serve portal.html (Unified Login Page) on root route
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(__dirname, 'portal.html'));
 });
 
 console.log('Connected to Supabase Cloud Database.');
@@ -1190,6 +1190,16 @@ app.post('/api/portal/login', (req, res) => {
     const cleanPwd = password.trim();
     const phoneClean = cleanInput.replace(/[^0-9]/g, '');
 
+    // Check Admin Login
+    const adminUser = (process.env.ADMIN_USER || 'admin').toLowerCase();
+    const adminPass = (process.env.ADMIN_PASS || process.env.DELETE_PIN || '1234');
+    if (cleanInput.toLowerCase() === adminUser && cleanPwd === adminPass) {
+        return res.json({
+            role: 'admin',
+            message: 'Admin login successful'
+        });
+    }
+
     db.get(
         'SELECT * FROM customers WHERE (username = ? OR phone = ? OR REPLACE(phone, " ", "") = ? OR REPLACE(phone, "-", "") = ?) AND password = ?',
         [cleanInput, cleanInput, phoneClean, phoneClean, cleanPwd],
@@ -1227,9 +1237,18 @@ app.post('/api/portal/login', (req, res) => {
 
                 db.all(`SELECT * FROM pawn_payments WHERE pawn_id IN (${pawnIds.join(',')})`, [], (err, payments) => {
                     const paymentsByPawn = {};
+                    const paymentsListByPawn = {};
                     (payments || []).forEach(pm => {
                         if (!paymentsByPawn[pm.pawn_id]) paymentsByPawn[pm.pawn_id] = 0;
                         paymentsByPawn[pm.pawn_id] += pm.amount;
+
+                        if (!paymentsListByPawn[pm.pawn_id]) paymentsListByPawn[pm.pawn_id] = [];
+                        paymentsListByPawn[pm.pawn_id].push({
+                            id: pm.id,
+                            amount: pm.amount,
+                            payment_type: pm.payment_type || 'Jama',
+                            payment_date: pm.payment_date
+                        });
                     });
 
                     let totalPrincipal = 0;
@@ -1260,13 +1279,15 @@ app.post('/api/portal/login', (req, res) => {
                             item_metal_type: p.item_metal_type || 'Gold',
                             item_weight_grams: p.item_weight_grams || 0,
                             item_photo: p.item_photo,
-                            is_udhari: p.is_udhari
+                            is_udhari: p.is_udhari,
+                            payments: paymentsListByPawn[p.id] || []
                         };
                     });
 
                     const netBalance = Math.round((totalPrincipal + totalInterest) - totalJama);
 
                     res.json({
+                        role: 'customer',
                         active: true,
                         customer: {
                             id: customer.id,
