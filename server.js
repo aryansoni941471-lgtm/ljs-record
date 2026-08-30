@@ -1190,9 +1190,9 @@ app.post('/api/portal/login', (req, res) => {
     const cleanPwd = password.trim();
     const phoneClean = cleanInput.replace(/[^0-9]/g, '');
 
-    // Check Admin Login (Support 'admin' / '1234' or env variables)
-    const adminUser = String(process.env.ADMIN_USER || 'admin').trim().toLowerCase();
-    const adminPass = String(process.env.ADMIN_PASS || process.env.DELETE_PIN || '1234').trim();
+    // Check Admin Login (Support 'jitendra' / '121965' or env variables)
+    const adminUser = String(process.env.ADMIN_USER || 'jitendra').trim().toLowerCase();
+    const adminPass = String(process.env.ADMIN_PASS || process.env.DELETE_PIN || '121965').trim();
     if (cleanInput.toLowerCase() === adminUser && String(cleanPwd).trim() === adminPass) {
         return res.json({
             role: 'admin',
