@@ -206,7 +206,7 @@ app.post('/api/customers', upload.single('aadhar_photo'), async (req, res) => {
 app.delete('/api/customers/:id', (req, res) => {
     const { id } = req.params;
     const providedPin = (req.headers['x-delete-pin'] || '').toString().trim();
-    const expectedPin = (process.env.DELETE_PIN || '1234').toString().trim();
+    const expectedPin = String(process.env.ADMIN_PASS || process.env.DELETE_PIN || '121965').trim();
 
     if (!providedPin || providedPin !== expectedPin) {
         return res.status(401).json({ error: 'Galat Security PIN! Record delete nahi hua.' });

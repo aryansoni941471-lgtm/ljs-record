@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('👨‍💼 Switched to Staff Counter Mode!\nEntries will now go to Admin Approval Queue before updating database.');
             } else {
                 const pin = prompt('🔑 Enter Master Security PIN to switch to Admin Owner Mode:');
-                if (pin && pin.trim() === '1234') {
+                if (pin && pin.trim() === '121965') {
                     currentRole = 'admin';
                     localStorage.setItem('user_role', 'admin');
                     updateRoleUI();
