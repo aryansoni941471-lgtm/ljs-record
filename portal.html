@@ -711,6 +711,32 @@
                 </button>
             </div>
 
+            <!-- LJS Credit Score Card -->
+            <div id="creditScoreCard" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.25rem; color: #ffffff; border: 1px solid rgba(212, 175, 55, 0.4); box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <span style="font-size: 1.5rem;">🎯</span>
+                        <div>
+                            <div style="font-family: var(--font-heading); font-size: 1.05rem; font-weight: 800; color: var(--gold-primary); letter-spacing: 0.03em;">LJS CREDIT SCORE</div>
+                            <div id="scoreLabel" style="font-size: 0.78rem; color: #cbd5e1; font-weight: 600;">⭐ Platinum Trust Account</div>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div id="scoreNumber" style="font-size: 1.85rem; font-weight: 800; color: #ffffff; line-height: 1;">700</div>
+                        <div style="font-size: 0.7rem; color: var(--gold-primary); font-weight: 800; margin-top: 2px;">OUT OF 900</div>
+                    </div>
+                </div>
+                
+                <!-- Score Progress Bar -->
+                <div style="background: rgba(255,255,255,0.12); border-radius: 999px; height: 10px; overflow: hidden; margin-bottom: 0.75rem; border: 1px solid rgba(255,255,255,0.15);">
+                    <div id="scoreProgressBar" style="width: 77%; height: 100%; background: var(--gold-gradient); border-radius: 999px; transition: width 0.8s ease;"></div>
+                </div>
+                
+                <div style="font-size: 0.78rem; color: #cbd5e1; display: flex; align-items: center; gap: 0.4rem;">
+                    💡 <span>Time par byaj jama karein aur apna score 900 tak badhayein!</span>
+                </div>
+            </div>
+
             <!-- Dashboard Summary Grid -->
             <div class="summary-grid">
                 <div class="summary-box">
@@ -830,6 +856,47 @@
 
                 document.getElementById('custName').textContent = c.name || 'Valued Customer';
                 document.getElementById('custPhone').textContent = `📞 ${c.phone || ''}`;
+
+                // Calculate & Render Credit Score
+                let totalPayments = 0;
+                let releasedCount = 0;
+                let overdueCount = 0;
+                let meltedCount = 0;
+                let activeNormalCount = 0;
+                const now = new Date();
+
+                pawns.forEach(p => {
+                    totalPayments += (p.payments || []).length;
+                    if (p.status === 'Released' || p.status === 'Renewed') {
+                        releasedCount++;
+                    } else if (p.status === 'Melted') {
+                        meltedCount++;
+                    } else if (p.status === 'Active') {
+                        const startDate = new Date(p.date_added);
+                        const diffDays = Math.ceil(Math.abs(now - startDate) / (1000 * 60 * 60 * 24));
+                        if (diffDays > 180) overdueCount++;
+                        else activeNormalCount++;
+                    }
+                });
+
+                let calculatedScore = c.credit_score || (700 + (releasedCount * 30) + (activeNormalCount * 10) + (totalPayments * 15) - (overdueCount * 50) - (meltedCount * 150));
+                calculatedScore = Math.min(900, Math.max(300, calculatedScore));
+
+                const scoreEl = document.getElementById('scoreNumber');
+                const labelEl = document.getElementById('scoreLabel');
+                const barEl = document.getElementById('scoreProgressBar');
+
+                if (scoreEl) scoreEl.textContent = calculatedScore;
+
+                let scorePct = Math.round((calculatedScore / 900) * 100);
+                if (barEl) barEl.style.width = scorePct + '%';
+
+                if (labelEl) {
+                    if (calculatedScore >= 800) labelEl.textContent = '⭐ Platinum Trust Account (High Rating)';
+                    else if (calculatedScore >= 700) labelEl.textContent = '⭐ Prime Trust Account (Good Rating)';
+                    else if (calculatedScore >= 600) labelEl.textContent = '🟡 Average Trust Account';
+                    else labelEl.textContent = '🔴 High Risk Account (Requires Follow-up)';
+                }
 
                 // Update WhatsApp link with customer info if phone exists
                 const waBtn = document.getElementById('whatsappSupportBtn');

@@ -198,6 +198,13 @@ async function handleQuery(sql, params) {
         return data || [];
     }
 
+    // 15b. All Pawn Records
+    if (/SELECT \* FROM pawn_records$/i.test(cleanSql) || cleanSql === 'SELECT * FROM pawn_records') {
+        const { data, error } = await supabase.from('pawn_records').select('*');
+        if (error) throw error;
+        return data || [];
+    }
+
     // 16. Dashboard SUM(amount) payments
     if (/SELECT SUM\(amount\) as total FROM pawn_payments/i.test(cleanSql) && !cleanSql.includes('WHERE')) {
         const { data, error } = await supabase.from('pawn_payments').select('amount');

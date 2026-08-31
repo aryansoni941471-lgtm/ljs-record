@@ -149,14 +149,56 @@ app.post('/api/admin/reject/:id', (req, res) => {
     });
 });
 
-// Get all customers
+// Get all customers with calculated credit score
 app.get('/api/customers', (req, res) => {
-    db.all('SELECT * FROM customers ORDER BY id DESC', [], (err, rows) => {
+    db.all('SELECT * FROM customers ORDER BY id DESC', [], (err, customers) => {
         if (err) {
-            res.status(500).json({ error: err.message });
-            return;
+            console.error('Error fetching customers:', err);
+            return res.status(500).json({ error: err.message });
         }
-        res.json({ customers: rows });
+        if (!customers || customers.length === 0) {
+            return res.json({ customers: [] });
+        }
+
+        db.all('SELECT * FROM pawn_records', [], (err, pawns) => {
+            const pawnsByCustomer = {};
+            (pawns || []).forEach(p => {
+                if (!pawnsByCustomer[p.customer_id]) pawnsByCustomer[p.customer_id] = [];
+                pawnsByCustomer[p.customer_id].push(p);
+            });
+
+            const now = new Date();
+            const formatted = (customers || []).map(c => {
+                const customerPawns = pawnsByCustomer[c.id] || [];
+                let releasedCount = 0;
+                let overdueCount = 0;
+                let meltedCount = 0;
+                let activeNormalCount = 0;
+
+                customerPawns.forEach(p => {
+                    if (p.status === 'Released' || p.status === 'Renewed') {
+                        releasedCount++;
+                    } else if (p.status === 'Melted') {
+                        meltedCount++;
+                    } else if (p.status === 'Active') {
+                        const startDate = new Date(p.date_added);
+                        const diffDays = Math.ceil(Math.abs(now - startDate) / (1000 * 60 * 60 * 24));
+                        if (diffDays > 180) overdueCount++;
+                        else activeNormalCount++;
+                    }
+                });
+
+                let score = 700 + (releasedCount * 30) + (activeNormalCount * 10) - (overdueCount * 50) - (meltedCount * 150);
+                score = Math.min(900, Math.max(300, score));
+
+                return {
+                    ...c,
+                    credit_score: score
+                };
+            });
+
+            res.json({ customers: formatted });
+        });
     });
 });
 

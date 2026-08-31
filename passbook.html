@@ -536,6 +536,29 @@
                     }
                 }
 
+                // Calculate Credit Score for Passbook
+                let totalPayments = 0;
+                let releasedCount = 0;
+                let overdueCount = 0;
+                let meltedCount = 0;
+                let activeNormalCount = 0;
+                const now = new Date();
+
+                pawns.forEach(p => {
+                    totalPayments += (p.payments || []).length;
+                    if (p.status === 'Released' || p.status === 'Renewed') releasedCount++;
+                    else if (p.status === 'Melted') meltedCount++;
+                    else if (p.status === 'Active') {
+                        const startDate = new Date(p.date_added);
+                        const diffDays = Math.ceil(Math.abs(now - startDate) / (1000 * 60 * 60 * 24));
+                        if (diffDays > 180) overdueCount++;
+                        else activeNormalCount++;
+                    }
+                });
+
+                let calculatedScore = c.credit_score || (700 + (releasedCount * 30) + (activeNormalCount * 10) + (totalPayments * 15) - (overdueCount * 50) - (meltedCount * 150));
+                calculatedScore = Math.min(900, Math.max(300, calculatedScore));
+
                 // Render main shell
                 app.innerHTML = `
                     <div class="customer-card">
@@ -543,7 +566,10 @@
                             <div class="customer-name">${escapeHtml(c.name)}</div>
                             <div class="customer-phone">📞 ${escapeHtml(c.phone)}</div>
                         </div>
-                        <div style="font-size: 1.8rem;">👤</div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 1.15rem; font-weight: 800; color: #1e293b; background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 8px; border: 1px solid #bae6fd;">🎯 Score: ${calculatedScore} / 900</div>
+                            <div style="font-size: 0.72rem; color: var(--text-secondary); font-weight: 700; margin-top: 2px;">LJS Credit Rating</div>
+                        </div>
                     </div>
 
                     <!-- Amount Search & Filter Section -->

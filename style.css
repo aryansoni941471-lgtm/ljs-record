@@ -547,6 +547,23 @@ input[type="file"]:hover {
     border: 1px solid var(--card-border);
 }
 
+/* Customer Database Scrollable Table */
+#customerTableContainer {
+    max-height: 390px;
+    overflow-y: auto;
+    overflow-x: auto;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--card-border);
+}
+
+#customerTableContainer table th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #f8fafc;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
 table {
     width: 100%;
     border-collapse: collapse;

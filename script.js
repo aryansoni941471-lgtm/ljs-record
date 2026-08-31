@@ -962,7 +962,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (fullCustName) fullCustName.textContent = customer.name;
         if (fullCustDetails) fullCustDetails.textContent = `Phone: ${customer.phone || 'N/A'} | Email: ${customer.email || 'N/A'} | D.O.B: ${formatDate(customer.dob)}`;
-        if (fullPinBadge) fullPinBadge.textContent = `🔑 PIN: ${customer.password || 'N/A'}`;
+        const score = customer.credit_score || 700;
+        const scoreBadge = getScoreBadgeHtml(score);
+        if (fullPinBadge) fullPinBadge.innerHTML = `🔑 PIN: ${customer.password || 'N/A'} &nbsp;&nbsp; ${scoreBadge}`;
         if (fullKalamSearch) fullKalamSearch.value = '';
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1628,6 +1630,26 @@ _Thank you for choosing LJS Jewellers_`
         }
     }
 
+    // Helper to get Credit Score Badge HTML
+    function getScoreBadgeHtml(score) {
+        score = parseInt(score || 700);
+        let color = '#0284c7';
+        let bg = '#e0f2fe';
+        let label = 'Platinum Trust';
+        
+        if (score >= 800) {
+            color = '#15803d'; bg = '#dcfce7'; label = 'Platinum Trust';
+        } else if (score >= 700) {
+            color = '#0369a1'; bg = '#e0f2fe'; label = 'Prime Trust';
+        } else if (score >= 600) {
+            color = '#b45309'; bg = '#fef3c7'; label = 'Average Trust';
+        } else {
+            color = '#b91c1c'; bg = '#fee2e2'; label = 'High Risk Alert';
+        }
+
+        return `<span class="badge" style="background: ${bg}; color: ${color}; font-weight: 800; font-size: 0.85rem; border: 1px solid ${color}40;" title="${label}">🎯 ${score} / 900</span>`;
+    }
+
     function renderCustomers() {
         // Update count
         customerCount.textContent = filteredCustomers.length;
@@ -1643,10 +1665,14 @@ _Thank you for choosing LJS Jewellers_`
             // Render rows
             customerList.innerHTML = filteredCustomers.map(c => {
                 let photoHtml = c.aadhar_photo ? `<a href="${c.aadhar_photo}" target="_blank"><img src="${c.aadhar_photo}" class="customer-avatar"></a>` : `<div class="customer-avatar" style="display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:0.75rem;font-weight:700;">No Pic</div>`;
+                const score = c.credit_score || 700;
+                const scoreBadge = getScoreBadgeHtml(score);
+
                 return `
                 <tr>
                     <td>${photoHtml}</td>
                     <td><span class="customer-name-link" data-id="${c.id}" data-name="${escapeHtml(c.name)}" style="color:var(--accent-blue); font-weight:700; cursor:pointer;">${escapeHtml(c.name)}</span></td>
+                    <td>${scoreBadge}</td>
                     <td><strong>${escapeHtml(c.phone)}</strong></td>
                     <td><span class="badge" style="background:#fffbeb; color:#b45309; font-weight:800; font-family:monospace; font-size:0.85rem;">🔑 ${escapeHtml(c.password || 'N/A')}</span></td>
                     <td>${escapeHtml(c.email || 'N/A')}</td>
