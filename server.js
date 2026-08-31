@@ -224,12 +224,13 @@ app.delete('/api/customers/:id', (req, res) => {
 // Add a pawn receipt for a customer
 app.post('/api/customers/:id/pawn', upload.single('item_photo'), async (req, res) => {
     const { id } = req.params;
-    const { amount, description, interest_rate, item_weight_grams, item_metal_type, is_udhari } = req.body;
+    const { amount, description, interest_rate, item_weight_grams, item_metal_type, is_udhari, locker_location } = req.body;
     const dateAdded = new Date().toISOString();
     const rate = interest_rate || 0;
     const weight = item_weight_grams || 0;
     const metal = item_metal_type || 'Gold';
     const udhariFlag = is_udhari === 'true' ? 1 : 0;
+    const locker = (locker_location && locker_location.trim()) ? locker_location.trim() : 'Safe Vault';
 
     // Upload item photo to Supabase Storage if provided
     let itemPhoto = null;
@@ -248,8 +249,8 @@ app.post('/api/customers/:id/pawn', upload.single('item_photo'), async (req, res
     }
 
     db.run(
-        `INSERT INTO pawn_records (customer_id, amount, description, date_added, interest_rate, status, item_photo, item_weight_grams, item_metal_type, is_udhari) VALUES (?, ?, ?, ?, ?, 'Active', ?, ?, ?, ?)`,
-        [id, amount, description, dateAdded, rate, itemPhoto, weight, metal, udhariFlag],
+        `INSERT INTO pawn_records (customer_id, amount, description, date_added, interest_rate, status, item_photo, item_weight_grams, item_metal_type, is_udhari, locker_location) VALUES (?, ?, ?, ?, ?, 'Active', ?, ?, ?, ?, ?)`,
+        [id, amount, description, dateAdded, rate, itemPhoto, weight, metal, udhariFlag, locker],
         function (err) {
             if (err) {
                 res.status(500).json({ error: err.message });
@@ -278,6 +279,24 @@ app.get('/api/customers/:id/pawn', (req, res) => {
             return;
         }
         res.json({ pawn_records: rows });
+    });
+});
+
+// Get all active pawns for Recovery Time calculation (sorted oldest date_added first)
+app.get('/api/recovery-pawns', (req, res) => {
+    db.all(`
+        SELECT p.*, c.name as customer_name, c.phone as customer_phone,
+               COALESCE((SELECT SUM(amount) FROM pawn_payments WHERE pawn_id = p.id), 0) as total_jama
+        FROM pawn_records p
+        JOIN customers c ON p.customer_id = c.id
+        WHERE p.status = 'Active'
+        ORDER BY p.date_added ASC
+    `, [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.json({ pawns: rows || [] });
     });
 });
 
@@ -342,6 +361,99 @@ app.put('/api/customers/:id/pawn/:pawnId/melt', (req, res) => {
                 return;
             }
             res.json({ message: 'Pawn marked as melted' });
+        }
+    );
+});
+
+// Renew a pawn receipt (Byaaj Closing & Auto Issue Fresh Receipt)
+app.post('/api/customers/:id/pawn/:pawnId/renew', (req, res) => {
+    const { id: customerId, pawnId } = req.params;
+    const {
+        interest_collected,
+        new_principal_amount,
+        new_interest_rate,
+        new_locker_location,
+        notes
+    } = req.body;
+
+    const renewDate = new Date().toISOString();
+
+    db.get(
+        `SELECT p.*, c.name as customer_name, c.phone as customer_phone 
+         FROM pawn_records p 
+         LEFT JOIN customers c ON p.customer_id = c.id 
+         WHERE p.id = ? AND p.customer_id = ?`,
+        [pawnId, customerId],
+        (pErr, oldPawn) => {
+            if (pErr || !oldPawn) {
+                return res.status(404).json({ error: 'Original pawn receipt not found' });
+            }
+
+            const settledInterest = parseFloat(interest_collected) || 0;
+            const newPrincipal = parseFloat(new_principal_amount) || oldPawn.amount;
+            const newRate = parseFloat(new_interest_rate) || oldPawn.interest_rate || 2;
+            const locker = (new_locker_location && new_locker_location.trim()) ? new_locker_location.trim() : (oldPawn.locker_location || 'Safe Vault');
+            const renewNotes = notes || `Renewed on ${new Date().toLocaleDateString('en-IN')}`;
+
+            // 1. Update Old Pawn to 'Renewed' status
+            db.run(
+                `UPDATE pawn_records SET status = 'Renewed', release_date = ? WHERE id = ?`,
+                [renewDate, pawnId],
+                function (err) {
+                    if (err) return res.status(500).json({ error: err.message });
+
+                    // 2. Record interest collection payment
+                    if (settledInterest > 0) {
+                        db.run(
+                            `INSERT INTO pawn_payments (pawn_id, amount, payment_type, payment_date) VALUES (?, ?, ?, ?)`,
+                            [pawnId, settledInterest, 'Byaaj Closing Interest Settlement', renewDate]
+                        );
+
+                        db.run(
+                            `INSERT INTO interest_ledger (pawn_id, customer_name, customer_phone, item_description, principal_amount, interest_amount, payment_date, payment_type, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                            [
+                                oldPawn.id,
+                                oldPawn.customer_name || 'Customer Record',
+                                oldPawn.customer_phone || '',
+                                oldPawn.description || '',
+                                oldPawn.amount || 0,
+                                settledInterest,
+                                renewDate,
+                                'Byaaj Closing Interest Collection',
+                                renewNotes
+                            ]
+                        );
+                    }
+
+                    // 3. Issue new Active Pawn Receipt starting today
+                    const newDescription = oldPawn.description.includes('(Renewed)') 
+                        ? oldPawn.description 
+                        : `${oldPawn.description} (Renewed)`;
+
+                    db.run(
+                        `INSERT INTO pawn_records (customer_id, amount, description, date_added, interest_rate, status, item_photo, item_weight_grams, item_metal_type, is_udhari, locker_location) VALUES (?, ?, ?, ?, ?, 'Active', ?, ?, ?, ?, ?)`,
+                        [
+                            customerId,
+                            newPrincipal,
+                            newDescription,
+                            renewDate,
+                            newRate,
+                            oldPawn.item_photo || null,
+                            oldPawn.item_weight_grams || 0,
+                            oldPawn.item_metal_type || 'Gold',
+                            oldPawn.is_udhari || 0,
+                            locker
+                        ],
+                        function (insErr) {
+                            if (insErr) return res.status(500).json({ error: insErr.message });
+                            res.json({
+                                message: 'Pawn successfully renewed! Fresh receipt created.',
+                                newPawnId: this.lastID
+                            });
+                        }
+                    );
+                }
+            );
         }
     );
 });

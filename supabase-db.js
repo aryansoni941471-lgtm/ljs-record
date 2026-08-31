@@ -228,6 +228,28 @@ async function handleQuery(sql, params) {
         }));
     }
 
+    // 17b. Recovery Time Pawns (Active pawns sorted date_added ASC)
+    if (/WHERE p\.status = 'Active' ORDER BY p\.date_added ASC/i.test(cleanSql)) {
+        const { data: pawns, error } = await supabase.from('pawn_records').select('*, customers(name, phone)').eq('status', 'Active').order('date_added', { ascending: true });
+        if (error) throw error;
+
+        const pawnIds = (pawns || []).map(p => p.id);
+        let paymentsMap = {};
+        if (pawnIds.length > 0) {
+            const { data: pmts } = await supabase.from('pawn_payments').select('pawn_id, amount').in('pawn_id', pawnIds);
+            (pmts || []).forEach(pm => {
+                paymentsMap[pm.pawn_id] = (paymentsMap[pm.pawn_id] || 0) + parseFloat(pm.amount || 0);
+            });
+        }
+
+        return (pawns || []).map(p => ({
+            ...p,
+            customer_name: p.customers?.name || '',
+            customer_phone: p.customers?.phone || '',
+            total_jama: paymentsMap[p.id] || 0
+        }));
+    }
+
     // 18. Daily Rokad - New Pawns (date_added LIKE ?)
     if (/WHERE p\.date_added LIKE \?/i.test(cleanSql)) {
         const datePrefix = params[0].replace('%', '');
@@ -422,6 +444,18 @@ async function handleQuery(sql, params) {
         return (data || []).map(normalizeCustomer);
     }
 
+    // 32. Single Pawn Record with Customer JOIN (WHERE p.id = ? AND p.customer_id = ?)
+    if (/FROM pawn_records p.*JOIN customers c.*WHERE p\.id = \?/i.test(cleanSql)) {
+        const pawnId = params[0];
+        const { data: pawns, error } = await supabase.from('pawn_records').select('*, customers(name, phone)').eq('id', pawnId);
+        if (error) throw error;
+        return (pawns || []).map(p => ({
+            ...p,
+            customer_name: p.customers?.name || '',
+            customer_phone: p.customers?.phone || ''
+        }));
+    }
+
     // 30. Portal Login - complex WHERE with username/phone OR and password
     if (/SELECT \* FROM customers WHERE.*username.*OR.*phone.*AND password/i.test(cleanSql)) {
         const username = params[0];
@@ -456,6 +490,21 @@ async function handleRun(sql, params) {
         return { lastID: 0, changes: 0 };
     }
 
+async function safeInsert(tableName, record) {
+    let { data, error } = await supabase.from(tableName).insert(record).select('id').single();
+    if (error && (error.code === '23505' || (error.message && (error.message.includes('unique constraint') || error.message.includes('primary key'))))) {
+        console.log(`Primary key sequence collision on ${tableName}. Auto-repairing ID sequence fallback...`);
+        const { data: maxRow } = await supabase.from(tableName).select('id').order('id', { ascending: false }).limit(1);
+        const nextId = (maxRow && maxRow.length > 0 && maxRow[0].id ? parseInt(maxRow[0].id) : 0) + 1;
+        record.id = nextId;
+        const res = await supabase.from(tableName).insert(record).select('id').single();
+        if (res.error) throw res.error;
+        return res.data;
+    }
+    if (error) throw error;
+    return data;
+}
+
     // 1. INSERT INTO customers
     if (/INSERT INTO customers/i.test(cleanSql)) {
         // Parse columns from SQL dynamically
@@ -480,8 +529,7 @@ async function handleRun(sql, params) {
             newCust.password = params[7];
             newCust.qr_token = params[8];
         }
-        const { data, error } = await supabase.from('customers').insert(newCust).select('id').single();
-        if (error) throw error;
+        const data = await safeInsert('customers', newCust);
         return { lastID: data.id, changes: 1 };
     }
 
@@ -511,8 +559,7 @@ async function handleRun(sql, params) {
             record.item_metal_type = params[7] || 'Gold';
             record.is_udhari = params[8] || 0;
         }
-        const { data, error } = await supabase.from('pawn_records').insert(record).select('id').single();
-        if (error) throw error;
+        const data = await safeInsert('pawn_records', record);
         return { lastID: data.id, changes: 1 };
     }
 
@@ -524,8 +571,7 @@ async function handleRun(sql, params) {
             payment_type: params[2],
             payment_date: params[3]
         };
-        const { data, error } = await supabase.from('pawn_payments').insert(record).select('id').single();
-        if (error) throw error;
+        const data = await safeInsert('pawn_payments', record);
         return { lastID: data.id, changes: 1 };
     }
 
@@ -538,8 +584,7 @@ async function handleRun(sql, params) {
             status: 'Pending',
             created_at: params[3]
         };
-        const { data, error } = await supabase.from('pending_approvals').insert(record).select('id').single();
-        if (error) throw error;
+        const data = await safeInsert('pending_approvals', record);
         return { lastID: data.id, changes: 1 };
     }
 
@@ -604,9 +649,11 @@ async function handleRun(sql, params) {
         return { lastID: 0, changes: 1 };
     }
 
-    // 8. UPDATE pawn_records SET status = 'Released', release_date = ? WHERE id = ?
-    if (/UPDATE pawn_records SET status = 'Released'/i.test(cleanSql)) {
-        const { error } = await supabase.from('pawn_records').update({ status: 'Released', release_date: params[0] }).eq('id', params[1]);
+    // 8. UPDATE pawn_records SET status = 'Released' OR status = 'Renewed'
+    if (/UPDATE pawn_records SET status = '(Released|Renewed)'/i.test(cleanSql)) {
+        const statusMatch = cleanSql.match(/SET status = '([^']+)'/i);
+        const status = statusMatch ? statusMatch[1] : 'Released';
+        const { error } = await supabase.from('pawn_records').update({ status, release_date: params[0] }).eq('id', params[1]);
         if (error) throw error;
         return { lastID: 0, changes: 1 };
     }

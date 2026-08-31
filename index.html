@@ -84,6 +84,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:18px;height:18px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                 📜 Permanent Interest Ledger
             </a>
+            <button id="navRecoveryBtn" class="nav-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                ⏳ Recovery Time Hub
+            </button>
         </nav>
 
         <!-- DASHBOARD VIEW -->
@@ -479,6 +483,7 @@
                                 <tr>
                                     <th>Date</th>
                                     <th>Kalam / Gehna Description</th>
+                                    <th>🔐 Locker</th>
                                     <th>Principal (₹)</th>
                                     <th>Interest (₹)</th>
                                     <th>Paid (Jama)</th>
@@ -495,6 +500,85 @@
                     <div id="pawnEmptyState" class="empty-state" style="display: none;">
                         <p>No pawn records found for this customer.</p>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RECOVERY TIME HUB VIEW -->
+        <div id="recoveryView" style="display: none;">
+            <div class="card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color: white; border: none; box-shadow: 0 10px 25px -5px rgba(49, 46, 129, 0.4);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem;">
+                    <div>
+                        <h2 style="color: #f8fafc; font-family: var(--font-heading); margin: 0; font-size: 1.6rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>⏳</span> Recovery Time Hub (Oldest Accounts Target Engine)
+                        </h2>
+                        <p style="color: #c7d2fe; font-size: 0.9rem; margin-top: 0.35rem;">Enter your recovery target amount to automatically calculate & queue the oldest overdue pawns required to reach your target!</p>
+                    </div>
+
+                    <!-- Target Recovery Input & Action Pad -->
+                    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                        <div style="position: relative;">
+                            <span style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--navy-header); font-weight: 800; font-size: 1.1rem;">₹</span>
+                            <input type="number" id="recoveryTargetInput" placeholder="Target Recovery (e.g. 100000)" style="padding: 0.65rem 1rem 0.65rem 2.2rem; font-size: 0.95rem; font-weight: 800; border-radius: var(--radius-pill); border: 2px solid #818cf8; width: 240px; background: white; color: black;">
+                        </div>
+                        <button id="calculateRecoveryBtn" class="btn-primary" style="background: var(--gold-gradient); color: var(--navy-header); font-weight: 800; padding: 0.7rem 1.3rem; border: none; border-radius: var(--radius-pill); box-shadow: var(--shadow-gold); cursor: pointer;">
+                            🎯 Calculate Recovery Queue
+                        </button>
+                        <button id="downloadRecoveryBtn" class="btn-primary" style="background: #10b981; font-weight: 800; padding: 0.7rem 1.1rem; border-radius: var(--radius-pill);">
+                            📥 Excel Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recovery KPI Summary Cards -->
+            <div class="dashboard-cards" style="margin-bottom: 1.5rem;">
+                <div class="stat-card">
+                    <span class="stat-title">Target Recovery Amount</span>
+                    <p id="recTargetDisplay" class="stat-value" style="color: var(--accent-blue); margin-top: 0.4rem;">₹0</p>
+                </div>
+                <div class="stat-card stat-success">
+                    <span class="stat-title">Total Recoverable (Principal + Interest)</span>
+                    <p id="recCalculatedDisplay" class="stat-value" style="color: var(--success); margin-top: 0.4rem;">₹0</p>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-title">Queued Oldest Pawns</span>
+                    <p id="recCountDisplay" class="stat-value" style="color: var(--warning); margin-top: 0.4rem;">0 Items</p>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-title">Oldest Record Date</span>
+                    <p id="recOldestDateDisplay" class="stat-value" style="font-size: 1.1rem; margin-top: 0.4rem;">-</p>
+                </div>
+            </div>
+
+            <!-- Recovery Queue Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>📋 Priority Recovery Target List (Oldest Pawns First)</h2>
+                    <span id="recBadge" class="badge badge-warning">0 Queue</span>
+                </div>
+
+                <div class="table-container">
+                    <table id="recoveryTable">
+                        <thead>
+                            <tr>
+                                <th>Age (Date)</th>
+                                <th>Customer & Phone</th>
+                                <th>Gehna / Item Description</th>
+                                <th>🔐 Locker</th>
+                                <th>Principal (₹)</th>
+                                <th>Interest Due (₹)</th>
+                                <th>Total Recoverable (₹)</th>
+                                <th style="text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recoveryList">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="recoveryEmptyState" class="empty-state">
+                    <p>Enter a target recovery amount above and click <strong>🎯 Calculate Recovery Queue</strong> to view oldest priority accounts.</p>
                 </div>
             </div>
         </div>
@@ -518,6 +602,10 @@
                 <div class="form-group">
                     <label for="pawnDescription">Item Description *</label>
                     <textarea id="pawnDescription" required rows="2" placeholder="e.g. 2 Gold Bangles, 1 Ring"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="pawnLockerLocation">🔐 Gehna Vault / Locker Location</label>
+                    <input type="text" id="pawnLockerLocation" placeholder="e.g. Vault-1 / Box-B12">
                 </div>
                 <div id="pawnItemDetailsGroup">
                     <div style="display: flex; gap: 1rem;">
@@ -565,6 +653,87 @@
                     <textarea id="meltNotes" rows="2" placeholder="e.g. Sent to factory"></textarea>
                 </div>
                 <button type="submit" class="btn-primary" style="background: var(--error);">Confirm Melt</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2B: Renew Pawn / Byaaj Closing -->
+    <div id="renewPawnModal" class="modal">
+        <div class="modal-content" style="max-width: 520px; border-radius: var(--radius-lg); padding: 1.75rem;">
+            <span class="close-modal" id="closeRenewModal">&times;</span>
+            <h2 style="color: var(--navy-header); margin-bottom: 0.25rem; font-family: var(--font-heading); display: flex; align-items: center; gap: 0.5rem;">
+                <span>🔄</span> Pawn Renewal & Byaaj Closing
+            </h2>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">Close old overdue receipt by collecting interest, and auto-issue a fresh active receipt with today's date.</p>
+
+            <form id="renewPawnForm">
+                <input type="hidden" id="renewPawnId">
+                <input type="hidden" id="renewCustomerId">
+
+                <!-- Old Loan Summary Box -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 1.25rem; font-size: 0.88rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                        <span style="color: var(--text-muted);">Pawn Item:</span>
+                        <strong id="renewOldDesc" style="color: var(--navy-header);">-</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                        <span style="color: var(--text-muted);">Old Principal:</span>
+                        <strong id="renewOldPrincipal" style="color: var(--navy-header);">₹0</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                        <span style="color: var(--text-muted);">Calculated Interest Due:</span>
+                        <strong id="renewOldInterest" style="color: #d97706;">₹0</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: var(--text-muted);">Days Elapsed:</span>
+                        <span id="renewOldDays" style="font-weight: 700; color: var(--accent-blue);">-</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="renewInterestCollected">💰 Interest Amount Settled & Collected (₹) *</label>
+                    <input type="number" id="renewInterestCollected" required placeholder="e.g. 3000">
+                </div>
+
+                <div style="display: flex; gap: 0.75rem;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="renewPrincipalAdjustType">Principal Adjustment</label>
+                        <select id="renewPrincipalAdjustType">
+                            <option value="NONE">No Change (Keep Same)</option>
+                            <option value="REDUCE">Customer Paid Extra Principal (-)</option>
+                            <option value="TOPUP">Customer Borrowed Extra Principal (+)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="renewAdjustAmount">Adjustment Amt (₹)</label>
+                        <input type="number" id="renewAdjustAmount" value="0" placeholder="0">
+                    </div>
+                </div>
+
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; color: #166534; font-size: 0.9rem;">New Active Loan Principal:</span>
+                    <strong id="renewNewPrincipalDisplay" style="font-size: 1.2rem; color: #15803d;">₹0</strong>
+                </div>
+
+                <div style="display: flex; gap: 0.75rem;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="renewInterestRate">New Rate (% / mo) *</label>
+                        <input type="number" step="0.1" id="renewInterestRate" required value="2">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="renewLockerLocation">🔐 Locker Box</label>
+                        <input type="text" id="renewLockerLocation" placeholder="e.g. Vault-1 / Box-B12">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="renewNotes">Notes / Description (Optional)</label>
+                    <input type="text" id="renewNotes" placeholder="e.g. 6 Months Byaaj Closed & Renewed">
+                </div>
+
+                <button type="submit" class="btn-primary btn-gold" style="font-weight: 800; font-size: 1rem; padding: 0.75rem;">
+                    🔄 Confirm Byaaj Closing & Renew Receipt
+                </button>
             </form>
         </div>
     </div>
@@ -709,6 +878,10 @@
                         <div class="card-row">
                             <span class="card-label">Item Details:</span>
                             <input type="text" id="cardDescription" class="card-input" placeholder="e.g. 2 Gold Bangles" required>
+                        </div>
+                        <div class="card-row">
+                            <span class="card-label">Locker Box:</span>
+                            <input type="text" id="cardLockerLocation" class="card-input" placeholder="e.g. Vault-1 / Box-B12">
                         </div>
                         <div class="card-row">
                             <span class="card-label">Weight (g):</span>

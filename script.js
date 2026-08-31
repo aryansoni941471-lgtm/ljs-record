@@ -240,50 +240,48 @@ document.addEventListener('DOMContentLoaded', () => {
         analyticsStartDate.valueAsDate = start;
     }
 
+    // Helper function for mutually exclusive view switching
+    function hideAllViews() {
+        if (dashboardView) dashboardView.style.display = 'none';
+        if (rokadView) rokadView.style.display = 'none';
+        if (analyticsView) analyticsView.style.display = 'none';
+        const khaataViewEl = document.getElementById('khaataView');
+        if (khaataViewEl) khaataViewEl.style.display = 'none';
+        const recoveryViewEl = document.getElementById('recoveryView');
+        if (recoveryViewEl) recoveryViewEl.style.display = 'none';
+
+        if (navDashboardBtn) navDashboardBtn.classList.remove('active-tab');
+        if (navRokadBtn) navRokadBtn.classList.remove('active-tab');
+        if (navAnalyticsBtn) navAnalyticsBtn.classList.remove('active-tab');
+        const navKhaataBtnEl = document.getElementById('navKhaataBtn');
+        if (navKhaataBtnEl) navKhaataBtnEl.classList.remove('active-tab');
+        const navRecoveryBtnEl = document.getElementById('navRecoveryBtn');
+        if (navRecoveryBtnEl) navRecoveryBtnEl.classList.remove('active-tab');
+    }
+
     // Navigation Logic
     if (navDashboardBtn) {
         navDashboardBtn.addEventListener('click', () => {
+            hideAllViews();
             dashboardView.style.display = 'block';
-            rokadView.style.display = 'none';
-            if (analyticsView) analyticsView.style.display = 'none';
-            const khaataView = document.getElementById('khaataView');
-            if (khaataView) khaataView.style.display = 'none';
             navDashboardBtn.classList.add('active-tab');
-            navRokadBtn.classList.remove('active-tab');
-            if (navAnalyticsBtn) navAnalyticsBtn.classList.remove('active-tab');
-            const navKhaataBtn = document.getElementById('navKhaataBtn');
-            if (navKhaataBtn) navKhaataBtn.classList.remove('active-tab');
         });
     }
 
     if (navRokadBtn) {
         navRokadBtn.addEventListener('click', () => {
-            dashboardView.style.display = 'none';
+            hideAllViews();
             rokadView.style.display = 'block';
-            if (analyticsView) analyticsView.style.display = 'none';
-            const khaataView = document.getElementById('khaataView');
-            if (khaataView) khaataView.style.display = 'none';
             navRokadBtn.classList.add('active-tab');
-            navDashboardBtn.classList.remove('active-tab');
-            if (navAnalyticsBtn) navAnalyticsBtn.classList.remove('active-tab');
-            const navKhaataBtn = document.getElementById('navKhaataBtn');
-            if (navKhaataBtn) navKhaataBtn.classList.remove('active-tab');
             fetchRokad(rokadDateInput.value);
         });
     }
     
     if (navAnalyticsBtn) {
         navAnalyticsBtn.addEventListener('click', () => {
-            dashboardView.style.display = 'none';
-            rokadView.style.display = 'none';
+            hideAllViews();
             if (analyticsView) analyticsView.style.display = 'block';
-            const khaataView = document.getElementById('khaataView');
-            if (khaataView) khaataView.style.display = 'none';
-            navAnalyticsBtn.classList.add('active-tab');
-            navDashboardBtn.classList.remove('active-tab');
-            navRokadBtn.classList.remove('active-tab');
-            const navKhaataBtn = document.getElementById('navKhaataBtn');
-            if (navKhaataBtn) navKhaataBtn.classList.remove('active-tab');
+            if (navAnalyticsBtn) navAnalyticsBtn.classList.add('active-tab');
             fetchAnalytics(analyticsStartDate.value, analyticsEndDate.value);
         });
     }
@@ -292,14 +290,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const khaataView = document.getElementById('khaataView');
     if (navKhaataBtn && khaataView) {
         navKhaataBtn.addEventListener('click', () => {
-            dashboardView.style.display = 'none';
-            rokadView.style.display = 'none';
-            if (analyticsView) analyticsView.style.display = 'none';
+            hideAllViews();
             khaataView.style.display = 'block';
             navKhaataBtn.classList.add('active-tab');
-            navDashboardBtn.classList.remove('active-tab');
-            navRokadBtn.classList.remove('active-tab');
-            if (navAnalyticsBtn) navAnalyticsBtn.classList.remove('active-tab');
             
             const khaataCustomerSearch = document.getElementById('khaataCustomerSearch');
             if (khaataCustomerSearch) khaataCustomerSearch.focus();
@@ -844,10 +837,11 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('item_weight_grams', document.getElementById('itemWeight').value);
         formData.append('item_metal_type', document.getElementById('itemMetalType').value);
         formData.append('interest_rate', document.getElementById('pawnInterestRate').value);
-        if (pawnIsUdhari) {
-            formData.append('is_udhari', pawnIsUdhari.checked);
+        const pawnLockerInput = document.getElementById('pawnLockerLocation');
+        if (pawnLockerInput && pawnLockerInput.value) {
+            formData.append('locker_location', pawnLockerInput.value.trim());
         }
-        
+
         const itemFile = document.getElementById('itemPhoto').files[0];
         if (itemFile) {
             formData.append('item_photo', itemFile);
@@ -894,6 +888,11 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('interest_rate', interest_rate);
         formData.append('item_weight_grams', item_weight_grams);
         formData.append('item_metal_type', item_metal_type);
+
+        const cardLockerInput = document.getElementById('cardLockerLocation');
+        if (cardLockerInput && cardLockerInput.value) {
+            formData.append('locker_location', cardLockerInput.value.trim());
+        }
 
         try {
             const response = await fetch(`${API_URL}/customers/${id}/pawn`, {
@@ -944,15 +943,9 @@ document.addEventListener('DOMContentLoaded', () => {
         currentKhaataCustomer = customer;
 
         // Switch to full-page Khaata View
-        if (dashboardView) dashboardView.style.display = 'none';
-        if (rokadView) rokadView.style.display = 'none';
-        if (analyticsView) analyticsView.style.display = 'none';
+        hideAllViews();
         if (khaataView) khaataView.style.display = 'block';
-
         if (navKhaataBtn) navKhaataBtn.classList.add('active-tab');
-        if (navDashboardBtn) navDashboardBtn.classList.remove('active-tab');
-        if (navRokadBtn) navRokadBtn.classList.remove('active-tab');
-        if (navAnalyticsBtn) navAnalyticsBtn.classList.remove('active-tab');
 
         // Show Khaata Content Area
         const noCustState = document.getElementById('khaataNoCustomerState');
@@ -1149,12 +1142,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const endDate = p.status === 'Released' && p.release_date ? new Date(p.release_date) : new Date();
                 const diffDays = Math.ceil(Math.abs(endDate - startDate) / (1000 * 60 * 60 * 24));
 
-                const statusColor = p.status === 'Active' ? 'var(--gold-primary)' : (p.status === 'Melted' ? '#ef4444' : '#4CAF50');
+                const statusColor = p.status === 'Active' ? 'var(--gold-primary)' : (p.status === 'Melted' ? '#ef4444' : (p.status === 'Renewed' ? '#3b82f6' : '#4CAF50'));
                 let actionBtn = p.status === 'Active' 
                     ? `<button class="delete-btn release-pawn-btn" data-id="${p.id}" data-customer="${customerId}" style="color: #4CAF50; border-color: rgba(76, 175, 80, 0.3);">Release</button>
+                       <button class="delete-btn renew-pawn-btn" data-id="${p.id}" data-customer="${customerId}" data-principal="${p.amount}" data-desc="${escapeHtml(p.description)}" data-rate="${p.interest_rate || 2}" data-days="${diffDays}" data-date="${p.date_added}" data-interest="${interest.toFixed(0)}" data-locker="${escapeHtml(p.locker_location || 'Safe Vault')}" style="color: #3b82f6; border-color: rgba(59, 130, 246, 0.4); margin-top: 5px;">🔄 Renew</button>
                        <button class="delete-btn melt-pawn-btn" data-id="${p.id}" data-customer="${customerId}" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3); margin-top: 5px;">🔥 Melt</button>
                        <button class="pawn-btn pay-btn" data-id="${p.id}" style="margin-top: 5px; color: #fff; background: var(--gold-primary); border:none;">💰 Pay</button>` 
-                    : (p.status === 'Melted' ? `<span style="color: #ef4444; font-size: 0.85rem; font-weight:bold;">🔥 Melted on<br>${formatDate(p.melt_date)}</span>` : `<span style="color: #a0a0a0; font-size: 0.85rem;">Released on<br>${formatDate(p.release_date)}</span>`);
+                    : (p.status === 'Renewed'
+                        ? `<span style="color: #3b82f6; font-size: 0.85rem; font-weight:bold;">🔄 Renewed on<br>${formatDate(p.release_date)}</span>`
+                        : (p.status === 'Melted' ? `<span style="color: #ef4444; font-size: 0.85rem; font-weight:bold;">🔥 Melted on<br>${formatDate(p.melt_date)}</span>` : `<span style="color: #a0a0a0; font-size: 0.85rem;">Released on<br>${formatDate(p.release_date)}</span>`));
                 
                 // Add Email Button
                 actionBtn += ` <button class="pawn-btn email-pawn-btn" data-id="${p.id}" data-customer="${customerId}" style="margin-top: 5px; color: #fff; background: #666; border:none;">📧 Email</button>`;
@@ -1179,11 +1175,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 const detailsStr = p.is_udhari == 1 ? `Rate: ${p.interest_rate || 0}% / month` : `Rate: ${p.interest_rate || 0}% / month<br>Weight: ${p.item_weight_grams || 0}g (${p.item_metal_type || 'Gold'})`;
+                const lockerStr = p.locker_location || 'Safe Vault';
 
                 return `
                 <tr style="background: rgba(0,0,0,0.02);">
                     <td style="vertical-align: top;">${formatDate(p.date_added)}<br><small style="color: var(--gold-primary); font-weight: bold;">${diffDays} Din</small></td>
                     <td style="vertical-align: top;"><strong>${escapeHtml(p.description)}</strong>${badgeHtml}${photoHtml}<br><small style="color:var(--text-secondary)">${detailsStr}</small></td>
+                    <td style="vertical-align: top;"><span class="badge" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; font-weight:bold;">🔐 ${escapeHtml(lockerStr)}</span></td>
                     <td style="vertical-align: top; color: var(--gold-primary); font-weight: bold; font-size: 1.1rem;">₹${p.amount}</td>
                     <td style="vertical-align: top; color: #ff9800; font-weight: bold;">₹${interest.toFixed(0)}</td>
                     <td style="vertical-align: top; color: #4CAF50; font-weight: bold;">₹${totalJama}</td>
@@ -1237,6 +1235,36 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('meltPureWeight').value = "";
             document.getElementById('meltNotes').value = "";
             meltModal.style.display = 'block';
+        }
+
+        // Renew Pawn Action (Byaaj Closing)
+        if (e.target.classList.contains('renew-pawn-btn')) {
+            const pawnId = e.target.getAttribute('data-id');
+            const customerId = e.target.getAttribute('data-customer');
+            const oldPrincipal = parseFloat(e.target.getAttribute('data-principal')) || 0;
+            const oldInterest = parseFloat(e.target.getAttribute('data-interest')) || 0;
+            const oldDesc = e.target.getAttribute('data-desc') || '';
+            const oldDays = e.target.getAttribute('data-days') || '';
+            const oldRate = e.target.getAttribute('data-rate') || '2';
+            const oldLocker = e.target.getAttribute('data-locker') || 'Safe Vault';
+
+            document.getElementById('renewPawnId').value = pawnId;
+            document.getElementById('renewCustomerId').value = customerId;
+            document.getElementById('renewOldDesc').textContent = oldDesc;
+            document.getElementById('renewOldPrincipal').textContent = `₹${oldPrincipal.toLocaleString('en-IN')}`;
+            document.getElementById('renewOldInterest').textContent = `₹${Math.round(oldInterest).toLocaleString('en-IN')}`;
+            document.getElementById('renewOldDays').textContent = `${oldDays} Days`;
+
+            document.getElementById('renewInterestCollected').value = Math.round(oldInterest);
+            document.getElementById('renewPrincipalAdjustType').value = 'NONE';
+            document.getElementById('renewAdjustAmount').value = 0;
+            document.getElementById('renewNewPrincipalDisplay').textContent = `₹${oldPrincipal.toLocaleString('en-IN')}`;
+            document.getElementById('renewInterestRate').value = oldRate;
+            document.getElementById('renewLockerLocation').value = oldLocker;
+            document.getElementById('renewNotes').value = `Byaaj Closing for ${oldDays} Days`;
+
+            const renewModal = document.getElementById('renewPawnModal');
+            if (renewModal) renewModal.style.display = 'block';
         }
         
         // Email Receipt
@@ -1815,6 +1843,261 @@ _Thank you for choosing LJS Jewellers_`
     if (printCommonQrBtn) {
         printCommonQrBtn.addEventListener('click', () => {
             window.print();
+        });
+    }
+
+    // -------------------------------------------------------------
+    // ⏳ RECOVERY TIME HUB ENGINE (Oldest Accounts Target Engine)
+    // -------------------------------------------------------------
+    const navRecoveryBtn = document.getElementById('navRecoveryBtn');
+    const recoveryView = document.getElementById('recoveryView');
+    const recoveryTargetInput = document.getElementById('recoveryTargetInput');
+    const calculateRecoveryBtn = document.getElementById('calculateRecoveryBtn');
+    const downloadRecoveryBtn = document.getElementById('downloadRecoveryBtn');
+    const recTargetDisplay = document.getElementById('recTargetDisplay');
+    const recCalculatedDisplay = document.getElementById('recCalculatedDisplay');
+    const recCountDisplay = document.getElementById('recCountDisplay');
+    const recOldestDateDisplay = document.getElementById('recOldestDateDisplay');
+    const recoveryList = document.getElementById('recoveryList');
+    const recoveryEmptyState = document.getElementById('recoveryEmptyState');
+    const recoveryTable = document.getElementById('recoveryTable');
+    const recBadge = document.getElementById('recBadge');
+
+    let currentRecoveryQueue = [];
+
+    if (navRecoveryBtn && recoveryView) {
+        navRecoveryBtn.addEventListener('click', () => {
+            hideAllViews();
+            recoveryView.style.display = 'block';
+            navRecoveryBtn.classList.add('active-tab');
+        });
+    }
+
+    if (calculateRecoveryBtn) {
+        calculateRecoveryBtn.addEventListener('click', () => {
+            const targetVal = parseFloat(recoveryTargetInput ? recoveryTargetInput.value : 0);
+            if (!targetVal || targetVal <= 0) {
+                alert('⚠️ Kripya recovery target amount (₹) enter karein!');
+                return;
+            }
+            calculateRecoveryQueue(targetVal);
+        });
+    }
+
+    async function calculateRecoveryQueue(targetAmount) {
+        try {
+            if (recoveryList) recoveryList.innerHTML = '<tr><td colspan="8" style="text-align:center;">Calculating Oldest Pawns Queue...</td></tr>';
+            if (recoveryEmptyState) recoveryEmptyState.style.display = 'none';
+            if (recoveryTable && recoveryTable.parentElement) recoveryTable.parentElement.style.display = 'block';
+
+            const res = await fetch(`${API_URL}/recovery-pawns`);
+            const data = await res.json();
+            const allActivePawns = data.pawns || [];
+
+            if (allActivePawns.length === 0) {
+                if (recoveryEmptyState) recoveryEmptyState.style.display = 'block';
+                if (recoveryTable && recoveryTable.parentElement) recoveryTable.parentElement.style.display = 'none';
+                if (recTargetDisplay) recTargetDisplay.textContent = `₹${targetAmount.toLocaleString('en-IN')}`;
+                if (recCalculatedDisplay) recCalculatedDisplay.textContent = '₹0';
+                if (recCountDisplay) recCountDisplay.textContent = '0 Items';
+                if (recOldestDateDisplay) recOldestDateDisplay.textContent = '-';
+                if (recBadge) recBadge.textContent = '0 Queue';
+                return;
+            }
+
+            // Calculate total recoverable for each active pawn & accumulate oldest first
+            let totalAccumulated = 0;
+            const queue = [];
+
+            for (const p of allActivePawns) {
+                const interest = calculateInterest(p.amount, p.interest_rate, p.date_added, 'Active');
+                const totalJama = parseFloat(p.total_jama) || 0;
+                const principalAmt = parseFloat(p.amount) || 0;
+                const baki = (principalAmt + interest) - totalJama;
+
+                if (baki > 0) {
+                    queue.push({
+                        ...p,
+                        calculatedInterest: interest,
+                        totalJama: totalJama,
+                        totalRecoverable: baki
+                    });
+                    totalAccumulated += baki;
+                    if (totalAccumulated >= targetAmount) {
+                        break; // Target reached
+                    }
+                }
+            }
+
+            currentRecoveryQueue = queue;
+
+            // Render stats
+            if (recTargetDisplay) recTargetDisplay.textContent = `₹${targetAmount.toLocaleString('en-IN')}`;
+            if (recCalculatedDisplay) recCalculatedDisplay.textContent = `₹${Math.round(totalAccumulated).toLocaleString('en-IN')}`;
+            if (recCountDisplay) recCountDisplay.textContent = `${queue.length} Accounts`;
+            if (recBadge) recBadge.textContent = `${queue.length} Selected`;
+
+            if (queue.length > 0 && recOldestDateDisplay) {
+                recOldestDateDisplay.textContent = formatDate(queue[0].date_added);
+            }
+
+            renderRecoveryTable(queue);
+
+        } catch (err) {
+            console.error('Error calculating recovery queue:', err);
+            if (recoveryList) recoveryList.innerHTML = '<tr><td colspan="8" style="color:red; text-align:center;">Failed to calculate recovery queue.</td></tr>';
+        }
+    }
+
+    function renderRecoveryTable(queue) {
+        if (!recoveryList) return;
+        if (queue.length === 0) {
+            if (recoveryEmptyState) recoveryEmptyState.style.display = 'block';
+            if (recoveryTable && recoveryTable.parentElement) recoveryTable.parentElement.style.display = 'none';
+            return;
+        }
+
+        if (recoveryEmptyState) recoveryEmptyState.style.display = 'none';
+        if (recoveryTable && recoveryTable.parentElement) recoveryTable.parentElement.style.display = 'block';
+
+        recoveryList.innerHTML = queue.map(p => {
+            const startDate = new Date(p.date_added);
+            const diffDays = Math.ceil(Math.abs(new Date() - startDate) / (1000 * 60 * 60 * 24));
+            const months = (diffDays / 30.4375).toFixed(1);
+            const locker = p.locker_location || 'Safe Vault';
+
+            let waMsg = `Namaste ${p.customer_name} Ji,\nLJS Jewellers se nivedan hai ki aapke Girvi Gehna (${p.description}) ki samay seema ${months} mahine ho chuki hai.\n\nTotal Due Amount: ₹${Math.round(p.totalRecoverable).toLocaleString('en-IN')}\n\nKripya dukan par aakar apna byaaj/hisab jama karein. Dhanyawad!`;
+            let cleanPhone = (p.customer_phone || '').replace(/[^0-9]/g, '');
+            if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
+            const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(waMsg)}`;
+
+            return `
+            <tr>
+                <td style="vertical-align: top;">
+                    <strong>${formatDate(p.date_added)}</strong><br>
+                    <span class="badge" style="background:#fee2e2; color:#991b1b; font-size:0.75rem; margin-top:3px; display:inline-block;">⏱️ ${months} Mo (${diffDays} Days)</span>
+                </td>
+                <td style="vertical-align: top;">
+                    <strong style="color:var(--navy-header); font-size:0.95rem;">${escapeHtml(p.customer_name)}</strong><br>
+                    <small style="color:var(--text-muted);">📱 ${escapeHtml(p.customer_phone)}</small>
+                </td>
+                <td style="vertical-align: top;">
+                    <strong>${escapeHtml(p.description)}</strong><br>
+                    <small style="color:var(--text-secondary);">${p.item_metal_type || 'Gold'} | ${p.item_weight_grams || 0}g</small>
+                </td>
+                <td style="vertical-align: top;">
+                    <span class="badge" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; font-weight:700;">🔐 ${escapeHtml(locker)}</span>
+                </td>
+                <td style="vertical-align: top; font-weight: bold; color: var(--navy-header);">₹${p.amount}</td>
+                <td style="vertical-align: top; font-weight: bold; color: #d97706;">₹${p.calculatedInterest.toFixed(0)}</td>
+                <td style="vertical-align: top; font-weight: 800; color: #dc2626; font-size: 1.15rem;">₹${Math.round(p.totalRecoverable).toLocaleString('en-IN')}</td>
+                <td style="vertical-align: top; text-align: right; min-width: 140px;">
+                    <a href="${waUrl}" target="_blank" class="btn-primary" style="display:inline-flex; align-items:center; gap:4px; padding:0.4rem 0.75rem; font-size:0.8rem; background:#25D366; color:white; text-decoration:none; border-radius:var(--radius-pill); font-weight:700;">💬 Remind WA</a>
+                    <button class="view-khaata-btn btn-primary" data-id="${p.customer_id}" style="padding:0.4rem 0.75rem; font-size:0.8rem; background:var(--accent-blue); color:white; width:auto; border-radius:var(--radius-pill); margin-top:4px;">📖 Khaata</button>
+                </td>
+            </tr>
+            `;
+        }).join('');
+    }
+
+    if (downloadRecoveryBtn) {
+        downloadRecoveryBtn.addEventListener('click', () => {
+            if (currentRecoveryQueue.length === 0) {
+                alert('Pehle recovery queue calculate karein!');
+                return;
+            }
+            let csv = 'Customer,Phone,Pawn Date,Age Days,Description,Locker Location,Principal,Interest,Total Recoverable\n';
+            currentRecoveryQueue.forEach(p => {
+                const diffDays = Math.ceil(Math.abs(new Date() - new Date(p.date_added)) / (1000 * 60 * 60 * 24));
+                csv += `"${p.customer_name}","${p.customer_phone}","${p.date_added}",${diffDays},"${p.description}","${p.locker_location || 'Safe Vault'}",${p.amount},${p.calculatedInterest},${p.totalRecoverable}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `Recovery_Target_Report_${new Date().toISOString().substring(0, 10)}.csv`);
+            a.click();
+        });
+    }
+
+    // -------------------------------------------------------------
+    // 🔄 PAWN RENEWAL / BYAAJ CLOSING LOGIC
+    // -------------------------------------------------------------
+    const renewPawnForm = document.getElementById('renewPawnForm');
+    const renewPawnModal = document.getElementById('renewPawnModal');
+    const closeRenewModal = document.getElementById('closeRenewModal');
+    const renewPrincipalAdjustType = document.getElementById('renewPrincipalAdjustType');
+    const renewAdjustAmount = document.getElementById('renewAdjustAmount');
+    const renewNewPrincipalDisplay = document.getElementById('renewNewPrincipalDisplay');
+
+    if (closeRenewModal && renewPawnModal) closeRenewModal.onclick = () => renewPawnModal.style.display = 'none';
+
+    function updateRenewNewPrincipal() {
+        const oldPStr = (document.getElementById('renewOldPrincipal').textContent || '').replace(/[^0-9.]/g, '');
+        const oldP = parseFloat(oldPStr) || 0;
+        const type = renewPrincipalAdjustType ? renewPrincipalAdjustType.value : 'NONE';
+        const adj = parseFloat(renewAdjustAmount ? renewAdjustAmount.value : 0) || 0;
+
+        let newP = oldP;
+        if (type === 'REDUCE') {
+            newP = Math.max(0, oldP - adj);
+        } else if (type === 'TOPUP') {
+            newP = oldP + adj;
+        }
+
+        if (renewNewPrincipalDisplay) renewNewPrincipalDisplay.textContent = `₹${Math.round(newP).toLocaleString('en-IN')}`;
+    }
+
+    if (renewPrincipalAdjustType) renewPrincipalAdjustType.addEventListener('change', updateRenewNewPrincipal);
+    if (renewAdjustAmount) renewAdjustAmount.addEventListener('input', updateRenewNewPrincipal);
+
+    if (renewPawnForm) {
+        renewPawnForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const pawnId = document.getElementById('renewPawnId').value;
+            const customerId = document.getElementById('renewCustomerId').value;
+            const interest_collected = document.getElementById('renewInterestCollected').value;
+            const new_interest_rate = document.getElementById('renewInterestRate').value;
+            const new_locker_location = document.getElementById('renewLockerLocation').value;
+            const notes = document.getElementById('renewNotes').value;
+
+            const oldPStr = (document.getElementById('renewOldPrincipal').textContent || '').replace(/[^0-9.]/g, '');
+            const oldP = parseFloat(oldPStr) || 0;
+            const type = renewPrincipalAdjustType ? renewPrincipalAdjustType.value : 'NONE';
+            const adj = parseFloat(renewAdjustAmount ? renewAdjustAmount.value : 0) || 0;
+
+            let new_principal_amount = oldP;
+            if (type === 'REDUCE') {
+                new_principal_amount = Math.max(0, oldP - adj);
+            } else if (type === 'TOPUP') {
+                new_principal_amount = oldP + adj;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/customers/${customerId}/pawn/${pawnId}/renew`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        interest_collected,
+                        new_principal_amount,
+                        new_interest_rate,
+                        new_locker_location,
+                        notes
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to renew pawn receipt.');
+
+                const data = await response.json();
+                alert('✅ ' + data.message);
+                if (renewPawnModal) renewPawnModal.style.display = 'none';
+                fetchPawns(customerId);
+                fetchDashboard();
+            } catch (err) {
+                console.error('Error renewing pawn:', err);
+                alert('❌ Failed to renew pawn. Check console for details.');
+            }
         });
     }
 });
