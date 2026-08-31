@@ -1143,23 +1143,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 const diffDays = Math.ceil(Math.abs(endDate - startDate) / (1000 * 60 * 60 * 24));
 
                 const statusColor = p.status === 'Active' ? 'var(--gold-primary)' : (p.status === 'Melted' ? '#ef4444' : (p.status === 'Renewed' ? '#3b82f6' : '#4CAF50'));
-                let actionBtn = p.status === 'Active' 
-                    ? `<button class="delete-btn release-pawn-btn" data-id="${p.id}" data-customer="${customerId}" style="color: #4CAF50; border-color: rgba(76, 175, 80, 0.3);">Release</button>
-                       <button class="delete-btn renew-pawn-btn" data-id="${p.id}" data-customer="${customerId}" data-principal="${p.amount}" data-desc="${escapeHtml(p.description)}" data-rate="${p.interest_rate || 2}" data-days="${diffDays}" data-date="${p.date_added}" data-interest="${interest.toFixed(0)}" data-locker="${escapeHtml(p.locker_location || 'Safe Vault')}" style="color: #3b82f6; border-color: rgba(59, 130, 246, 0.4); margin-top: 5px;">🔄 Renew</button>
-                       <button class="delete-btn melt-pawn-btn" data-id="${p.id}" data-customer="${customerId}" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3); margin-top: 5px;">🔥 Melt</button>
-                       <button class="pawn-btn pay-btn" data-id="${p.id}" style="margin-top: 5px; color: #fff; background: var(--gold-primary); border:none;">💰 Pay</button>` 
-                    : (p.status === 'Renewed'
-                        ? `<span style="color: #3b82f6; font-size: 0.85rem; font-weight:bold;">🔄 Renewed on<br>${formatDate(p.release_date)}</span>`
-                        : (p.status === 'Melted' ? `<span style="color: #ef4444; font-size: 0.85rem; font-weight:bold;">🔥 Melted on<br>${formatDate(p.melt_date)}</span>` : `<span style="color: #a0a0a0; font-size: 0.85rem;">Released on<br>${formatDate(p.release_date)}</span>`));
                 
-                // Add Email Button
-                actionBtn += ` <button class="pawn-btn email-pawn-btn" data-id="${p.id}" data-customer="${customerId}" style="margin-top: 5px; color: #fff; background: #666; border:none;">📧 Email</button>`;
-                
-                // Add WhatsApp Button
-                actionBtn += ` <button class="pawn-btn whatsapp-pawn-btn" data-amount="${p.amount}" data-desc="${escapeHtml(p.description)}" data-date="${p.date_added}" data-jama="${totalJama.toFixed(0)}" data-interest="${interest.toFixed(0)}" data-baki="${baki.toFixed(0)}" style="margin-top: 5px; color: #fff; background: #25D366; border:none;">💬 WA</button>`;
-                
-                // Add Print Button
-                actionBtn += ` <button class="pawn-btn print-pawn-btn" data-customer="${escapeHtml(currentKhaataCustomer ? currentKhaataCustomer.name : '')}" data-phone="" data-amount="${p.amount}" data-desc="${escapeHtml(p.description)}" data-date="${p.date_added}" data-rate="${p.interest_rate || 0}" style="margin-top: 5px; color: #333; background: #eee; border:1px solid #ccc;">🖨️ Print</button>`;
+                let actionMenuItems = '';
+                if (p.status === 'Active') {
+                    actionMenuItems += `
+                        <button class="dropdown-item release-pawn-btn" data-id="${p.id}" data-customer="${customerId}">
+                            <span>🟢</span> Release Gehna
+                        </button>
+                        <button class="dropdown-item renew-pawn-btn" data-id="${p.id}" data-customer="${customerId}" data-principal="${p.amount}" data-desc="${escapeHtml(p.description)}" data-rate="${p.interest_rate || 2}" data-days="${diffDays}" data-date="${p.date_added}" data-interest="${interest.toFixed(0)}" data-locker="${escapeHtml(p.locker_location || 'Safe Vault')}">
+                            <span>🔄</span> Renew / Byaaj Closing
+                        </button>
+                        <button class="dropdown-item pay-btn" data-id="${p.id}">
+                            <span>💰</span> Collect Payment
+                        </button>
+                        <button class="dropdown-item melt-pawn-btn" data-id="${p.id}" data-customer="${customerId}">
+                            <span>🔥</span> Melt Gehna
+                        </button>
+                        <div class="dropdown-divider"></div>
+                    `;
+                }
+
+                actionMenuItems += `
+                    <button class="dropdown-item whatsapp-pawn-btn" data-amount="${p.amount}" data-desc="${escapeHtml(p.description)}" data-date="${p.date_added}" data-jama="${totalJama.toFixed(0)}" data-interest="${interest.toFixed(0)}" data-baki="${baki.toFixed(0)}">
+                        <span>💬</span> WhatsApp Bill
+                    </button>
+                    <button class="dropdown-item email-pawn-btn" data-id="${p.id}" data-customer="${customerId}">
+                        <span>📧</span> Email Receipt
+                    </button>
+                    <button class="dropdown-item print-pawn-btn" data-customer="${escapeHtml(currentKhaataCustomer ? currentKhaataCustomer.name : '')}" data-phone="" data-amount="${p.amount}" data-desc="${escapeHtml(p.description)}" data-date="${p.date_added}" data-rate="${p.interest_rate || 0}">
+                        <span>🖨️</span> Print Receipt
+                    </button>
+                `;
+
+                const actionDropdownHtml = `
+                    <div class="action-dropdown-wrap">
+                        <button class="action-dots-btn" title="Actions" onclick="toggleRowDropdown(event, this)">⋮</button>
+                        <div class="action-dropdown-menu">
+                            ${actionMenuItems}
+                        </div>
+                    </div>
+                `;
 
                 let photoHtml = p.item_photo ? `<br><a href="${p.item_photo}" target="_blank"><img src="${p.item_photo}" style="width:50px;height:50px;object-fit:cover;border-radius:8px;margin-top:8px;border: 1px solid var(--gold-primary);"></a>` : '';
 
@@ -1187,10 +1210,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td style="vertical-align: top; color: #4CAF50; font-weight: bold;">₹${totalJama}</td>
                     <td style="vertical-align: top; color: #ff4a4a; font-weight: bold; font-size: 1.2rem;">₹${baki.toFixed(0)}${riskHtml}</td>
                     <td style="vertical-align: top;"><span class="badge" style="background: ${statusColor}20; color: ${statusColor};">${p.status || 'Active'}</span></td>
-                    <td style="vertical-align: top; min-width: 220px;">
-                        <div style="display: flex; flex-wrap: wrap; gap: 5px;">
-                            ${actionBtn}
-                        </div>
+                    <td style="vertical-align: top; text-align: center;">
+                        ${actionDropdownHtml}
                     </td>
                 </tr>
             `}).join('');
@@ -1202,12 +1223,44 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Toggle 3-dots dropdown function
+    window.toggleRowDropdown = function(event, btn) {
+        event.stopPropagation();
+        const dropdownMenu = btn.nextElementSibling;
+        const isAlreadyOpen = dropdownMenu.classList.contains('show');
+        
+        document.querySelectorAll('.action-dropdown-menu.show').forEach(menu => {
+            menu.classList.remove('show');
+        });
+        
+        if (!isAlreadyOpen) {
+            dropdownMenu.classList.add('show');
+        }
+    };
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.action-dropdown-wrap')) {
+            document.querySelectorAll('.action-dropdown-menu.show').forEach(menu => {
+                menu.classList.remove('show');
+            });
+        }
+    });
+
     // Handle pawn release & email
     pawnList.addEventListener('click', async (e) => {
+        // Auto-close dropdown when clicking an action item
+        const dropdownItem = e.target.closest('.dropdown-item');
+        if (dropdownItem) {
+            const menu = dropdownItem.closest('.action-dropdown-menu');
+            if (menu) menu.classList.remove('show');
+        }
+
         // Release Pawn
-        if (e.target.classList.contains('release-pawn-btn')) {
-            const pawnId = e.target.getAttribute('data-id');
-            const customerId = e.target.getAttribute('data-customer');
+        const releaseBtn = e.target.closest('.release-pawn-btn');
+        if (releaseBtn) {
+            const pawnId = releaseBtn.getAttribute('data-id');
+            const customerId = releaseBtn.getAttribute('data-customer');
             
             if (confirm('Are you sure you want to mark this gehna as released/returned?')) {
                 try {
@@ -1227,9 +1280,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Melt Pawn Action
-        if (e.target.classList.contains('melt-pawn-btn')) {
-            const pawnId = e.target.getAttribute('data-id');
-            const customerId = e.target.getAttribute('data-customer');
+        const meltBtn = e.target.closest('.melt-pawn-btn');
+        if (meltBtn) {
+            const pawnId = meltBtn.getAttribute('data-id');
+            const customerId = meltBtn.getAttribute('data-customer');
             document.getElementById('meltPawnId').value = pawnId;
             document.getElementById('meltCustomerId').value = customerId;
             document.getElementById('meltPureWeight').value = "";
@@ -1238,15 +1292,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Renew Pawn Action (Byaaj Closing)
-        if (e.target.classList.contains('renew-pawn-btn')) {
-            const pawnId = e.target.getAttribute('data-id');
-            const customerId = e.target.getAttribute('data-customer');
-            const oldPrincipal = parseFloat(e.target.getAttribute('data-principal')) || 0;
-            const oldInterest = parseFloat(e.target.getAttribute('data-interest')) || 0;
-            const oldDesc = e.target.getAttribute('data-desc') || '';
-            const oldDays = e.target.getAttribute('data-days') || '';
-            const oldRate = e.target.getAttribute('data-rate') || '2';
-            const oldLocker = e.target.getAttribute('data-locker') || 'Safe Vault';
+        const renewBtn = e.target.closest('.renew-pawn-btn');
+        if (renewBtn) {
+            const pawnId = renewBtn.getAttribute('data-id');
+            const customerId = renewBtn.getAttribute('data-customer');
+            const oldPrincipal = parseFloat(renewBtn.getAttribute('data-principal')) || 0;
+            const oldInterest = parseFloat(renewBtn.getAttribute('data-interest')) || 0;
+            const oldDesc = renewBtn.getAttribute('data-desc') || '';
+            const oldDays = renewBtn.getAttribute('data-days') || '';
+            const oldRate = renewBtn.getAttribute('data-rate') || '2';
+            const oldLocker = renewBtn.getAttribute('data-locker') || 'Safe Vault';
 
             document.getElementById('renewPawnId').value = pawnId;
             document.getElementById('renewCustomerId').value = customerId;
@@ -1268,14 +1323,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Email Receipt
-        if (e.target.classList.contains('email-pawn-btn')) {
-            const pawnId = e.target.getAttribute('data-id');
-            const customerId = e.target.getAttribute('data-customer');
-            const originalText = e.target.innerHTML;
+        const emailBtn = e.target.closest('.email-pawn-btn');
+        if (emailBtn) {
+            const pawnId = emailBtn.getAttribute('data-id');
+            const customerId = emailBtn.getAttribute('data-customer');
+            const originalText = emailBtn.innerHTML;
             
             try {
-                e.target.innerHTML = 'Sending...';
-                e.target.disabled = true;
+                emailBtn.innerHTML = 'Sending...';
+                emailBtn.disabled = true;
                 
                 const response = await fetch(`${API_URL}/customers/${customerId}/pawn/${pawnId}/email`, {
                     method: 'POST'
@@ -1288,28 +1344,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     throw new Error(data.error || 'Failed to email receipt');
                 }
                 
-                e.target.innerHTML = '✅ Sent!';
+                emailBtn.innerHTML = '✅ Sent!';
                 setTimeout(() => {
-                    e.target.innerHTML = originalText;
-                    e.target.disabled = false;
+                    emailBtn.innerHTML = originalText;
+                    emailBtn.disabled = false;
                 }, 3000);
             } catch (error) {
                 console.error('Error emailing receipt:', error);
                 alert(error.message);
-                e.target.innerHTML = originalText;
-                e.target.disabled = false;
+                emailBtn.innerHTML = originalText;
+                emailBtn.disabled = false;
             }
         }
         
         // WhatsApp Receipt
-        if (e.target.classList.contains('whatsapp-pawn-btn')) {
-            const amount = e.target.getAttribute('data-amount');
-            const desc = e.target.getAttribute('data-desc');
-            const date = formatDate(e.target.getAttribute('data-date'));
-            const jama = e.target.getAttribute('data-jama');
-            const baki = e.target.getAttribute('data-baki');
-            const interest = e.target.getAttribute('data-interest');
-            const originalText = e.target.innerHTML;
+        const waBtn = e.target.closest('.whatsapp-pawn-btn');
+        if (waBtn) {
+            const amount = waBtn.getAttribute('data-amount');
+            const desc = waBtn.getAttribute('data-desc');
+            const date = formatDate(waBtn.getAttribute('data-date'));
+            const jama = waBtn.getAttribute('data-jama');
+            const baki = waBtn.getAttribute('data-baki');
+            const interest = waBtn.getAttribute('data-interest');
+            const originalText = waBtn.innerHTML;
             
             const number = window.prompt("Enter customer's WhatsApp number (e.g. 9876543210):");
             if (number !== null) {
@@ -1345,20 +1402,21 @@ _Thank you for choosing LJS Jewellers_`
                 window.open(waUrl, '_blank');
                 
                 // Show visual feedback that WhatsApp was opened
-                e.target.innerHTML = '✅ Opened!';
+                waBtn.innerHTML = '✅ Opened!';
                 setTimeout(() => {
-                    e.target.innerHTML = originalText;
+                    waBtn.innerHTML = originalText;
                 }, 3000);
             }
         }
         
         // Print Receipt
-        if (e.target.classList.contains('print-pawn-btn')) {
-            const customer = e.target.getAttribute('data-customer');
-            const date = formatDate(e.target.getAttribute('data-date'));
-            const amount = e.target.getAttribute('data-amount');
-            const desc = e.target.getAttribute('data-desc');
-            const rate = e.target.getAttribute('data-rate');
+        const printBtn = e.target.closest('.print-pawn-btn');
+        if (printBtn) {
+            const customer = printBtn.getAttribute('data-customer');
+            const date = formatDate(printBtn.getAttribute('data-date'));
+            const amount = printBtn.getAttribute('data-amount');
+            const desc = printBtn.getAttribute('data-desc');
+            const rate = printBtn.getAttribute('data-rate');
             const phone = document.querySelector('#customerTable td:nth-child(3)') ? document.querySelector('#customerTable td:nth-child(3)').innerText : ''; // Best effort
             
             document.getElementById('printDate').innerText = date;
@@ -1372,8 +1430,9 @@ _Thank you for choosing LJS Jewellers_`
         }
         
         // Open Payment Modal
-        if (e.target.classList.contains('pay-btn')) {
-            const pawnId = e.target.getAttribute('data-id');
+        const payBtn = e.target.closest('.pay-btn');
+        if (payBtn) {
+            const pawnId = payBtn.getAttribute('data-id');
             payPawnIdInput.value = pawnId;
             paymentModal.style.display = 'block';
             fetchPayments(pawnId);
