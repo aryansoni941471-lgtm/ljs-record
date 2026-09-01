@@ -6,8 +6,41 @@ const nodemailer = require('nodemailer');
 const multer = require('multer');
 const fs = require('fs');
 const os = require('os');
+const bcrypt = require('bcryptjs');
 require('dotenv').config();
 const { db, supabase } = require('./supabase-db');
+
+// Password security helpers
+function isBcryptHash(str) {
+    return typeof str === 'string' && (str.startsWith('$2a$') || str.startsWith('$2b$') || str.startsWith('$2y$'));
+}
+
+function hashPassword(password) {
+    if (!password) return '';
+    if (isBcryptHash(password)) return password;
+    return bcrypt.hashSync(password.toString().trim(), 10);
+}
+
+function verifyPassword(inputPassword, storedPassword) {
+    if (!inputPassword || !storedPassword) return false;
+    const cleanInput = inputPassword.toString().trim();
+    if (isBcryptHash(storedPassword)) {
+        return bcrypt.compareSync(cleanInput, storedPassword);
+    }
+    return cleanInput === storedPassword.toString().trim();
+}
+
+function migrateLegacyPasswords() {
+    db.all('SELECT id, password FROM customers', [], (err, rows) => {
+        if (err || !rows) return;
+        rows.forEach(cust => {
+            if (cust.password && !isBcryptHash(cust.password)) {
+                const hashed = hashPassword(cust.password);
+                db.run('UPDATE customers SET password = ? WHERE id = ?', [hashed, cust.id]);
+            }
+        });
+    });
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -56,6 +89,9 @@ db.run(`CREATE TABLE IF NOT EXISTS interest_ledger (
     created_at TEXT
 )`);
 
+// Run legacy password migration once database initializes
+setTimeout(migrateLegacyPasswords, 2000);
+
 // API Routes
 
 // Staff Submission API (Queues entries for Admin Approval)
@@ -98,11 +134,12 @@ app.post('/api/admin/approve/:id', (req, res) => {
         if (row.type === 'NEW_CUSTOMER') {
             const { name, phone, email, dob } = data;
             const username = phone ? phone.trim() : 'cust_' + Date.now();
-            const password = Math.floor(100000 + Math.random() * 900000).toString();
+            const rawPassword = Math.floor(100000 + Math.random() * 900000).toString();
+            const passwordHash = hashPassword(rawPassword);
             
             db.run(
                 `INSERT INTO customers (name, phone, email, dob, username, password) VALUES (?, ?, ?, ?, ?, ?)`,
-                [name, phone, email || null, dob || null, username, password],
+                [name, phone, email || null, dob || null, username, passwordHash],
                 function (err2) {
                     if (err2) return res.status(500).json({ error: err2.message });
                     db.run("UPDATE pending_approvals SET status = 'Approved' WHERE id = ?", [id]);
@@ -193,6 +230,7 @@ app.get('/api/customers', (req, res) => {
 
                 return {
                     ...c,
+                    password: '[PROTECTED]',
                     credit_score: score
                 };
             });
@@ -208,6 +246,7 @@ app.post('/api/customers', upload.single('aadhar_photo'), async (req, res) => {
     const dateAdded = new Date().toISOString();
     const finalUsername = (username && username.trim()) ? username.trim() : phone.trim();
     const finalPassword = (password && password.trim()) ? password.trim() : Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedPassword = hashPassword(finalPassword);
     const qrToken = 'ljs_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
 
     // Upload aadhar photo to Supabase Storage if provided
@@ -228,7 +267,7 @@ app.post('/api/customers', upload.single('aadhar_photo'), async (req, res) => {
 
     db.run(
         `INSERT INTO customers (name, phone, email, dob, dateAdded, aadhar_photo, username, password, qr_token, qr_active, portal_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)`,
-        [name, phone, email, dob, dateAdded, aadharPhoto, finalUsername, finalPassword, qrToken],
+        [name, phone, email, dob, dateAdded, aadharPhoto, finalUsername, hashedPassword, qrToken],
         function (err) {
             if (err) {
                 res.status(500).json({ error: err.message });
@@ -242,6 +281,17 @@ app.post('/api/customers', upload.single('aadhar_photo'), async (req, res) => {
             });
         }
     );
+});
+
+// Reset Customer PIN API Endpoint
+app.post('/api/customers/:id/reset-pin', (req, res) => {
+    const { id } = req.params;
+    const newPin = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedPassword = hashPassword(newPin);
+    db.run('UPDATE customers SET password = ? WHERE id = ?', [hashedPassword, id], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'PIN reset successfully', newPin: newPin });
+    });
 });
 
 // Delete a customer (Protected by Master Security PIN)
@@ -1355,8 +1405,8 @@ app.post('/api/portal/login', (req, res) => {
     }
 
     db.get(
-        'SELECT * FROM customers WHERE (username = ? OR phone = ? OR REPLACE(phone, " ", "") = ? OR REPLACE(phone, "-", "") = ?) AND password = ?',
-        [cleanInput, cleanInput, phoneClean, phoneClean, cleanPwd],
+        'SELECT * FROM customers WHERE username = ? OR phone = ? OR REPLACE(phone, " ", "") = ? OR REPLACE(phone, "-", "") = ?',
+        [cleanInput, cleanInput, phoneClean, phoneClean],
         (err, customer) => {
             if (err) {
                 console.error('Portal Login Error:', err);
@@ -1364,6 +1414,17 @@ app.post('/api/portal/login', (req, res) => {
             }
             if (!customer) {
                 return res.status(401).json({ error: 'Invalid Username/Phone or Password/PIN.' });
+            }
+
+            const isCorrect = verifyPassword(cleanPwd, customer.password);
+            if (!isCorrect) {
+                return res.status(401).json({ error: 'Invalid Username/Phone or Password/PIN.' });
+            }
+
+            // Auto-upgrade legacy plain text password to bcrypt hash in DB
+            if (!isBcryptHash(customer.password)) {
+                const newHash = hashPassword(cleanPwd);
+                db.run('UPDATE customers SET password = ? WHERE id = ?', [newHash, customer.id]);
             }
 
             if (customer.portal_active === 0) {

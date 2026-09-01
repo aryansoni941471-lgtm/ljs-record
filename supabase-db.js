@@ -463,12 +463,11 @@ async function handleQuery(sql, params) {
         }));
     }
 
-    // 30. Portal Login - complex WHERE with username/phone OR and password
-    if (/SELECT \* FROM customers WHERE.*username.*OR.*phone.*AND password/i.test(cleanSql)) {
+    // 30. Portal Login - customer lookup by username / phone
+    if (/SELECT \* FROM customers WHERE.*username.*OR.*phone/i.test(cleanSql)) {
         const username = params[0];
-        const phoneClean = params[2];
-        const pwd = params[4];
-        const { data, error } = await supabase.from('customers').select('*').eq('password', pwd).or(`username.eq.${username},phone.eq.${username},phone.eq.${phoneClean}`);
+        const phoneClean = params[2] || username;
+        const { data, error } = await supabase.from('customers').select('*').or(`username.eq.${username},phone.eq.${username},phone.eq.${phoneClean}`);
         if (error) throw error;
         return (data || []).map(normalizeCustomer);
     }

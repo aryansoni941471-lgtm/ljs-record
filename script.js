@@ -597,6 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (!response.ok) throw new Error('Failed to save customer');
+            const data = await response.json();
             
             // Re-fetch and update UI
             await fetchCustomers();
@@ -604,6 +605,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // Reset form
             customerForm.reset();
             document.getElementById('name').focus();
+
+            if (data.password) {
+                if (confirm(`✅ Customer Added Successfully!\n\n📱 Phone: ${data.username}\n🔑 Secret 6-Digit PIN: ${data.password}\n\nDo you want to send login details to customer on WhatsApp?`)) {
+                    sendCustomerCredentials(data.name || formData.get('name'), data.phone || formData.get('phone'), data.password);
+                }
+            }
         } catch (error) {
             console.error('Error adding customer:', error);
             alert('Failed to save customer record. Check console for details.');
@@ -964,7 +971,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (fullCustDetails) fullCustDetails.textContent = `Phone: ${customer.phone || 'N/A'} | Email: ${customer.email || 'N/A'} | D.O.B: ${formatDate(customer.dob)}`;
         const score = customer.credit_score || 700;
         const scoreBadge = getScoreBadgeHtml(score);
-        if (fullPinBadge) fullPinBadge.innerHTML = `🔑 PIN: ${customer.password || 'N/A'} &nbsp;&nbsp; ${scoreBadge}`;
+        if (fullPinBadge) {
+            fullPinBadge.innerHTML = `<span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:700; font-family:sans-serif; font-size:0.8rem;">🔒 PIN Encrypted</span> &nbsp;<button id="resetCustomerPinBtn" class="btn-action" style="background:#fffbeb; color:#b45309; border:1px solid #fef3c7; font-weight:800; padding:0.25rem 0.6rem; border-radius:4px; cursor:pointer;" title="Reset Secret 6-Digit PIN">🔑 Reset PIN</button> &nbsp;&nbsp; ${scoreBadge}`;
+            const resetBtn = document.getElementById('resetCustomerPinBtn');
+            if (resetBtn) {
+                resetBtn.onclick = async () => {
+                    if (!confirm(`Generate a new Secret 6-Digit PIN for ${customer.name}?`)) return;
+                    try {
+                        const res = await fetch(`${API_URL}/customers/${customer.id}/reset-pin`, { method: 'POST' });
+                        const resData = await res.json();
+                        if (res.ok && resData.newPin) {
+                            alert(`✅ New PIN for ${customer.name}: ${resData.newPin}`);
+                            sendCustomerCredentials(customer.name, customer.phone, resData.newPin);
+                        } else {
+                            alert(resData.error || 'Failed to reset PIN.');
+                        }
+                    } catch (e) {
+                        alert('Error resetting PIN.');
+                    }
+                };
+            }
+        }
         if (fullKalamSearch) fullKalamSearch.value = '';
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1008,9 +1035,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (fullKhaataWhatsappBtn) {
-        fullKhaataWhatsappBtn.onclick = () => {
+        fullKhaataWhatsappBtn.onclick = async () => {
             if (!currentKhaataCustomer) return;
-            sendCustomerCredentials(currentKhaataCustomer.name, currentKhaataCustomer.phone, currentKhaataCustomer.password);
+            if (confirm(`Send Login Details to ${currentKhaataCustomer.name} on WhatsApp?\n\n(Note: PIN is encrypted for security. Click OK to reset & send a fresh 6-digit PIN on WhatsApp, or CANCEL to close)`)) {
+                try {
+                    const res = await fetch(`${API_URL}/customers/${currentKhaataCustomer.id}/reset-pin`, { method: 'POST' });
+                    const resData = await res.json();
+                    if (res.ok && resData.newPin) {
+                        sendCustomerCredentials(currentKhaataCustomer.name, currentKhaataCustomer.phone, resData.newPin);
+                    } else {
+                        alert('Failed to generate PIN.');
+                    }
+                } catch (e) {
+                    alert('Error generating PIN.');
+                }
+            }
         };
     }
 
@@ -1674,7 +1713,7 @@ _Thank you for choosing LJS Jewellers_`
                     <td><span class="customer-name-link" data-id="${c.id}" data-name="${escapeHtml(c.name)}" style="color:var(--accent-blue); font-weight:700; cursor:pointer;">${escapeHtml(c.name)}</span></td>
                     <td>${scoreBadge}</td>
                     <td><strong>${escapeHtml(c.phone)}</strong></td>
-                    <td><span class="badge" style="background:#fffbeb; color:#b45309; font-weight:800; font-family:monospace; font-size:0.85rem;">🔑 ${escapeHtml(c.password || 'N/A')}</span></td>
+                    <td><span class="badge" style="background:#f3f4f6; color:#374151; font-weight:700; font-family:sans-serif; font-size:0.8rem;">🔒 Encrypted</span></td>
                     <td>${escapeHtml(c.email || 'N/A')}</td>
                     <td>${formatDate(c.dob)}</td>
                     <td>
