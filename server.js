@@ -1404,20 +1404,20 @@ app.post('/api/portal/login', (req, res) => {
         });
     }
 
-    db.get(
+    db.all(
         'SELECT * FROM customers WHERE username = ? OR phone = ? OR REPLACE(phone, " ", "") = ? OR REPLACE(phone, "-", "") = ?',
         [cleanInput, cleanInput, phoneClean, phoneClean],
-        (err, customer) => {
+        (err, customers) => {
             if (err) {
                 console.error('Portal Login Error:', err);
                 return res.status(500).json({ error: 'Database query error.' });
             }
-            if (!customer) {
+            if (!customers || customers.length === 0) {
                 return res.status(401).json({ error: 'Invalid Username/Phone or Password/PIN.' });
             }
 
-            const isCorrect = verifyPassword(cleanPwd, customer.password);
-            if (!isCorrect) {
+            const customer = customers.find(c => verifyPassword(cleanPwd, c.password));
+            if (!customer) {
                 return res.status(401).json({ error: 'Invalid Username/Phone or Password/PIN.' });
             }
 
