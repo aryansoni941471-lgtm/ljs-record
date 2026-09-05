@@ -1535,6 +1535,174 @@ app.put('/api/customers/:id/portal-status', (req, res) => {
     });
 });
 
+// -------------------------------------------------------------
+// ONLINE PAYMENT ENDPOINTS (PhonePe PG + Manual UPI QR with UTR)
+// -------------------------------------------------------------
+
+const crypto = require('crypto');
+
+// 1. Submit Manual UPI QR Payment with UTR for Admin Approval
+app.post('/api/payments/submit-utr', (req, res) => {
+    const { pawn_id, customer_id, customer_name, customer_phone, amount, utr_number, notes } = req.body;
+    
+    if (!pawn_id || !amount || !utr_number) {
+        return res.status(400).json({ error: 'Pawn ID, amount, and 12-digit UTR/Txn number are required.' });
+    }
+
+    const cleanUtr = String(utr_number).trim();
+    const dataJson = JSON.stringify({
+        pawn_id: parseInt(pawn_id),
+        customer_id: customer_id ? parseInt(customer_id) : null,
+        amount: parseFloat(amount),
+        payment_type: `Online UPI (UTR: ${cleanUtr})`,
+        utr_number: cleanUtr,
+        notes: notes || 'Submitted from Customer Portal UPI QR'
+    });
+
+    const staffName = customer_name ? `${customer_name} (Portal UTR: ${cleanUtr})` : `Customer (Portal UTR: ${cleanUtr})`;
+    const createdAt = new Date().toISOString();
+
+    db.run(
+        `INSERT INTO pending_approvals (type, staff_name, data_json, status, created_at) VALUES (?, ?, ?, 'Pending', ?)`,
+        ['RECEIVE_PAYMENT', staffName, dataJson, createdAt],
+        function (err) {
+            if (err) {
+                console.error('Error recording UTR payment request:', err);
+                return res.status(500).json({ error: 'Failed to submit payment request' });
+            }
+            res.json({
+                success: true,
+                message: 'Aapka UTR payment submit ho gaya hai! Dukan owner dwara verify hone ke baad byaaj ledger me update ho jayega.',
+                approval_id: this.lastID
+            });
+        }
+    );
+});
+
+// 2. Initiate PhonePe Payment Gateway
+app.post('/api/phonepe/initiate-payment', async (req, res) => {
+    try {
+        const { pawn_id, customer_id, amount, customer_phone } = req.body;
+        const numAmount = parseFloat(amount || 0);
+
+        if (!pawn_id || numAmount <= 0) {
+            return res.status(400).json({ error: 'Valid Pawn ID and amount required.' });
+        }
+
+        const merchantId = process.env.PHONEPE_MERCHANT_ID || 'PGTESTPAYUAT';
+        const saltKey = process.env.PHONEPE_SALT_KEY || '099eb0cd-02cf-4e2a-8aca-3e6c6aff0399';
+        const saltIndex = process.env.PHONEPE_SALT_INDEX || '1';
+        const envMode = (process.env.PHONEPE_ENV || 'SANDBOX').toUpperCase();
+
+        const hostUrl = `${req.protocol}://${req.get('host')}`;
+        const txnId = 'LJS_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+
+        const payload = {
+            merchantId: merchantId,
+            merchantTransactionId: txnId,
+            merchantUserId: customer_id ? 'CUST_' + customer_id : 'GUEST_' + Date.now(),
+            amount: Math.round(numAmount * 100),
+            redirectUrl: `${hostUrl}/api/phonepe/callback?txnId=${txnId}&pawnId=${pawn_id}&amt=${numAmount}`,
+            redirectMode: 'POST',
+            callbackUrl: `${hostUrl}/api/phonepe/callback?txnId=${txnId}&pawnId=${pawn_id}&amt=${numAmount}`,
+            mobileNumber: (customer_phone || '').replace(/[^0-9]/g, '').slice(-10) || '9999999999',
+            paymentInstrument: { type: 'PAY_PAGE' }
+        };
+
+        const base64Payload = Buffer.from(JSON.stringify(payload)).toString('base64');
+        const endpoint = '/pg/v1/pay';
+        const checksumStr = base64Payload + endpoint + saltKey;
+        const sha256Hash = crypto.createHash('sha256').update(checksumStr).digest('hex');
+        const xVerify = sha256Hash + '###' + saltIndex;
+
+        const apiUrl = envMode === 'PRODUCTION'
+            ? 'https://api.phonepe.com/apis/hermes/pg/v1/pay'
+            : 'https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/pay';
+
+        const phonepeRes = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-VERIFY': xVerify
+            },
+            body: JSON.stringify({ request: base64Payload })
+        });
+
+        const data = await phonepeRes.json();
+
+        if (data.success && data.data && data.data.instrumentResponse && data.data.instrumentResponse.redirectInfo) {
+            const redirectUrl = data.data.instrumentResponse.redirectInfo.url;
+            res.json({ success: true, redirectUrl, txnId });
+        } else {
+            console.error('PhonePe API Error Response:', data);
+            res.status(400).json({ error: data.message || 'PhonePe payment initiation failed', data });
+        }
+    } catch (err) {
+        console.error('PhonePe Initiate Error:', err);
+        res.status(500).json({ error: 'Server error while initiating PhonePe payment: ' + err.message });
+    }
+});
+
+// 3. PhonePe Payment Callback & Status Verification
+app.all('/api/phonepe/callback', async (req, res) => {
+    try {
+        const txnId = req.query.txnId || req.body?.merchantTransactionId;
+        const pawnId = req.query.pawnId;
+        const amt = parseFloat(req.query.amt || 0);
+
+        if (!txnId) {
+            return res.redirect('/portal.html?payment=failed&reason=invalid_transaction');
+        }
+
+        const merchantId = process.env.PHONEPE_MERCHANT_ID || 'PGTESTPAYUAT';
+        const saltKey = process.env.PHONEPE_SALT_KEY || '099eb0cd-02cf-4e2a-8aca-3e6c6aff0399';
+        const saltIndex = process.env.PHONEPE_SALT_INDEX || '1';
+        const envMode = (process.env.PHONEPE_ENV || 'SANDBOX').toUpperCase();
+
+        const endpoint = `/pg/v1/status/${merchantId}/${txnId}`;
+        const checksumStr = endpoint + saltKey;
+        const sha256Hash = crypto.createHash('sha256').update(checksumStr).digest('hex');
+        const xVerify = sha256Hash + '###' + saltIndex;
+
+        const apiUrl = envMode === 'PRODUCTION'
+            ? `https://api.phonepe.com/apis/hermes${endpoint}`
+            : `https://api-preprod.phonepe.com/apis/pg-sandbox${endpoint}`;
+
+        const statusRes = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-VERIFY': xVerify,
+                'X-MERCHANT-ID': merchantId
+            }
+        });
+
+        const statusData = await statusRes.json();
+
+        if (statusData.code === 'PAYMENT_SUCCESS' || (statusData.success && statusData.data?.responseCode === 'SUCCESS')) {
+            const paymentDate = new Date().toISOString();
+            const finalAmount = amt || (statusData.data?.amount ? statusData.data.amount / 100 : 0);
+
+            if (pawnId && finalAmount > 0) {
+                db.run(
+                    `INSERT INTO pawn_payments (pawn_id, amount, payment_type, payment_date) VALUES (?, ?, ?, ?)`,
+                    [pawnId, finalAmount, `PhonePe PG Online (Txn: ${txnId})`, paymentDate],
+                    (err) => {
+                        if (err) console.error('Error inserting PhonePe payment:', err);
+                    }
+                );
+            }
+            return res.redirect(`/portal.html?payment=success&txn=${txnId}&amt=${finalAmount}`);
+        } else {
+            console.warn('PhonePe Payment Verification Failed/Pending:', statusData);
+            return res.redirect(`/portal.html?payment=failed&txn=${txnId}&reason=${encodeURIComponent(statusData.message || 'Payment not completed')}`);
+        }
+    } catch (err) {
+        console.error('PhonePe Callback Error:', err);
+        return res.redirect('/portal.html?payment=failed&reason=server_error');
+    }
+});
+
 if (require.main === module) {
     app.listen(PORT, '0.0.0.0', () => {
         const ip = getLocalIpAddress();

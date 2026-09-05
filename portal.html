@@ -1011,6 +1011,12 @@
                                     </div>
                                 </div>
 
+                                ${p.status === 'Active' ? `
+                                    <button class="pay-online-btn" onclick="openPaymentModal(${p.id}, '${escapeHtml(p.description)}', ${p.amount}, ${p.calculated_interest}, ${p.baki})" style="width:100%; margin-top:0.75rem; background: linear-gradient(135deg, #2563eb, #1d4ed8); color:white; font-weight:800; padding:0.65rem 1rem; border-radius: var(--radius-pill); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; font-size:0.9rem; box-shadow: 0 4px 12px rgba(37,99,235,0.3); transition: transform 0.15s ease;">
+                                        💳 Online Byaaj / Part Payment Karein
+                                    </button>
+                                ` : ''}
+
                                 <button class="timeline-toggle-btn" onclick="toggleTimeline(${p.id})">
                                     <span>📜 Payment History Timeline (${paymentsArr.length})</span>
                                 </button>
@@ -1047,10 +1053,371 @@
                 ledgerView.style.display = 'block';
             }
 
-            window.toggleTimeline = function(id) {
-                const el = document.getElementById(`timeline-${id}`);
-                if (el) {
-                    el.classList.toggle('show');
+    <!-- Payment Modal -->
+    <div id="paymentModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.75); backdrop-filter:blur(6px); z-index:9999; align-items:center; justify-content:center; padding:1rem;">
+        <div style="background:white; border-radius:1.5rem; max-width:480px; width:100%; padding:1.5rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); position:relative; overflow:hidden; border:1px solid #e2e8f0; animation: modalSlideUp 0.3s ease;">
+            <button onclick="closePaymentModal()" style="position:absolute; top:1.25rem; right:1.25rem; background:#f1f5f9; border:none; width:32px; height:32px; border-radius:50%; font-weight:bold; color:#64748b; cursor:pointer; font-size:1rem;">✕</button>
+
+            <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:1rem;">
+                <div style="width:40px; height:40px; background:#eff6ff; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">💳</div>
+                <div>
+                    <h3 style="margin:0; font-size:1.15rem; color:#1e293b; font-family:var(--font-heading);">Online Byaaj / Part Payment</h3>
+                    <p style="margin:0; font-size:0.78rem; color:#64748b;" id="modalPawnDesc">Girvi Item Payment</p>
+                </div>
+            </div>
+
+            <!-- Alert Message Container -->
+            <div id="modalPayAlert" style="display:none; padding:0.75rem; border-radius:0.75rem; font-size:0.85rem; margin-bottom:1rem; font-weight:600;"></div>
+
+            <form id="paymentForm" onsubmit="handlePaymentSubmit(event)">
+                <input type="hidden" id="modalPawnId">
+                
+                <div style="background:#f8fafc; padding:1rem; border-radius:1rem; border:1px solid #e2e8f0; margin-bottom:1.25rem;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem; font-size:0.85rem; color:#475569;">
+                        <span>Kitna Byaaj Baki Hai:</span>
+                        <strong id="modalInterestDue" style="color:#d97706;">₹0</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#475569;">
+                        <span>Total Balance Baki:</span>
+                        <strong id="modalNetBaki" style="color:#dc2626;">₹0</strong>
+                    </div>
+                </div>
+
+                <!-- Amount Selection -->
+                <div style="margin-bottom:1.25rem;">
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:0.4rem;">Kitna Amount Jama Karna Hai? (₹)</label>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:0.6rem;">
+                        <button type="button" id="btnPayFullInterest" onclick="selectAmountOption('full')" style="padding:0.6rem; border:2px solid #2563eb; background:#eff6ff; color:#1d4ed8; font-weight:800; border-radius:0.75rem; cursor:pointer; font-size:0.8rem;">Full Byaaj</button>
+                        <button type="button" id="btnPayCustomAmount" onclick="selectAmountOption('custom')" style="padding:0.6rem; border:1px solid #cbd5e1; background:white; color:#475569; font-weight:700; border-radius:0.75rem; cursor:pointer; font-size:0.8rem;">Custom Amount</button>
+                    </div>
+                    <input type="number" id="payAmountInput" required min="1" step="1" placeholder="Amount (₹)" style="width:100%; padding:0.75rem; border:1.5px solid #cbd5e1; border-radius:0.75rem; font-size:1.1rem; font-weight:800; color:#0f172a; box-sizing:border-box;">
+                </div>
+
+                <!-- Payment Method Dropdown -->
+                <div style="margin-bottom:1.25rem;">
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:0.4rem;">Payment Ka Tarika Select Karein:</label>
+                    <select id="paymentMethodSelect" onchange="togglePaymentMethodView()" style="width:100%; padding:0.75rem; border:1.5px solid #cbd5e1; border-radius:0.75rem; font-size:0.9rem; font-weight:700; color:#0f172a; background:white; cursor:pointer;">
+                        <option value="UPI_QR">📲 Direct Bank UPI QR (0% Fee - Upload UTR)</option>
+                        <option value="PHONEPE_PG">⚡ PhonePe Online Gateway (Automated)</option>
+                    </select>
+                </div>
+
+                <!-- VIEW 1: Manual UPI QR + UTR Input -->
+                <div id="viewUpiQr" style="display:block; background:#f0fdf4; border:1px solid #bbf7d0; padding:1.25rem; border-radius:1rem; text-align:center; margin-bottom:1.25rem;">
+                    <div style="font-size:0.8rem; font-weight:800; color:#166534; margin-bottom:0.5rem; text-transform:uppercase; letter-spacing:0.05em;">Scan & Pay via GPay / PhonePe / Paytm</div>
+                    <div style="background:white; padding:0.75rem; border-radius:1rem; display:inline-block; box-shadow:0 4px 10px rgba(0,0,0,0.05); margin-bottom:0.75rem;">
+                        <img id="upiQrImg" src="" alt="UPI QR Code" style="width:170px; height:170px; display:block;">
+                    </div>
+                    <div style="font-size:0.85rem; font-weight:800; color:#15803d; margin-bottom:0.25rem;">UPI ID: <span id="shopUpiIdText">laxminarayanjewellers@ybl</span></div>
+                    <div style="font-size:0.75rem; color:#166534; margin-bottom:1rem;">⚡ 0% Extra Charges • Direct Bank Transfer</div>
+
+                    <div style="text-align:left; background:white; padding:0.75rem; border-radius:0.75rem; border:1px solid #dcfce7;">
+                        <label style="display:block; font-size:0.78rem; font-weight:800; color:#166534; margin-bottom:0.3rem;">Payment hone ke baad 12-Digit UTR / Ref No daalein *</label>
+                        <input type="text" id="utrNumberInput" placeholder="e.g. 423456789012" maxlength="20" style="width:100%; padding:0.6rem; border:1.5px solid #86efac; border-radius:0.5rem; font-size:0.95rem; font-weight:800; font-family:monospace; color:#0f172a; box-sizing:border-box;">
+                    </div>
+                </div>
+
+                <!-- VIEW 2: PhonePe Gateway Info -->
+                <div id="viewPhonePePg" style="display:none; background:#f0f9ff; border:1px solid #bae6fd; padding:1rem; border-radius:1rem; margin-bottom:1.25rem;">
+                    <div style="display:flex; align-items:center; gap:0.5rem; color:#0369a1; font-weight:800; font-size:0.85rem; margin-bottom:0.4rem;">
+                        <span>⚡ PhonePe Official Checkout</span>
+                    </div>
+                    <p style="margin:0; font-size:0.78rem; color:#0284c7; line-height:1.4;">
+                        Click karte hi aap PhonePe Payment Gateway par redirect ho jayenge. Payment successful hote hi aapka byaaj instantly update ho jayega.
+                    </p>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="btnSubmitPayment" style="width:100%; background:linear-gradient(135deg, #16a34a, #15803d); color:white; font-weight:800; padding:0.85rem; border-radius:var(--radius-pill); border:none; cursor:pointer; font-size:1rem; box-shadow:0 4px 14px rgba(22,163,74,0.35); display:flex; align-items:center; justify-content:center; gap:0.5rem;">
+                    <span id="btnSubmitText">✅ Submit UTR Payment for Verification</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginView = document.getElementById('loginView');
+            const ledgerView = document.getElementById('ledgerView');
+            const loginForm = document.getElementById('portalLoginForm');
+            const loginAlert = document.getElementById('loginAlert');
+            const logoutBtn = document.getElementById('logoutBtn');
+
+            // URL notification banner check
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('payment')) {
+                const payStatus = urlParams.get('payment');
+                const txnId = urlParams.get('txn') || '';
+                const amt = urlParams.get('amt') || '';
+                
+                if (payStatus === 'success') {
+                    alert(`🎉 Online Payment Successful!\n\nTransaction ID: ${txnId}\nAmount Paid: ₹${amt}\n\nAapka payment record ho gaya hai!`);
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                } else if (payStatus === 'failed') {
+                    const reason = urlParams.get('reason') || 'Payment incomplete';
+                    alert(`❌ Online Payment Failed or Cancelled.\nReason: ${reason}`);
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            }
+
+            // Session check on load
+            const currentRole = localStorage.getItem('ljs_session_role');
+            if (currentRole === 'admin') {
+                window.location.href = '/index.html';
+                return;
+            }
+
+            const savedData = localStorage.getItem('ljs_customer_session');
+            if (savedData && currentRole === 'customer') {
+                try {
+                    const data = JSON.parse(savedData);
+                    renderLedger(data);
+                } catch(e) { 
+                    localStorage.removeItem('ljs_customer_session'); 
+                    localStorage.removeItem('ljs_session_role');
+                }
+            }
+
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                loginAlert.style.display = 'none';
+
+                const username = document.getElementById('loginUsername').value;
+                const password = document.getElementById('loginPassword').value;
+
+                try {
+                    const res = await fetch('/api/portal/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+                    const data = await res.json();
+
+                    if (!res.ok) {
+                        loginAlert.innerText = data.error || 'Login failed. Sahi Username/Password daalein.';
+                        loginAlert.style.display = 'block';
+                        return;
+                    }
+
+                    if (data.role === 'admin') {
+                        localStorage.setItem('ljs_session_role', 'admin');
+                        window.location.href = '/index.html';
+                        return;
+                    }
+
+                    // Save customer session & render ledger
+                    localStorage.setItem('ljs_session_role', 'customer');
+                    localStorage.setItem('ljs_customer_session', JSON.stringify(data));
+                    renderLedger(data);
+                } catch (err) {
+                    console.error(err);
+                    loginAlert.innerText = 'Server se connect nahi ho pa raha hai. Kripya punah prayas karein.';
+                    loginAlert.style.display = 'block';
+                }
+            });
+
+            logoutBtn.addEventListener('click', () => {
+                localStorage.removeItem('ljs_customer_session');
+                localStorage.removeItem('ljs_session_role');
+                ledgerView.style.display = 'none';
+                loginView.style.display = 'block';
+                loginForm.reset();
+            });
+
+            // Payment modal state
+            let currentPaymentData = {
+                pawnId: null,
+                description: '',
+                principal: 0,
+                interestDue: 0,
+                netBaki: 0,
+                customerName: '',
+                customerPhone: '',
+                customerId: null
+            };
+
+            window.openPaymentModal = function(pawnId, desc, principal, interest, netBaki) {
+                const sessionStr = localStorage.getItem('ljs_customer_session');
+                let custName = '', custPhone = '', custId = null;
+                if (sessionStr) {
+                    try {
+                        const sess = JSON.parse(sessionStr);
+                        if (sess.customer) {
+                            custName = sess.customer.name || '';
+                            custPhone = sess.customer.phone || '';
+                            custId = sess.customer.id || null;
+                        }
+                    } catch(e) {}
+                }
+
+                currentPaymentData = { pawnId, description: desc, principal, interestDue: interest, netBaki, customerName: custName, customerPhone: custPhone, customerId: custId };
+
+                document.getElementById('modalPawnId').value = pawnId;
+                document.getElementById('modalPawnDesc').innerText = desc;
+                document.getElementById('modalInterestDue').innerText = '₹' + Math.round(interest).toLocaleString('en-IN');
+                document.getElementById('modalNetBaki').innerText = '₹' + Math.round(netBaki).toLocaleString('en-IN');
+                
+                const defaultAmount = Math.max(1, Math.round(interest > 0 ? interest : netBaki));
+                document.getElementById('payAmountInput').value = defaultAmount;
+                
+                selectAmountOption('full');
+                togglePaymentMethodView();
+
+                document.getElementById('modalPayAlert').style.display = 'none';
+                document.getElementById('paymentModal').style.display = 'flex';
+            };
+
+            window.closePaymentModal = function() {
+                document.getElementById('paymentModal').style.display = 'none';
+            };
+
+            window.selectAmountOption = function(type) {
+                const btnFull = document.getElementById('btnPayFullInterest');
+                const btnCustom = document.getElementById('btnPayCustomAmount');
+                const input = document.getElementById('payAmountInput');
+
+                if (type === 'full') {
+                    btnFull.style.background = '#eff6ff';
+                    btnFull.style.borderColor = '#2563eb';
+                    btnFull.style.color = '#1d4ed8';
+
+                    btnCustom.style.background = 'white';
+                    btnCustom.style.borderColor = '#cbd5e1';
+                    btnCustom.style.color = '#475569';
+
+                    const defaultAmt = Math.max(1, Math.round(currentPaymentData.interestDue > 0 ? currentPaymentData.interestDue : currentPaymentData.netBaki));
+                    input.value = defaultAmt;
+                } else {
+                    btnCustom.style.background = '#eff6ff';
+                    btnCustom.style.borderColor = '#2563eb';
+                    btnCustom.style.color = '#1d4ed8';
+
+                    btnFull.style.background = 'white';
+                    btnFull.style.borderColor = '#cbd5e1';
+                    btnFull.style.color = '#475569';
+
+                    input.focus();
+                }
+            };
+
+            window.togglePaymentMethodView = function() {
+                const method = document.getElementById('paymentMethodSelect').value;
+                const viewUpi = document.getElementById('viewUpiQr');
+                const viewPhonePe = document.getElementById('viewPhonePePg');
+                const btnSubmitText = document.getElementById('btnSubmitText');
+                const btnSubmit = document.getElementById('btnSubmitPayment');
+                const amount = document.getElementById('payAmountInput').value || 100;
+
+                if (method === 'UPI_QR') {
+                    viewUpi.style.display = 'block';
+                    viewPhonePe.style.display = 'none';
+                    btnSubmitText.innerText = '✅ Submit UTR Payment for Verification';
+                    btnSubmit.style.background = 'linear-gradient(135deg, #16a34a, #15803d)';
+
+                    const upiId = 'laxminarayanjewellers@ybl';
+                    const shopName = 'LJS Jewellers';
+                    const upiUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(shopName)}&am=${amount}&cu=INR&tn=${encodeURIComponent('Pawn Interest Payment')}`;
+                    document.getElementById('upiQrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiUrl)}`;
+                } else {
+                    viewUpi.style.display = 'none';
+                    viewPhonePe.style.display = 'block';
+                    btnSubmitText.innerText = '⚡ Pay via PhonePe Gateway →';
+                    btnSubmit.style.background = 'linear-gradient(135deg, #2563eb, #1d4ed8)';
+                }
+            };
+
+            window.handlePaymentSubmit = async function(e) {
+                e.preventDefault();
+                const method = document.getElementById('paymentMethodSelect').value;
+                const amount = parseFloat(document.getElementById('payAmountInput').value || 0);
+                const alertEl = document.getElementById('modalPayAlert');
+
+                if (amount <= 0) {
+                    alertEl.innerText = '❌ Kripya valid amount daalein (Minimum ₹1).';
+                    alertEl.style.background = '#fef2f2';
+                    alertEl.style.color = '#dc2626';
+                    alertEl.style.display = 'block';
+                    return;
+                }
+
+                if (method === 'UPI_QR') {
+                    const utr = document.getElementById('utrNumberInput').value.trim();
+                    if (!utr || utr.length < 6) {
+                        alertEl.innerText = '❌ Kripya Payment app (GPay/PhonePe) me se 12-digit UTR/Txn Ref number dekher sahi se fill karein.';
+                        alertEl.style.background = '#fef2f2';
+                        alertEl.style.color = '#dc2626';
+                        alertEl.style.display = 'block';
+                        return;
+                    }
+
+                    alertEl.innerText = '⏳ Submitting UTR payment request...';
+                    alertEl.style.background = '#f0f9ff';
+                    alertEl.style.color = '#0284c7';
+                    alertEl.style.display = 'block';
+
+                    try {
+                        const res = await fetch('/api/payments/submit-utr', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                pawn_id: currentPaymentData.pawnId,
+                                customer_id: currentPaymentData.customerId,
+                                customer_name: currentPaymentData.customerName,
+                                customer_phone: currentPaymentData.customerPhone,
+                                amount: amount,
+                                utr_number: utr,
+                                notes: `Byaaj Payment for ${currentPaymentData.description}`
+                            })
+                        });
+                        const data = await res.json();
+
+                        if (res.ok && data.success) {
+                            alert(`✅ Payment Request Submitted!\n\nTransaction UTR: ${utr}\nAmount: ₹${amount}\n\nDukan owner dwara verify hone ke baad aapka Interest Ledger auto-update ho jayega.`);
+                            closePaymentModal();
+                        } else {
+                            alertEl.innerText = '❌ Error: ' + (data.error || 'Submission failed.');
+                            alertEl.style.background = '#fef2f2';
+                            alertEl.style.color = '#dc2626';
+                        }
+                    } catch(err) {
+                        console.error(err);
+                        alertEl.innerText = '❌ Server se connect nahi ho pa raha hai.';
+                        alertEl.style.background = '#fef2f2';
+                        alertEl.style.color = '#dc2626';
+                    }
+                } else {
+                    // PhonePe PG
+                    alertEl.innerText = '🚀 PhonePe Payment Gateway par redirect kar rahe hain...';
+                    alertEl.style.background = '#f0f9ff';
+                    alertEl.style.color = '#0284c7';
+                    alertEl.style.display = 'block';
+
+                    try {
+                        const res = await fetch('/api/phonepe/initiate-payment', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                pawn_id: currentPaymentData.pawnId,
+                                customer_id: currentPaymentData.customerId,
+                                customer_phone: currentPaymentData.customerPhone,
+                                amount: amount
+                            })
+                        });
+                        const data = await res.json();
+
+                        if (res.ok && data.redirectUrl) {
+                            window.location.href = data.redirectUrl;
+                        } else {
+                            alertEl.innerText = '❌ PhonePe Error: ' + (data.error || 'Initiation failed');
+                            alertEl.style.background = '#fef2f2';
+                            alertEl.style.color = '#dc2626';
+                        }
+                    } catch(err) {
+                        console.error(err);
+                        alertEl.innerText = '❌ Server se connect nahi ho pa raha hai.';
+                        alertEl.style.background = '#fef2f2';
+                        alertEl.style.color = '#dc2626';
+                    }
                 }
             };
 
@@ -1069,3 +1436,4 @@
     </script>
 </body>
 </html>
+
