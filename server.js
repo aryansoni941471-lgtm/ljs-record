@@ -1225,17 +1225,19 @@ function calcServerPawnInterest(amount, rate, dateAdded, status, releaseDate) {
     
     const diffTime = Math.abs(end - start);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return 0;
 
     const months = Math.floor(diffDays / 30);
     const extraDays = diffDays % 30;
     
     let chargeableMonths = months;
-    if (extraDays >= 1 && extraDays <= 15) {
-        chargeableMonths += 0.5; // 1-15 extra days = half month interest
+    if (extraDays > 0 && extraDays <= 5) {
+        chargeableMonths += 1; // 1-5 extra days = full month interest
+    } else if (extraDays > 5 && extraDays <= 15) {
+        chargeableMonths += 0.5; // >5 & <=15 extra days = half month interest
     } else if (extraDays > 15) {
         chargeableMonths += (extraDays / 30); // >15 extra days = day-wise interest
+    } else if (months === 0 && extraDays === 0) {
+        chargeableMonths = 1; // 0 days = within 5 days = 1 full month interest
     }
 
     return amount * (rate / 100) * chargeableMonths;

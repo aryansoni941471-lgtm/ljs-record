@@ -1564,17 +1564,19 @@ _Thank you for choosing LJS Jewellers_`
         const diffTime = Math.abs(end - start);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
-        if (diffDays === 0) return 0;
-
         const months = Math.floor(diffDays / 30);
         const extraDays = diffDays % 30;
         
         let chargeableMonths = months;
         
-        if (extraDays >= 1 && extraDays <= 15) {
-            chargeableMonths += 0.5; // 1-15 din extra tak half month ki interest
+        if (extraDays > 0 && extraDays <= 5) {
+            chargeableMonths += 1; // 1-5 din extra = 1 full month interest
+        } else if (extraDays > 5 && extraDays <= 15) {
+            chargeableMonths += 0.5; // 5 din se jyada aur 15 din tak = half month interest
         } else if (extraDays > 15) {
-            chargeableMonths += (extraDays / 30); // 15 din ke baad day wise
+            chargeableMonths += (extraDays / 30); // 15 din se jyada = day wise interest
+        } else if (months === 0 && extraDays === 0) {
+            chargeableMonths = 1; // 0 days (same day) = within 5 days = 1 full month interest
         }
 
         return amount * (rate / 100) * chargeableMonths;
