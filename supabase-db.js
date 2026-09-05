@@ -93,6 +93,36 @@ async function handleQuery(sql, params) {
         return (data || []).map(normalizeCustomer);
     }
 
+    // 3b. Portal Login: SELECT * FROM customers WHERE username = ? OR phone = ? OR REPLACE(phone...) = ? ...
+    // Server sends 4 params: [cleanInput, cleanInput, phoneClean, phoneClean]
+    if (/SELECT \* FROM customers WHERE username = \? OR phone = \?/i.test(cleanSql)) {
+        const searchVal = params[0] || '';
+        const phoneVal = params[2] || searchVal.replace(/[^0-9]/g, '');
+        
+        // Try username match first
+        const { data: byUsername, error: e1 } = await supabase.from('customers').select('*').eq('username', searchVal);
+        if (e1) throw e1;
+        if (byUsername && byUsername.length > 0) return byUsername.map(normalizeCustomer);
+
+        // Try phone match (exact)
+        const { data: byPhone, error: e2 } = await supabase.from('customers').select('*').eq('phone', searchVal);
+        if (e2) throw e2;
+        if (byPhone && byPhone.length > 0) return byPhone.map(normalizeCustomer);
+
+        // Try phone digits only match
+        if (phoneVal && phoneVal.length >= 10) {
+            const { data: allCusts, error: e3 } = await supabase.from('customers').select('*');
+            if (e3) throw e3;
+            const matched = (allCusts || []).filter(c => {
+                const cp = (c.phone || '').replace(/[^0-9]/g, '');
+                return cp === phoneVal;
+            });
+            if (matched.length > 0) return matched.map(normalizeCustomer);
+        }
+
+        return [];
+    }
+
     // 4. SELECT * FROM customers WHERE qr_token = ?
     if (/SELECT \* FROM customers WHERE qr_token = \?/i.test(cleanSql)) {
         const { data, error } = await supabase.from('customers').select('*').eq('qr_token', params[0]);
@@ -135,7 +165,7 @@ async function handleQuery(sql, params) {
         return data || [];
     }
 
-    // 10. Get pawn records with total_jama for a customer
+    // 10. Get pawn records with total_jama for a customer (admin view with alias p)
     if (/FROM pawn_records p WHERE p\.customer_id = \?/i.test(cleanSql)) {
         const custId = params[0];
         const { data: pawns, error } = await supabase.from('pawn_records').select('*').eq('customer_id', custId).order('id', { ascending: false });
@@ -157,11 +187,34 @@ async function handleQuery(sql, params) {
         }));
     }
 
+    // 10b. Portal Login: SELECT * FROM pawn_records WHERE customer_id = ? ORDER BY id DESC
+    if (/SELECT \* FROM pawn_records WHERE customer_id = \? ORDER BY id DESC/i.test(cleanSql)) {
+        const custId = params[0];
+        const { data: pawns, error } = await supabase.from('pawn_records').select('*').eq('customer_id', custId).order('id', { ascending: false });
+        if (error) throw error;
+        return pawns || [];
+    }
+
     // 11. SELECT * FROM pawn_payments WHERE pawn_id = ? ORDER BY id DESC
     if (/SELECT \* FROM pawn_payments WHERE pawn_id = \?/i.test(cleanSql)) {
         const { data, error } = await supabase.from('pawn_payments').select('*').eq('pawn_id', params[0]).order('id', { ascending: false });
         if (error) throw error;
         return data || [];
+    }
+
+    // 11b. Portal: SELECT * FROM pawn_payments WHERE pawn_id IN (1,2,3...)
+    if (/SELECT \* FROM pawn_payments WHERE pawn_id IN \(/i.test(cleanSql)) {
+        // Extract pawn IDs from the SQL string directly
+        const inMatch = cleanSql.match(/pawn_id IN \(([^)]+)\)/i);
+        if (inMatch) {
+            const ids = inMatch[1].split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+            if (ids.length > 0) {
+                const { data, error } = await supabase.from('pawn_payments').select('*').in('pawn_id', ids).order('id', { ascending: false });
+                if (error) throw error;
+                return data || [];
+            }
+        }
+        return [];
     }
 
     // 12. Dashboard SUM(amount) Active principal
