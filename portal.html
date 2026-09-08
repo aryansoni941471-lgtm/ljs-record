@@ -4,7 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LJS Jewellers - Customer Portal</title>
+    <!-- PWA Web App Manifest & Mobile Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LJS Pay">
+    <link rel="apple-touch-icon" href="/icon-192.png">
+    <link rel="icon" type="image/svg+xml" href="/icon.svg">
+
     <!-- Google Fonts -->
     <link
         href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
@@ -660,6 +669,272 @@
             }
         }
 
+        /* ========================================================
+           PhonePe-Style Transaction History Section
+           ======================================================== */
+        .txn-header-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: #e0e7ff;
+            color: #3730a3;
+            padding: 0.25rem 0.65rem;
+            border-radius: var(--radius-pill);
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        .txn-card {
+            background: var(--surface-card);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--card-border);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .txn-summary-bar {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+            padding: 1rem 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .txn-summary-label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .txn-summary-val {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #10b981;
+        }
+
+        .txn-date-group-header {
+            background: #f8fafc;
+            padding: 0.55rem 1.25rem;
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #f1f5f9;
+            border-top: 1px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .txn-date-group-header:first-of-type {
+            border-top: none;
+        }
+
+        .txn-list {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .txn-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.95rem 1.25rem;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background-color 0.15s ease;
+            gap: 0.75rem;
+        }
+
+        .txn-item:last-child {
+            border-bottom: none;
+        }
+
+        .txn-item:hover {
+            background-color: #f8fafc;
+        }
+
+        .txn-left {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .txn-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.35rem;
+            flex-shrink: 0;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+        }
+
+        .txn-info {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .txn-title {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--navy-header);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .txn-subtitle {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            margin-top: 0.15rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .txn-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+            flex-wrap: wrap;
+        }
+
+        .txn-type-badge {
+            padding: 0.1rem 0.45rem;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.7rem;
+            border: 1px solid transparent;
+        }
+
+        .txn-right {
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .txn-amount {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: var(--success);
+            letter-spacing: -0.2px;
+        }
+
+        .txn-status {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.3rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--success);
+            margin-top: 0.2rem;
+        }
+
+        .txn-status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--success);
+            display: inline-block;
+        }
+
+        .txn-empty {
+            text-align: center;
+            padding: 2.5rem 1rem;
+            color: var(--text-secondary);
+        }
+
+        .txn-empty-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Navbar Navigation Tabs (Customer Portal) */
+        .nav-tabs-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 0.3rem 0.45rem;
+            border-radius: var(--radius-pill);
+            border: 1px solid rgba(212, 175, 55, 0.25);
+        }
+
+        .nav-tab-btn {
+            background: transparent;
+            border: none;
+            color: #cbd5e1;
+            font-family: var(--font-body);
+            font-size: 0.85rem;
+            font-weight: 700;
+            padding: 0.45rem 0.95rem;
+            border-radius: var(--radius-pill);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            white-space: nowrap;
+        }
+
+        .nav-tab-btn:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-tab-btn.active {
+            background: var(--gold-gradient);
+            color: #0f172a;
+            box-shadow: 0 2px 10px var(--gold-shadow);
+        }
+
+        .nav-badge {
+            background: rgba(15, 23, 42, 0.25);
+            color: #0f172a;
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 0.1rem 0.5rem;
+            border-radius: var(--radius-pill);
+        }
+
+        .nav-tab-btn:not(.active) .nav-badge {
+            background: rgba(255, 255, 255, 0.18);
+            color: #ffffff;
+        }
+
+        @media (max-width: 600px) {
+            .header-content {
+                flex-direction: column;
+                gap: 0.75rem;
+                align-items: stretch;
+            }
+
+            .nav-tabs-header {
+                justify-content: center;
+                width: 100%;
+            }
+
+            .nav-tab-btn {
+                flex: 1;
+                justify-content: center;
+                font-size: 0.78rem;
+                padding: 0.4rem 0.6rem;
+            }
+        }
+
         @media (max-width: 480px) {
             .summary-grid {
                 grid-template-columns: 1fr;
@@ -671,9 +946,84 @@
                 text-align: center;
             }
 
-            .cust-avatar-group {
-                flex-direction: column;
-            }
+        /* ========================================================
+           PWA Mobile App UI & Install Banner
+           ======================================================== */
+        .pwa-install-bar {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            color: #ffffff;
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-md);
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .pwa-install-info {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            min-width: 0;
+        }
+
+        .pwa-app-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: var(--gold-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px var(--gold-shadow);
+        }
+
+        .pwa-install-btn {
+            background: var(--gold-gradient);
+            color: #0f172a;
+            border: none;
+            font-family: var(--font-body);
+            font-weight: 800;
+            font-size: 0.8rem;
+            padding: 0.45rem 0.95rem;
+            border-radius: var(--radius-pill);
+            cursor: pointer;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px var(--gold-shadow);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .pwa-install-btn:active {
+            transform: scale(0.96);
+        }
+
+        .pwa-update-toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #0f172a;
+            color: #ffffff;
+            border: 1px solid var(--gold-primary);
+            padding: 0.75rem 1.35rem;
+            border-radius: var(--radius-pill);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            z-index: 10000;
+            font-size: 0.85rem;
+            font-weight: 700;
+            animation: fadeIn 0.3s ease;
         }
     </style>
 </head>
@@ -689,10 +1039,37 @@
                     <div class="brand-sub">Customer Khata Portal</div>
                 </div>
             </div>
+
+            <!-- Navbar Buttons (Visible after customer login) -->
+            <div id="navTabsContainer" class="nav-tabs-header" style="display: none;">
+                <button id="navTabDashboard" class="nav-tab-btn active" onclick="switchPortalTab('dashboard')">
+                    💎 Khata Records
+                </button>
+                <button id="navTabTxn" class="nav-tab-btn" onclick="switchPortalTab('transactions')">
+                    📋 Transactions <span id="navTxnCountBadge" class="nav-badge">0</span>
+                </button>
+            </div>
         </div>
     </header>
 
     <div class="container" id="portalContainer">
+        <!-- PWA Smart Install Banner (Mobile) -->
+        <div id="pwaInstallBanner" class="pwa-install-bar" style="display: none;">
+            <div class="pwa-install-info">
+                <div class="pwa-app-icon">💎</div>
+                <div>
+                    <div style="font-weight: 800; font-size: 0.88rem; color: #ffffff;">LJS Jewellers App</div>
+                    <div style="font-size: 0.72rem; color: #cbd5e1;">Fast & Secure Mobile App</div>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <button onclick="installPWA()" class="pwa-install-btn">
+                    📲 Install App
+                </button>
+                <button onclick="dismissPwaBanner()" style="background: transparent; border: none; color: #94a3b8; font-size: 1.1rem; cursor: pointer; padding: 0.2rem 0.4rem;">✕</button>
+            </div>
+        </div>
+
         <!-- LOGIN VIEW -->
         <div id="loginView" class="login-card">
             <div class="login-header">
@@ -749,76 +1126,91 @@
                 </button>
             </div>
 
-            <!-- LJS Credit Score Card -->
-            <div id="creditScoreCard"
-                style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.25rem; color: #ffffff; border: 1px solid rgba(212, 175, 55, 0.4); box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2);">
-                <div
-                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                    <div style="display: flex; align-items: center; gap: 0.6rem;">
-                        <span style="font-size: 1.5rem;">🎯</span>
-                        <div>
-                            <div
-                                style="font-family: var(--font-heading); font-size: 1.05rem; font-weight: 800; color: var(--gold-primary); letter-spacing: 0.03em;">
-                                LJS CREDIT SCORE</div>
-                            <div id="scoreLabel" style="font-size: 0.78rem; color: #cbd5e1; font-weight: 600;">⭐
-                                Platinum Trust Account</div>
+            <!-- View 1: Main Khata & Loan Records View -->
+            <div id="portalDashboardView">
+                <!-- LJS Credit Score Card -->
+                <div id="creditScoreCard"
+                    style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.25rem; color: #ffffff; border: 1px solid rgba(212, 175, 55, 0.4); box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                        <div style="display: flex; align-items: center; gap: 0.6rem;">
+                            <span style="font-size: 1.5rem;">🎯</span>
+                            <div>
+                                <div
+                                    style="font-family: var(--font-heading); font-size: 1.05rem; font-weight: 800; color: var(--gold-primary); letter-spacing: 0.03em;">
+                                    LJS CREDIT SCORE</div>
+                                <div id="scoreLabel" style="font-size: 0.78rem; color: #cbd5e1; font-weight: 600;">⭐
+                                    Platinum Trust Account</div>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div id="scoreNumber"
+                                style="font-size: 1.85rem; font-weight: 800; color: #ffffff; line-height: 1;">700</div>
+                            <div style="font-size: 0.7rem; color: var(--gold-primary); font-weight: 800; margin-top: 2px;">
+                                OUT OF 900</div>
                         </div>
                     </div>
-                    <div style="text-align: right;">
-                        <div id="scoreNumber"
-                            style="font-size: 1.85rem; font-weight: 800; color: #ffffff; line-height: 1;">700</div>
-                        <div style="font-size: 0.7rem; color: var(--gold-primary); font-weight: 800; margin-top: 2px;">
-                            OUT OF 900</div>
+
+                    <!-- Score Progress Bar -->
+                    <div
+                        style="background: rgba(255,255,255,0.12); border-radius: 999px; height: 10px; overflow: hidden; margin-bottom: 0.75rem; border: 1px solid rgba(255,255,255,0.15);">
+                        <div id="scoreProgressBar"
+                            style="width: 77%; height: 100%; background: var(--gold-gradient); border-radius: 999px; transition: width 0.8s ease;">
+                        </div>
+                    </div>
+
+                    <div style="font-size: 0.78rem; color: #cbd5e1; display: flex; align-items: center; gap: 0.4rem;">
+                        💡 <span>Time par byaj jama karein aur apna score 900 tak badhayein!</span>
                     </div>
                 </div>
 
-                <!-- Score Progress Bar -->
-                <div
-                    style="background: rgba(255,255,255,0.12); border-radius: 999px; height: 10px; overflow: hidden; margin-bottom: 0.75rem; border: 1px solid rgba(255,255,255,0.15);">
-                    <div id="scoreProgressBar"
-                        style="width: 77%; height: 100%; background: var(--gold-gradient); border-radius: 999px; transition: width 0.8s ease;">
+                <!-- Dashboard Summary Grid -->
+                <div class="summary-grid">
+                    <div class="summary-box">
+                        <div class="summary-label">Kitna Liya</div>
+                        <div id="sumPrincipal" class="summary-val" style="color: var(--navy-header);">₹0</div>
+                    </div>
+                    <div class="summary-box">
+                        <div class="summary-label">Total Byaaj</div>
+                        <div id="sumInterest" class="summary-val" style="color: var(--warning);">₹0</div>
+                    </div>
+                    <div class="summary-box highlight-box">
+                        <div class="summary-label">Net Baki</div>
+                        <div id="sumNet" class="summary-val" style="color: #ffffff;">₹0</div>
                     </div>
                 </div>
 
-                <div style="font-size: 0.78rem; color: #cbd5e1; display: flex; align-items: center; gap: 0.4rem;">
-                    💡 <span>Time par byaj jama karein aur apna score 900 tak badhayein!</span>
+                <!-- Amount Search Filter -->
+                <div class="filter-card">
+                    <div class="filter-card-title">
+                        🔍 Rakam ya Gehne se Khojein
+                    </div>
+                    <div class="search-row">
+                        <input type="text" id="portalAmountSearchInput" class="search-input"
+                            placeholder="Rakam (e.g. 25000) ya description">
+                        <button id="portalSearchAmountBtn" class="btn-filter">Search</button>
+                    </div>
                 </div>
+
+                <!-- Records List Header -->
+                <div class="section-header">
+                    <span>💎 Gehna & Loan Records</span>
+                </div>
+
+                <div id="pawnsListContainer"></div>
             </div>
 
-            <!-- Dashboard Summary Grid -->
-            <div class="summary-grid">
-                <div class="summary-box">
-                    <div class="summary-label">Kitna Liya</div>
-                    <div id="sumPrincipal" class="summary-val" style="color: var(--navy-header);">₹0</div>
+            <!-- View 2: Dedicated PhonePe-Style Transaction History View -->
+            <div id="portalTxnView" style="display: none;">
+                <div class="section-header">
+                    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                        <span>📋 Transaction History (लेन-देन)</span>
+                        <span id="txnTotalBadge" class="txn-header-badge">0 Transactions</span>
+                    </div>
                 </div>
-                <div class="summary-box">
-                    <div class="summary-label">Total Byaaj</div>
-                    <div id="sumInterest" class="summary-val" style="color: var(--warning);">₹0</div>
-                </div>
-                <div class="summary-box highlight-box">
-                    <div class="summary-label">Net Baki</div>
-                    <div id="sumNet" class="summary-val" style="color: #ffffff;">₹0</div>
-                </div>
-            </div>
 
-            <!-- Amount Search Filter -->
-            <div class="filter-card">
-                <div class="filter-card-title">
-                    🔍 Rakam ya Gehne se Khojein
-                </div>
-                <div class="search-row">
-                    <input type="text" id="portalAmountSearchInput" class="search-input"
-                        placeholder="Rakam (e.g. 25000) ya description">
-                    <button id="portalSearchAmountBtn" class="btn-filter">Search</button>
-                </div>
+                <div id="txnHistoryContainer"></div>
             </div>
-
-            <!-- Records List Header -->
-            <div class="section-header">
-                <span>💎 Gehna & Loan Records</span>
-            </div>
-
-            <div id="pawnsListContainer"></div>
         </div>
     </div>
 
@@ -944,7 +1336,118 @@
         </div>
     </div>
 
+    <!-- iOS Safari Install Guide Modal -->
+    <div id="iosInstallModal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.8); backdrop-filter:blur(6px); z-index:99999; align-items:center; justify-content:center; padding:1.25rem;">
+        <div
+            style="background:white; border-radius:1.5rem; max-width:400px; width:100%; padding:1.5rem; text-align:center; box-shadow:0 25px 50px rgba(0,0,0,0.3); border:1px solid #e2e8f0; position:relative;">
+            <button onclick="document.getElementById('iosInstallModal').style.display='none'"
+                style="position:absolute; top:1rem; right:1rem; background:#f1f5f9; border:none; width:32px; height:32px; border-radius:50%; font-weight:bold; color:#64748b; cursor:pointer;">✕</button>
+            <div style="font-size:2.5rem; margin-bottom:0.5rem;">📲</div>
+            <h3 style="margin:0 0 0.5rem 0; font-size:1.15rem; color:#0f172a;">iPhone mein App Install Karein</h3>
+            <p style="font-size:0.85rem; color:#64748b; line-height:1.5; margin-bottom:1rem;">
+                Apne iPhone Safari browser se LJS Jewellers ko home screen par add karne ke liye:
+            </p>
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:1rem; padding:0.85rem; text-align:left; font-size:0.82rem; color:#334155; display:flex; flex-direction:column; gap:0.6rem;">
+                <div>1️⃣ Niche Safari bar par <strong>Share icon (⎋)</strong> dabayein.</div>
+                <div>2️⃣ Menu mein scroll karke <strong>"Add to Home Screen" (+ )</strong> chunein.</div>
+                <div>3️⃣ Top right par <strong>"Add"</strong> dabayein.</div>
+            </div>
+            <button onclick="document.getElementById('iosInstallModal').style.display='none'"
+                style="width:100%; margin-top:1rem; background:var(--navy-header); color:white; font-weight:700; padding:0.7rem; border-radius:var(--radius-pill); border:none; cursor:pointer;">
+                Theek Hai, Samajh Gaya 👍
+            </button>
+        </div>
+    </div>
+
+    <!-- PWA Auto-Update Toast Notification -->
+    <div id="pwaUpdateToast" class="pwa-update-toast" style="display: none;">
+        <span>✨ Naya update aaya hai!</span>
+        <button onclick="applyPwaUpdate()" style="background: var(--gold-gradient); color:#0f172a; border:none; font-weight:800; padding:0.35rem 0.75rem; border-radius:var(--radius-pill); font-size:0.75rem; cursor:pointer;">
+            Update Karein 🚀
+        </button>
+    </div>
+
     <script>
+        // ==========================================
+        // PWA Service Worker & Install Handlers
+        // ==========================================
+        let deferredPwaPrompt = null;
+        let newWorkerInstance = null;
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then((reg) => {
+                    console.log('[PWA] Service Worker registered:', reg.scope);
+
+                    reg.addEventListener('updatefound', () => {
+                        newWorkerInstance = reg.installing;
+                        newWorkerInstance.addEventListener('statechange', () => {
+                            if (newWorkerInstance.state === 'installed' && navigator.serviceWorker.controller) {
+                                const toast = document.getElementById('pwaUpdateToast');
+                                if (toast) toast.style.display = 'flex';
+                            }
+                        });
+                    });
+                }).catch((err) => {
+                    console.log('[PWA] SW registration failed:', err);
+                });
+
+                let refreshing = false;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (!refreshing) {
+                        refreshing = true;
+                        window.location.reload();
+                    }
+                });
+            });
+        }
+
+        window.applyPwaUpdate = function () {
+            if (newWorkerInstance) {
+                newWorkerInstance.postMessage({ action: 'skipWaiting' });
+            } else {
+                window.location.reload();
+            }
+        };
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPwaPrompt = e;
+            const isDismissed = sessionStorage.getItem('ljs_pwa_dismissed');
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            if (!isDismissed && !isStandalone) {
+                const banner = document.getElementById('pwaInstallBanner');
+                if (banner) banner.style.display = 'flex';
+            }
+        });
+
+        window.installPWA = async function () {
+            const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+            if (isIos) {
+                const iosModal = document.getElementById('iosInstallModal');
+                if (iosModal) iosModal.style.display = 'flex';
+                return;
+            }
+
+            if (deferredPwaPrompt) {
+                deferredPwaPrompt.prompt();
+                const { outcome } = await deferredPwaPrompt.userChoice;
+                console.log('[PWA] Install choice outcome:', outcome);
+                deferredPwaPrompt = null;
+                const banner = document.getElementById('pwaInstallBanner');
+                if (banner) banner.style.display = 'none';
+            } else {
+                alert('📱 LJS App Install:\n\nBrowser ke 3-dots menu (⋮) par click karein aur "Install app" ya "Add to Home Screen" chunein!');
+            }
+        };
+
+        window.dismissPwaBanner = function () {
+            sessionStorage.setItem('ljs_pwa_dismissed', 'true');
+            const banner = document.getElementById('pwaInstallBanner');
+            if (banner) banner.style.display = 'none';
+        };
+
         // Global helper functions & Modal handlers for inline HTML attributes
         function escapeHtml(unsafe) {
             if (!unsafe) return '';
@@ -957,6 +1460,33 @@
                 return new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
             } catch (e) { return dateStr; }
         }
+
+        window.switchPortalTab = function (tabName) {
+            const tabDash = document.getElementById('navTabDashboard');
+            const tabTxn = document.getElementById('navTabTxn');
+            const viewDash = document.getElementById('portalDashboardView');
+            const viewTxn = document.getElementById('portalTxnView');
+
+            if (tabName === 'transactions') {
+                if (tabDash) tabDash.classList.remove('active');
+                if (tabTxn) tabTxn.classList.add('active');
+                if (viewDash) viewDash.style.display = 'none';
+                if (viewTxn) {
+                    viewTxn.style.display = 'block';
+                    viewTxn.style.animation = 'fadeIn 0.25s ease';
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                if (tabTxn) tabTxn.classList.remove('active');
+                if (tabDash) tabDash.classList.add('active');
+                if (viewTxn) viewTxn.style.display = 'none';
+                if (viewDash) {
+                    viewDash.style.display = 'block';
+                    viewDash.style.animation = 'fadeIn 0.25s ease';
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        };
 
         window.toggleTimeline = function (pawnId) {
             const el = document.getElementById(`timeline-${pawnId}`);
@@ -1243,6 +1773,8 @@
             logoutBtn.addEventListener('click', () => {
                 localStorage.removeItem('ljs_customer_session');
                 localStorage.removeItem('ljs_session_role');
+                const navTabs = document.getElementById('navTabsContainer');
+                if (navTabs) navTabs.style.display = 'none';
                 ledgerView.style.display = 'none';
                 loginView.style.display = 'block';
                 loginForm.reset();
@@ -1429,6 +1961,176 @@
                     }).join('');
                 }
 
+                // Render PhonePe-Style Transaction History
+                function renderTransactionHistory(pawnsList) {
+                    const txnContainer = document.getElementById('txnHistoryContainer');
+                    const badgeEl = document.getElementById('txnTotalBadge');
+                    if (!txnContainer) return;
+
+                    // 1. Flatten all payments from all pawns
+                    const allTxns = [];
+                    (pawnsList || []).forEach(p => {
+                        (p.payments || []).forEach(pm => {
+                            allTxns.push({
+                                id: pm.id,
+                                amount: parseFloat(pm.amount || 0),
+                                payment_type: pm.payment_type || 'Jama',
+                                payment_date: pm.payment_date,
+                                pawnId: p.id,
+                                pawnDescription: p.description || 'Girvi Record',
+                                itemMetal: p.item_metal_type || 'Gold',
+                                pawnStatus: p.status
+                            });
+                        });
+                    });
+
+                    if (badgeEl) {
+                        badgeEl.textContent = `${allTxns.length} Transactions`;
+                    }
+
+                    const navBadgeEl = document.getElementById('navTxnCountBadge');
+                    if (navBadgeEl) {
+                        navBadgeEl.textContent = allTxns.length;
+                    }
+
+                    if (allTxns.length === 0) {
+                        txnContainer.innerHTML = `
+                            <div class="txn-card">
+                                <div class="txn-empty">
+                                    <div class="txn-empty-icon">💸</div>
+                                    <p style="font-weight: 700; color: var(--navy-header); font-size: 1.05rem;">Koi Transaction History Nahi Hai</p>
+                                    <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem;">
+                                        Aapke khate mein abhi tak koi online ya counter payment jama nahi hua hai.
+                                    </p>
+                                </div>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    // 2. Sort by date DESC (latest first)
+                    allTxns.sort((a, b) => {
+                        const timeA = new Date(a.payment_date || 0).getTime();
+                        const timeB = new Date(b.payment_date || 0).getTime();
+                        return timeB - timeA;
+                    });
+
+                    // 3. Calculate total jama across all transactions
+                    const totalTxnSum = allTxns.reduce((sum, t) => sum + t.amount, 0);
+
+                    // 4. Group by date
+                    const groups = {};
+                    const now = new Date();
+                    const todayStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 10);
+                    const yest = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
+                    yest.setDate(yest.getDate() - 1);
+                    const yestStr = yest.toISOString().slice(0, 10);
+
+                    allTxns.forEach(t => {
+                        let groupKey = '9999-99-99';
+                        let groupLabel = 'Purane Transactions';
+                        if (t.payment_date) {
+                            const datePart = t.payment_date.slice(0, 10);
+                            groupKey = datePart;
+                            if (datePart === todayStr) {
+                                groupLabel = 'Aaj (Today)';
+                            } else if (datePart === yestStr) {
+                                groupLabel = 'Kal (Yesterday)';
+                            } else {
+                                try {
+                                    const d = new Date(t.payment_date);
+                                    groupLabel = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+                                } catch(e) {
+                                    groupLabel = datePart;
+                                }
+                            }
+                        }
+
+                        if (!groups[groupKey]) {
+                            groups[groupKey] = { label: groupLabel, items: [] };
+                        }
+                        groups[groupKey].items.push(t);
+                    });
+
+                    // Helper for payment mode icon & badge
+                    function getPaymentBadgeInfo(type) {
+                        const t = (type || '').toLowerCase();
+                        if (t.includes('upi') || t.includes('phonepe') || t.includes('gpay') || t.includes('paytm')) {
+                            return { icon: '📱', label: 'UPI / PhonePe', bg: '#eff6ff', color: '#1d4ed8' };
+                        } else if (t.includes('cash') || t.includes('rokad')) {
+                            return { icon: '💵', label: 'Cash / Rokad', bg: '#f0fdf4', color: '#15803d' };
+                        } else if (t.includes('bank') || t.includes('neft') || t.includes('rtgs') || t.includes('netbanking')) {
+                            return { icon: '🏦', label: 'Bank Transfer', bg: '#faf5ff', color: '#7e22ce' };
+                        } else if (t.includes('online') || t.includes('card')) {
+                            return { icon: '💳', label: 'Online Payment', bg: '#ecfeff', color: '#0e7490' };
+                        } else if (t.includes('interest') || t.includes('byaaj')) {
+                            return { icon: '🪙', label: 'Byaaj Jama', bg: '#fffbeb', color: '#b45309' };
+                        } else if (t.includes('principal') || t.includes('mool')) {
+                            return { icon: '💰', label: 'Mool Jama', bg: '#fdf2f8', color: '#be185d' };
+                        }
+                        return { icon: '✨', label: escapeHtml(type || 'Jama'), bg: '#f1f5f9', color: '#334155' };
+                    }
+
+                    let groupsHtml = '';
+                    const sortedGroupKeys = Object.keys(groups).sort().reverse();
+                    sortedGroupKeys.forEach(k => {
+                        const grp = groups[k];
+                        const itemsHtml = grp.items.map(item => {
+                            const badge = getPaymentBadgeInfo(item.payment_type);
+                            const formattedDate = formatDate(item.payment_date);
+                            return `
+                                <div class="txn-item">
+                                    <div class="txn-left">
+                                        <div class="txn-icon" style="background:${badge.bg}; color:${badge.color};">
+                                            ${badge.icon}
+                                        </div>
+                                        <div class="txn-info">
+                                            <div class="txn-title">Paid to LJS Jewellers</div>
+                                            <div class="txn-subtitle">📦 ${escapeHtml(item.pawnDescription)}</div>
+                                            <div class="txn-meta">
+                                                <span class="txn-type-badge" style="background:${badge.bg}; color:${badge.color}; border-color:${badge.color}33;">
+                                                    ${badge.label}
+                                                </span>
+                                                <span>📅 ${formattedDate}</span>
+                                                <span style="color:#94a3b8;">#${item.id}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="txn-right">
+                                        <div class="txn-amount">+ ₹${item.amount.toLocaleString('en-IN')}</div>
+                                        <div class="txn-status">
+                                            <span class="txn-status-dot"></span>
+                                            <span>Safal (Paid)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+
+                        groupsHtml += `
+                            <div class="txn-date-group-header">
+                                📅 ${grp.label}
+                            </div>
+                            <div class="txn-list">
+                                ${itemsHtml}
+                            </div>
+                        `;
+                    });
+
+                    txnContainer.innerHTML = `
+                        <div class="txn-card">
+                            <div class="txn-summary-bar">
+                                <div>
+                                    <div class="txn-summary-label">Total Jama Rakam (Total Paid)</div>
+                                    <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">Kul ${allTxns.length} payment transactions</div>
+                                </div>
+                                <div class="txn-summary-val">₹${totalTxnSum.toLocaleString('en-IN')}</div>
+                            </div>
+                            ${groupsHtml}
+                        </div>
+                    `;
+                }
+
                 // Add Event Listeners for Search
                 const searchInput = document.getElementById('portalAmountSearchInput');
                 const searchBtn = document.getElementById('portalSearchAmountBtn');
@@ -1446,6 +2148,11 @@
                 }
 
                 updatePortalView('');
+                renderTransactionHistory(pawns);
+
+                const navTabs = document.getElementById('navTabsContainer');
+                if (navTabs) navTabs.style.display = 'flex';
+                switchPortalTab('dashboard');
 
                 loginView.style.display = 'none';
                 ledgerView.style.display = 'block';
