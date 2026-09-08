@@ -171,13 +171,23 @@ async function handleQuery(sql, params) {
         const { data: pawns, error } = await supabase.from('pawn_records').select('*').eq('customer_id', custId).order('id', { ascending: false });
         if (error) throw error;
         
-        // Fetch total_jama for each pawn
+        // Fetch total_jama for each pawn (only payments made in the current active cycle)
         const pawnIds = (pawns || []).map(p => p.id);
         let paymentsMap = {};
         if (pawnIds.length > 0) {
-            const { data: pmts } = await supabase.from('pawn_payments').select('pawn_id, amount').in('pawn_id', pawnIds);
+            const { data: pmts } = await supabase.from('pawn_payments').select('pawn_id, amount, payment_date').in('pawn_id', pawnIds);
             (pmts || []).forEach(pm => {
-                paymentsMap[pm.pawn_id] = (paymentsMap[pm.pawn_id] || 0) + parseFloat(pm.amount || 0);
+                const parentPawn = (pawns || []).find(p => p.id === pm.pawn_id);
+                if (parentPawn && parentPawn.status === 'Active' && parentPawn.date_added) {
+                    const pDate = new Date(parentPawn.date_added);
+                    const payDate = new Date(pm.payment_date);
+                    // Only count payments made after the last cycle reset
+                    if (payDate > pDate) {
+                        paymentsMap[pm.pawn_id] = (paymentsMap[pm.pawn_id] || 0) + parseFloat(pm.amount || 0);
+                    }
+                } else if (parentPawn && parentPawn.status === 'Released') {
+                    paymentsMap[pm.pawn_id] = (paymentsMap[pm.pawn_id] || 0) + parseFloat(pm.amount || 0);
+                }
             });
         }
 
@@ -258,7 +268,13 @@ async function handleQuery(sql, params) {
         return data || [];
     }
 
-    // 16. Dashboard SUM(amount) payments
+    // 16. Dashboard SUM(interest_amount) from interest_ledger OR SUM(amount) payments
+    if (/SELECT SUM\(interest_amount\) as total FROM interest_ledger/i.test(cleanSql)) {
+        const { data, error } = await supabase.from('interest_ledger').select('interest_amount');
+        if (error) throw error;
+        const total = (data || []).reduce((sum, r) => sum + parseFloat(r.interest_amount || 0), 0);
+        return [{ total }];
+    }
     if (/SELECT SUM\(amount\) as total FROM pawn_payments/i.test(cleanSql) && !cleanSql.includes('WHERE')) {
         const { data, error } = await supabase.from('pawn_payments').select('amount');
         if (error) throw error;
@@ -537,6 +553,63 @@ async function handleQuery(sql, params) {
 
 }
 
+// ─── safeInsert: Robust insert with sequence-collision auto-repair ───────────
+// Strategy: Try normal insert first. If PK collision (23505), find max ID,
+// explicitly set the next ID, and retry once. This handles Supabase sequence
+// drift caused by direct DB imports or manual inserts.
+async function safeInsert(tableName, record) {
+    // First attempt: let PostgreSQL sequence assign the ID
+    let { data, error } = await supabase.from(tableName).insert(record).select('id').single();
+
+    if (!error) return data; // Success on first try
+
+    const isSequenceCollision = error.code === '23505' ||
+        (error.message && (
+            error.message.includes('unique constraint') ||
+            error.message.includes('primary key') ||
+            error.message.includes('duplicate key')
+        ));
+
+    if (isSequenceCollision) {
+        console.warn(`[safeInsert] PK sequence collision on '${tableName}'. Fetching max ID to repair...`);
+        const { data: maxRow, error: maxErr } = await supabase
+            .from(tableName).select('id').order('id', { ascending: false }).limit(1);
+        if (maxErr) throw maxErr;
+        const maxId = (maxRow && maxRow.length > 0 && maxRow[0].id) ? parseInt(maxRow[0].id) : 0;
+        const nextId = maxId + 1;
+        console.log(`[safeInsert] Retrying '${tableName}' insert with explicit id=${nextId}`);
+        const recordWithId = { ...record, id: nextId };
+        const { data: retryData, error: retryError } = await supabase
+            .from(tableName).insert(recordWithId).select('id').single();
+        if (retryError) throw retryError;
+        console.log(`[safeInsert] Success: '${tableName}' id=${nextId} inserted.`);
+        return retryData;
+    }
+
+    throw error; // Non-sequence error
+}
+
+// ─── fixAllSequences: Call ONCE at server startup to permanently sync sequences ─
+async function fixAllSequences() {
+    if (!supabase) return;
+    const tables = ['customers', 'pawn_records', 'pawn_payments', 'pending_approvals', 'interest_ledger'];
+    for (const table of tables) {
+        try {
+            const { data, error } = await supabase.from(table).select('id').order('id', { ascending: false }).limit(1);
+            if (error || !data || data.length === 0) continue;
+            const maxId = parseInt(data[0].id);
+            if (!maxId || maxId <= 0) continue;
+            // Try rpc setval if available, silently skip if not
+            await supabase.rpc('setval_sequence', { table_name: table, new_val: maxId }).then(
+                () => console.log(`[Sequence Fix] ${table}: sequence reset to ${maxId}`),
+                () => {} // Silently skip - safeInsert handles per-insert fallback
+            );
+        } catch (e) {
+            // Non-critical - safeInsert fallback handles per-insert
+        }
+    }
+}
+
 async function handleRun(sql, params) {
     if (!supabase) {
         console.error('Supabase client is not initialized. Please set SUPABASE_URL and SUPABASE_KEY.');
@@ -549,20 +622,7 @@ async function handleRun(sql, params) {
         return { lastID: 0, changes: 0 };
     }
 
-async function safeInsert(tableName, record) {
-    let { data, error } = await supabase.from(tableName).insert(record).select('id').single();
-    if (error && (error.code === '23505' || (error.message && (error.message.includes('unique constraint') || error.message.includes('primary key'))))) {
-        console.log(`Primary key sequence collision on ${tableName}. Auto-repairing ID sequence fallback...`);
-        const { data: maxRow } = await supabase.from(tableName).select('id').order('id', { ascending: false }).limit(1);
-        const nextId = (maxRow && maxRow.length > 0 && maxRow[0].id ? parseInt(maxRow[0].id) : 0) + 1;
-        record.id = nextId;
-        const res = await supabase.from(tableName).insert(record).select('id').single();
-        if (res.error) throw res.error;
-        return res.data;
-    }
-    if (error) throw error;
-    return data;
-}
+
 
     // 1. INSERT INTO customers
     if (/INSERT INTO customers/i.test(cleanSql)) {
@@ -708,12 +768,61 @@ async function safeInsert(tableName, record) {
         return { lastID: 0, changes: 1 };
     }
 
-    // 8. UPDATE pawn_records SET status = 'Released' OR status = 'Renewed'
+
+    // 8. UPDATE pawn_records general (e.g. date_added, amount)
+    if (/UPDATE pawn_records SET/i.test(cleanSql) && !/status = '(Released|Renewed|Melted)'/i.test(cleanSql)) {
+        const setPart = cleanSql.match(/SET\s+(.+?)\s+WHERE/i);
+        if (setPart) {
+            const assignments = setPart[1].split(',');
+            const updates = {};
+            let paramIdx = 0;
+            assignments.forEach(assign => {
+                const parts = assign.trim().split('=');
+                if (parts.length === 2) {
+                    const col = parts[0].trim();
+                    const val = parts[1].trim();
+                    if (val === '?') {
+                        updates[col] = params[paramIdx++];
+                    } else {
+                        let literalVal = val.replace(/^'|'$/g, '');
+                        if (!isNaN(literalVal) && literalVal !== '') {
+                            literalVal = Number(literalVal);
+                        }
+                        updates[col] = literalVal;
+                    }
+                }
+            });
+
+            const id = params[params.length - 1];
+            const { error } = await supabase.from('pawn_records').update(updates).eq('id', id);
+            if (error) throw error;
+            return { lastID: 0, changes: 1 };
+        }
+    }
+
+    // 8b. UPDATE pawn_records SET status = 'Released' OR status = 'Renewed'
     if (/UPDATE pawn_records SET status = '(Released|Renewed)'/i.test(cleanSql)) {
         const statusMatch = cleanSql.match(/SET status = '([^']+)'/i);
         const status = statusMatch ? statusMatch[1] : 'Released';
-        const { error } = await supabase.from('pawn_records').update({ status, release_date: params[0] }).eq('id', params[1]);
-        if (error) throw error;
+        
+        let releaseDate = (params && params[0]) ? params[0] : new Date().toISOString();
+        const dateMatch = cleanSql.match(/release_date = '([^']+)'/i);
+        if (dateMatch) releaseDate = dateMatch[1];
+
+        const id = (params && params[params.length - 1]) ? params[params.length - 1] : null;
+        if (id) {
+            const { error } = await supabase.from('pawn_records').update({ status, release_date: releaseDate }).eq('id', id);
+            if (error) throw error;
+            return { lastID: 0, changes: 1 };
+        } else if (/description LIKE/i.test(cleanSql)) {
+            const { error } = await supabase.from('pawn_records').update({ status, release_date: releaseDate }).ilike('description', '%ring (Renewed)%').eq('status', 'Active');
+            if (error) throw error;
+            return { lastID: 0, changes: 1 };
+        } else if (/amount <= 0/i.test(cleanSql)) {
+            const { error } = await supabase.from('pawn_records').update({ status, release_date: releaseDate }).lte('amount', 0).eq('status', 'Active');
+            if (error) throw error;
+            return { lastID: 0, changes: 1 };
+        }
         return { lastID: 0, changes: 1 };
     }
 
@@ -758,9 +867,42 @@ async function safeInsert(tableName, record) {
                 return { lastID: 0, changes: 0 };
             }
             return { lastID: data?.id || 0, changes: 1 };
-        } catch(e) {
+        } catch (err) {
+            console.error('Supabase interest_ledger error:', err.message);
             return { lastID: 0, changes: 0 };
         }
+    }
+
+    // 14. UPDATE interest_ledger (generic update - update specific fields from params)
+    if (/UPDATE interest_ledger SET/i.test(cleanSql)) {
+        // Parse SET clause and WHERE clause dynamically
+        const setPart = cleanSql.match(/SET\s+(.+?)\s+WHERE/i);
+        if (setPart) {
+            const assignments = setPart[1].split(',');
+            const updates = {};
+            let paramIdx = 0;
+            assignments.forEach(assign => {
+                const parts = assign.trim().split('=');
+                if (parts.length === 2) {
+                    const col = parts[0].trim();
+                    const val = parts[1].trim();
+                    if (val === '?') updates[col] = params[paramIdx++];
+                }
+            });
+            // WHERE clause: support id = ? and interest_amount = ?
+            const whereMatch = cleanSql.match(/WHERE (\w+) = \?/i);
+            if (whereMatch) {
+                const whereCol = whereMatch[1];
+                const whereVal = params[paramIdx];
+                try {
+                    await supabase.from('interest_ledger').update(updates).eq(whereCol, whereVal);
+                    return { lastID: 0, changes: 1 };
+                } catch (err) {
+                    return { lastID: 0, changes: 0 };
+                }
+            }
+        }
+        return { lastID: 0, changes: 0 };
     }
 
     console.log('Unrecognized run command:', cleanSql);
@@ -775,4 +917,5 @@ function normalizeCustomer(c) {
     };
 }
 
-module.exports = { db, supabase };
+module.exports = { db, supabase, fixAllSequences };
+

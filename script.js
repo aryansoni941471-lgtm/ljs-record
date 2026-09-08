@@ -194,7 +194,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (pendingApprovalsList) {
         pendingApprovalsList.addEventListener('click', async (e) => {
             if (e.target.classList.contains('btn-approve')) {
-                const id = e.target.getAttribute('data-id');
+                const btn = e.target;
+                if (btn.disabled) return;
+                btn.disabled = true;
+                btn.textContent = 'Approving...';
+                const id = btn.getAttribute('data-id');
                 try {
                     const res = await fetch(`${API_URL}/admin/approve/${id}`, { method: 'POST' });
                     const data = await res.json();
@@ -205,11 +209,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     fetchPendingApprovals();
                 } catch (err) {
                     alert('❌ Error: ' + err.message);
+                    btn.disabled = false;
+                    btn.textContent = '✅ Approve';
                 }
             }
 
             if (e.target.classList.contains('btn-reject')) {
-                const id = e.target.getAttribute('data-id');
+                const btn = e.target;
+                if (btn.disabled) return;
+                btn.disabled = true;
+                btn.textContent = 'Rejecting...';
+                const id = btn.getAttribute('data-id');
                 try {
                     const res = await fetch(`${API_URL}/admin/reject/${id}`, { method: 'POST' });
                     const data = await res.json();
@@ -218,6 +228,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     fetchPendingApprovals();
                 } catch (err) {
                     alert('❌ Error: ' + err.message);
+                    btn.disabled = false;
+                    btn.textContent = '❌ Reject';
                 }
             }
         });
@@ -1167,8 +1179,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const principalAmt = parseFloat(p.amount) || 0;
                 
                 // Baki = (Principal + Interest) - Total Jama
-                let baki = (principalAmt + interest) - totalJama;
-                if (p.status === 'Released') {
+                let baki = Math.max(0, (principalAmt + interest) - totalJama);
+                if (p.status === 'Released' || principalAmt <= 0) {
                     totalJama = principalAmt + interest;
                     baki = 0;
                 }
@@ -1191,7 +1203,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button class="dropdown-item release-pawn-btn" data-id="${p.id}" data-customer="${customerId}">
                             <span>🟢</span> Release Gehna
                         </button>
-                        <button class="dropdown-item renew-pawn-btn" data-id="${p.id}" data-customer="${customerId}" data-principal="${p.amount}" data-desc="${escapeHtml(p.description)}" data-rate="${p.interest_rate || 2}" data-days="${diffDays}" data-date="${p.date_added}" data-interest="${interest.toFixed(0)}" data-locker="${escapeHtml(p.locker_location || 'Safe Vault')}">
+                        <button class="dropdown-item renew-pawn-btn" data-id="${p.id}" data-customer="${customerId}" data-principal="${p.amount}" data-desc="${escapeHtml(p.description)}" data-rate="${p.interest_rate || 2}" data-days="${diffDays}" data-date="${p.date_added}" data-interest="${interest.toFixed(0)}" data-jama="${totalJama}" data-baki="${baki.toFixed(0)}" data-locker="${escapeHtml(p.locker_location || 'Safe Vault')}">
                             <span>🔄</span> Renew / Byaaj Closing
                         </button>
                         <button class="dropdown-item pay-btn" data-id="${p.id}">
@@ -1339,22 +1351,34 @@ document.addEventListener('DOMContentLoaded', () => {
             const customerId = renewBtn.getAttribute('data-customer');
             const oldPrincipal = parseFloat(renewBtn.getAttribute('data-principal')) || 0;
             const oldInterest = parseFloat(renewBtn.getAttribute('data-interest')) || 0;
+            const oldJama = parseFloat(renewBtn.getAttribute('data-jama')) || 0;
+            const oldBaki = parseFloat(renewBtn.getAttribute('data-baki')) || 0;
             const oldDesc = renewBtn.getAttribute('data-desc') || '';
             const oldDays = renewBtn.getAttribute('data-days') || '';
             const oldRate = renewBtn.getAttribute('data-rate') || '2';
             const oldLocker = renewBtn.getAttribute('data-locker') || 'Safe Vault';
+
+            // Calculate unpaid interest & net remaining principal
+            const unpaidInterest = Math.max(0, oldInterest - oldJama);
+            const extraPrincipalPaid = Math.max(0, oldJama - oldInterest);
+            const netPrincipal = Math.max(0, oldPrincipal - extraPrincipalPaid);
 
             document.getElementById('renewPawnId').value = pawnId;
             document.getElementById('renewCustomerId').value = customerId;
             document.getElementById('renewOldDesc').textContent = oldDesc;
             document.getElementById('renewOldPrincipal').textContent = `₹${oldPrincipal.toLocaleString('en-IN')}`;
             document.getElementById('renewOldInterest').textContent = `₹${Math.round(oldInterest).toLocaleString('en-IN')}`;
+            if (document.getElementById('renewOldJama')) document.getElementById('renewOldJama').textContent = `₹${Math.round(oldJama).toLocaleString('en-IN')}`;
+            if (document.getElementById('renewOldBaki')) document.getElementById('renewOldBaki').textContent = `₹${Math.round(oldBaki).toLocaleString('en-IN')}`;
             document.getElementById('renewOldDays').textContent = `${oldDays} Days`;
 
-            document.getElementById('renewInterestCollected').value = Math.round(oldInterest);
+            const renewFormEl = document.getElementById('renewPawnForm');
+            if (renewFormEl) renewFormEl.dataset.basePrincipal = netPrincipal;
+
+            document.getElementById('renewInterestCollected').value = Math.round(unpaidInterest);
             document.getElementById('renewPrincipalAdjustType').value = 'NONE';
             document.getElementById('renewAdjustAmount').value = 0;
-            document.getElementById('renewNewPrincipalDisplay').textContent = `₹${oldPrincipal.toLocaleString('en-IN')}`;
+            document.getElementById('renewNewPrincipalDisplay').textContent = `₹${Math.round(netPrincipal).toLocaleString('en-IN')}`;
             document.getElementById('renewInterestRate').value = oldRate;
             document.getElementById('renewLockerLocation').value = oldLocker;
             document.getElementById('renewNotes').value = `Byaaj Closing for ${oldDays} Days`;
@@ -2160,16 +2184,15 @@ _Thank you for choosing LJS Jewellers_`
     if (closeRenewModal && renewPawnModal) closeRenewModal.onclick = () => renewPawnModal.style.display = 'none';
 
     function updateRenewNewPrincipal() {
-        const oldPStr = (document.getElementById('renewOldPrincipal').textContent || '').replace(/[^0-9.]/g, '');
-        const oldP = parseFloat(oldPStr) || 0;
+        const baseP = parseFloat(renewPawnForm ? renewPawnForm.dataset.basePrincipal : 0) || 0;
         const type = renewPrincipalAdjustType ? renewPrincipalAdjustType.value : 'NONE';
         const adj = parseFloat(renewAdjustAmount ? renewAdjustAmount.value : 0) || 0;
 
-        let newP = oldP;
+        let newP = baseP;
         if (type === 'REDUCE') {
-            newP = Math.max(0, oldP - adj);
+            newP = Math.max(0, baseP - adj);
         } else if (type === 'TOPUP') {
-            newP = oldP + adj;
+            newP = baseP + adj;
         }
 
         if (renewNewPrincipalDisplay) renewNewPrincipalDisplay.textContent = `₹${Math.round(newP).toLocaleString('en-IN')}`;
@@ -2188,16 +2211,15 @@ _Thank you for choosing LJS Jewellers_`
             const new_locker_location = document.getElementById('renewLockerLocation').value;
             const notes = document.getElementById('renewNotes').value;
 
-            const oldPStr = (document.getElementById('renewOldPrincipal').textContent || '').replace(/[^0-9.]/g, '');
-            const oldP = parseFloat(oldPStr) || 0;
+            const baseP = parseFloat(renewPawnForm.dataset.basePrincipal) || 0;
             const type = renewPrincipalAdjustType ? renewPrincipalAdjustType.value : 'NONE';
             const adj = parseFloat(renewAdjustAmount ? renewAdjustAmount.value : 0) || 0;
 
-            let new_principal_amount = oldP;
+            let new_principal_amount = baseP;
             if (type === 'REDUCE') {
-                new_principal_amount = Math.max(0, oldP - adj);
+                new_principal_amount = Math.max(0, baseP - adj);
             } else if (type === 'TOPUP') {
-                new_principal_amount = oldP + adj;
+                new_principal_amount = baseP + adj;
             }
 
             try {

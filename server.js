@@ -8,7 +8,8 @@ const fs = require('fs');
 const os = require('os');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
-const { db, supabase } = require('./supabase-db');
+const { db, supabase, fixAllSequences } = require('./supabase-db');
+
 
 // Password security helpers
 function isBcryptHash(str) {
@@ -89,6 +90,39 @@ db.run(`CREATE TABLE IF NOT EXISTS interest_ledger (
     created_at TEXT
 )`);
 
+// Auto-release any paid-off pawns (amount <= 0)
+db.run(`UPDATE pawn_records SET status = 'Released', release_date = '${new Date().toISOString()}' WHERE amount <= 0 AND status = 'Active'`);
+
+// Standard Pawn Interest Calculation Function (Matches shop rules: minimum 1 full month, slab based)
+function calculateInterest(amount, rate, dateAdded, status, releaseDate) {
+    rate = parseFloat(rate || 0);
+    amount = parseFloat(amount || 0);
+    if (rate === 0 || amount === 0) return 0;
+
+    const start = new Date(dateAdded);
+    const end = status === 'Released' && releaseDate ? new Date(releaseDate) : new Date();
+    
+    const diffTime = Math.abs(end - start);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    const months = Math.floor(diffDays / 30);
+    const extraDays = diffDays % 30;
+    
+    let chargeableMonths = months;
+    
+    if (extraDays > 0 && extraDays <= 5) {
+        chargeableMonths += 1; // 1-5 din extra = 1 full month interest
+    } else if (extraDays > 5 && extraDays <= 15) {
+        chargeableMonths += 0.5; // 5-15 din = half month interest
+    } else if (extraDays > 15) {
+        chargeableMonths += (extraDays / 30); // >15 din = day-wise interest
+    } else if (months === 0 && extraDays === 0) {
+        chargeableMonths = 1; // same day = 1 full month interest
+    }
+
+    return Math.round(amount * (rate / 100) * chargeableMonths);
+}
+
 // Run legacy password migration once database initializes
 setTimeout(migrateLegacyPasswords, 2000);
 
@@ -161,13 +195,68 @@ app.post('/api/admin/approve/:id', (req, res) => {
         } else if (row.type === 'RECEIVE_PAYMENT') {
             const { pawn_id, amount, payment_type } = data;
             const paymentDate = new Date().toISOString();
-            db.run(
-                `INSERT INTO pawn_payments (pawn_id, amount, payment_type, payment_date) VALUES (?, ?, ?, ?)`,
-                [pawn_id, amount, payment_type, paymentDate],
-                function (err2) {
-                    if (err2) return res.status(500).json({ error: err2.message });
-                    db.run("UPDATE pending_approvals SET status = 'Approved' WHERE id = ?", [id]);
-                    res.json({ message: 'Payment approved & recorded!' });
+            const paidAmt = parseFloat(amount || 0);
+
+            db.get(
+                `SELECT p.*, c.name as customer_name, c.phone as customer_phone 
+                 FROM pawn_records p 
+                 LEFT JOIN customers c ON p.customer_id = c.id 
+                 WHERE p.id = ?`,
+                [pawn_id],
+                (pErr, pawn) => {
+                    db.run(
+                        `INSERT INTO pawn_payments (pawn_id, amount, payment_type, payment_date) VALUES (?, ?, ?, ?)`,
+                        [pawn_id, paidAmt, payment_type || 'Online UPI Payment', paymentDate],
+                        function (err2) {
+                            if (err2) return res.status(500).json({ error: err2.message });
+
+                            let newPrincipal = 0;
+                            if (pawn) {
+                                // 1. Calculate interest up to today using standard shop rule
+                                const calculatedInterest = calculateInterest(pawn.amount, pawn.interest_rate, pawn.date_added, pawn.status, null);
+
+                                // Actual interest collected is only up to the due interest, rest goes to principal
+                                const actualInterest = Math.min(paidAmt, calculatedInterest);
+                                const extraTowardsPrincipal = Math.max(0, paidAmt - calculatedInterest);
+                                newPrincipal = Math.max(0, Math.round(pawn.amount - extraTowardsPrincipal));
+
+                                const ledgerNote = extraTowardsPrincipal > 0 
+                                    ? `Byaaj: ₹${actualInterest}, Mool Jama: ₹${extraTowardsPrincipal}`
+                                    : 'Online UPI Payment';
+
+                                db.run(
+                                    `INSERT INTO interest_ledger (pawn_id, customer_name, customer_phone, item_description, principal_amount, interest_amount, payment_date, payment_type, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                                    [
+                                        pawn_id,
+                                        pawn.customer_name || 'Customer Record',
+                                        pawn.customer_phone || '',
+                                        pawn.description || '',
+                                        pawn.amount || 0,
+                                        actualInterest,
+                                        paymentDate,
+                                        payment_type || 'Online UPI Payment',
+                                        ledgerNote
+                                    ]
+                                );
+
+                                // If loan is fully cleared (newPrincipal <= 0), auto-release gehna!
+                                if (newPrincipal <= 0) {
+                                    db.run(
+                                        `UPDATE pawn_records SET status = 'Released', release_date = ?, amount = 0 WHERE id = ?`,
+                                        [paymentDate, pawn_id]
+                                    );
+                                } else if (paidAmt >= calculatedInterest) {
+                                    db.run(
+                                        `UPDATE pawn_records SET date_added = ?, amount = ? WHERE id = ?`,
+                                        [paymentDate, newPrincipal, pawn_id]
+                                    );
+                                }
+                            }
+
+                            db.run("UPDATE pending_approvals SET status = 'Approved' WHERE id = ?", [id]);
+                            res.json({ message: (pawn && newPrincipal <= 0) ? 'Loan fully cleared! Gehna marked as Released.' : 'Payment approved & loan date auto-reset to today!' });
+                        }
+                    );
                 }
             );
         } else {
@@ -573,6 +662,19 @@ app.post('/api/pawns/:pawnId/payments', (req, res) => {
                     }
 
                     if (pawn) {
+                        const paidAmt = parseFloat(amount || 0);
+
+                        // 1. Calculate interest up to today using standard shop rule
+                        const calculatedInterest = calculateInterest(pawn.amount, pawn.interest_rate, pawn.date_added, pawn.status, null);
+
+                        const actualInterest = Math.min(paidAmt, calculatedInterest);
+                        const extraTowardsPrincipal = Math.max(0, paidAmt - calculatedInterest);
+                        const newPrincipal = Math.max(0, Math.round(pawn.amount - extraTowardsPrincipal));
+
+                        const ledgerNote = extraTowardsPrincipal > 0 
+                            ? `Byaaj: ₹${actualInterest}, Mool Jama: ₹${extraTowardsPrincipal}`
+                            : (payment_type || 'Payment Received & Date Reset');
+
                         db.run(
                             `INSERT INTO interest_ledger (pawn_id, customer_name, customer_phone, item_description, principal_amount, interest_amount, payment_date, payment_type, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                             [
@@ -581,15 +683,28 @@ app.post('/api/pawns/:pawnId/payments', (req, res) => {
                                 pawn.customer_phone || '',
                                 pawn.description || '',
                                 pawn.amount || 0,
-                                parseFloat(amount || 0),
+                                actualInterest,
                                 paymentDate,
                                 payment_type || 'Partial Interest Payment',
-                                'Partial Payment Received'
+                                ledgerNote
                             ]
                         );
+
+                        // If loan is fully cleared (newPrincipal <= 0), auto-release gehna!
+                        if (newPrincipal <= 0) {
+                            db.run(
+                                `UPDATE pawn_records SET status = 'Released', release_date = ?, amount = 0 WHERE id = ?`,
+                                [paymentDate, pawnId]
+                            );
+                        } else if (paidAmt >= calculatedInterest) {
+                            db.run(
+                                `UPDATE pawn_records SET date_added = ?, amount = ? WHERE id = ?`,
+                                [paymentDate, newPrincipal, pawnId]
+                            );
+                        }
                     }
 
-                    res.json({ message: 'Payment added successfully', id: this.lastID });
+                    res.json({ message: 'Payment added successfully & record updated', id: this.lastID });
                 }
             );
         }
@@ -649,13 +764,18 @@ app.get('/api/reports/dashboard', async (req, res) => {
         `, [isoSixMonthsAgo]);
         data.overdueAccounts = overdueRows;
 
-        // 4. Total Interest Collected (from released items)
-        const releasedRows = await dbAll(`SELECT * FROM pawn_records WHERE status = 'Released'`, []);
-        let releasedInterest = 0;
-        releasedRows.forEach(p => {
-            releasedInterest += calcServerPawnInterest(p.amount, p.interest_rate, p.date_added, 'Released', p.release_date);
+        // 4. Total Interest Collected (Released Items Interest + Ledger Collected Interest)
+        const releasedPawns = await dbAll(`SELECT * FROM pawn_records WHERE status = 'Released'`, []);
+        let releasedInterestTotal = 0;
+        releasedPawns.forEach(p => {
+            const interest = calculateInterest(p.amount, p.interest_rate, p.date_added, 'Released', p.release_date);
+            releasedInterestTotal += interest;
         });
-        data.totalInterestCollected = Math.round(releasedInterest);
+
+        const ledgerRows = await dbAll(`SELECT SUM(interest_amount) as total FROM interest_ledger`, []);
+        const ledgerTotal = parseFloat((ledgerRows[0] && ledgerRows[0].total) || 0);
+
+        data.totalInterestCollected = Math.round(releasedInterestTotal + ledgerTotal);
 
         // 5. Gold & Silver Rates
         const rateRows = await dbAll(`SELECT key, value FROM settings WHERE key IN ('gold_rate', 'silver_rate')`, []);
@@ -1215,33 +1335,8 @@ cron.schedule('0 8 * * *', () => {
 });
 
 // Helper for interest calculation on server
-function calcServerPawnInterest(amount, rate, dateAdded, status, releaseDate) {
-    rate = parseFloat(rate || 0);
-    amount = parseFloat(amount || 0);
-    if (rate === 0 || amount === 0) return 0;
-
-    const start = new Date(dateAdded);
-    const end = status === 'Released' && releaseDate ? new Date(releaseDate) : new Date();
-    
-    const diffTime = Math.abs(end - start);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    const months = Math.floor(diffDays / 30);
-    const extraDays = diffDays % 30;
-    
-    let chargeableMonths = months;
-    if (extraDays > 0 && extraDays <= 5) {
-        chargeableMonths += 1; // 1-5 extra days = full month interest
-    } else if (extraDays > 5 && extraDays <= 15) {
-        chargeableMonths += 0.5; // >5 & <=15 extra days = half month interest
-    } else if (extraDays > 15) {
-        chargeableMonths += (extraDays / 30); // >15 extra days = day-wise interest
-    } else if (months === 0 && extraDays === 0) {
-        chargeableMonths = 1; // 0 days = within 5 days = 1 full month interest
-    }
-
-    return amount * (rate / 100) * chargeableMonths;
-}
+// calcServerPawnInterest is an alias for calculateInterest (defined at top of file)
+const calcServerPawnInterest = calculateInterest;
 
 // GET Customer QR Pass Details
 app.get('/api/customers/:id/qr-pass', (req, res) => {
@@ -1317,10 +1412,10 @@ app.get('/api/passbook/:token', (req, res) => {
                 });
             }
             db.all(`SELECT * FROM pawn_payments WHERE pawn_id IN (${pawnIds.join(',')})`, [], (err, payments) => {
-                const paymentsByPawn = {};
+                const paymentsListByPawn = {};
                 (payments || []).forEach(pm => {
-                    if (!paymentsByPawn[pm.pawn_id]) paymentsByPawn[pm.pawn_id] = 0;
-                    paymentsByPawn[pm.pawn_id] += pm.amount;
+                    if (!paymentsListByPawn[pm.pawn_id]) paymentsListByPawn[pm.pawn_id] = [];
+                    paymentsListByPawn[pm.pawn_id].push(pm);
                 });
 
                 let totalPrincipal = 0;
@@ -1328,14 +1423,27 @@ app.get('/api/passbook/:token', (req, res) => {
                 let totalJama = 0;
 
                 const formattedPawns = pawns.map(p => {
-                    const interest = calcServerPawnInterest(p.amount, p.interest_rate, p.date_added, p.status, p.release_date);
-                    const paid = paymentsByPawn[p.id] || 0;
-                    const baki = (p.amount + interest) - paid;
+                    const interest = calculateInterest(p.amount, p.interest_rate, p.date_added, p.status, p.release_date);
+                    const pList = paymentsListByPawn[p.id] || [];
+                    const pDate = new Date(p.date_added);
+
+                    // Only count payments in the current cycle (after last date reset)
+                    // Using > (strictly greater than) - same-day payments already reflected in reduced principal
+                    let paidInCycle = 0;
+                    pList.forEach(pm => {
+                        const payDate = new Date(pm.payment_date);
+                        if (p.status === 'Released' || payDate > pDate) {
+                            paidInCycle += parseFloat(pm.amount || 0);
+                        }
+                    });
+
+                    let baki = Math.max(0, Math.round((p.amount + interest) - paidInCycle));
+                    if (p.status === 'Released' || p.amount <= 0) baki = 0;
 
                     if (p.status === 'Active') {
                         totalPrincipal += p.amount;
                         totalInterest += interest;
-                        totalJama += paid;
+                        totalJama += paidInCycle;
                     }
 
                     return {
@@ -1344,8 +1452,8 @@ app.get('/api/passbook/:token', (req, res) => {
                         amount: p.amount,
                         interest_rate: p.interest_rate,
                         calculated_interest: Math.round(interest),
-                        paid: Math.round(paid),
-                        baki: Math.max(0, Math.round(baki)),
+                        paid: Math.round(paidInCycle),
+                        baki: baki,
                         status: p.status,
                         date_added: p.date_added,
                         item_metal_type: p.item_metal_type || 'Gold',
@@ -1355,7 +1463,7 @@ app.get('/api/passbook/:token', (req, res) => {
                     };
                 });
 
-                const netBalance = Math.round((totalPrincipal + totalInterest) - totalJama);
+                const netBalance = Math.max(0, Math.round((totalPrincipal + totalInterest) - totalJama));
 
                 res.json({
                     active: true,
@@ -1367,7 +1475,7 @@ app.get('/api/passbook/:token', (req, res) => {
                     totalPrincipal: Math.round(totalPrincipal),
                     totalInterest: Math.round(totalInterest),
                     totalJama: Math.round(totalJama),
-                    netBalance: Math.max(0, netBalance)
+                    netBalance: netBalance
                 });
             });
         });
@@ -1453,12 +1561,8 @@ app.post('/api/portal/login', (req, res) => {
                 }
 
                 db.all(`SELECT * FROM pawn_payments WHERE pawn_id IN (${pawnIds.join(',')})`, [], (err, payments) => {
-                    const paymentsByPawn = {};
                     const paymentsListByPawn = {};
                     (payments || []).forEach(pm => {
-                        if (!paymentsByPawn[pm.pawn_id]) paymentsByPawn[pm.pawn_id] = 0;
-                        paymentsByPawn[pm.pawn_id] += pm.amount;
-
                         if (!paymentsListByPawn[pm.pawn_id]) paymentsListByPawn[pm.pawn_id] = [];
                         paymentsListByPawn[pm.pawn_id].push({
                             id: pm.id,
@@ -1473,14 +1577,28 @@ app.post('/api/portal/login', (req, res) => {
                     let totalJama = 0;
 
                     const formattedPawns = pawns.map(p => {
-                        const interest = calcServerPawnInterest(p.amount, p.interest_rate, p.date_added, p.status, p.release_date);
-                        const paid = paymentsByPawn[p.id] || 0;
-                        const baki = (p.amount + interest) - paid;
+                        const interest = calculateInterest(p.amount, p.interest_rate, p.date_added, p.status, p.release_date);
+                        const pList = paymentsListByPawn[p.id] || [];
+                        const pDate = new Date(p.date_added);
+
+                        // Only count payments made in the current active cycle (since last reset)
+                        let paidInCycle = 0;
+                        pList.forEach(pm => {
+                            const payDate = new Date(pm.payment_date);
+                            if (p.status === 'Released' || payDate > pDate) {
+                                paidInCycle += parseFloat(pm.amount || 0);
+                            }
+                        });
+
+                        let baki = Math.max(0, Math.round((p.amount + interest) - paidInCycle));
+                        if (p.status === 'Released' || p.amount <= 0) {
+                            baki = 0;
+                        }
 
                         if (p.status === 'Active') {
                             totalPrincipal += p.amount;
                             totalInterest += interest;
-                            totalJama += paid;
+                            totalJama += paidInCycle;
                         }
 
                         return {
@@ -1489,15 +1607,15 @@ app.post('/api/portal/login', (req, res) => {
                             amount: p.amount,
                             interest_rate: p.interest_rate,
                             calculated_interest: Math.round(interest),
-                            paid: Math.round(paid),
-                            baki: Math.max(0, Math.round(baki)),
+                            paid: Math.round(paidInCycle),
+                            baki: baki,
                             status: p.status,
                             date_added: p.date_added,
                             item_metal_type: p.item_metal_type || 'Gold',
                             item_weight_grams: p.item_weight_grams || 0,
                             item_photo: p.item_photo,
                             is_udhari: p.is_udhari,
-                            payments: paymentsListByPawn[p.id] || []
+                            payments: pList
                         };
                     });
 
@@ -1704,10 +1822,15 @@ app.all('/api/phonepe/callback', async (req, res) => {
 });
 
 if (require.main === module) {
-    app.listen(PORT, '0.0.0.0', () => {
+    app.listen(PORT, '0.0.0.0', async () => {
         const ip = getLocalIpAddress();
         console.log(`Server is running locally at http://localhost:${PORT}`);
         console.log(`Mobile/Network access URL: http://${ip}:${PORT}`);
+        // Fix Supabase PK sequences at startup to prevent collision errors
+        if (fixAllSequences) {
+            await fixAllSequences();
+            console.log('[Startup] Supabase ID sequences verified/repaired.');
+        }
     });
 }
 
