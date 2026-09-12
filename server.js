@@ -126,6 +126,373 @@ function calculateInterest(amount, rate, dateAdded, status, releaseDate) {
 // Run legacy password migration once database initializes
 setTimeout(migrateLegacyPasswords, 2000);
 
+// ============================================
+// EMAIL NOTIFICATION SERVICE & RECEIPT HELPERS
+// ============================================
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
+
+function formatCurrency(val) {
+    return '₹' + Number(val || 0).toLocaleString('en-IN');
+}
+
+function formatReceiptDate(dateStr) {
+    try {
+        const d = dateStr ? new Date(dateStr) : new Date();
+        return d.toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+    } catch(e) {
+        return new Date().toLocaleString('en-IN');
+    }
+}
+
+// 1. Send Payment Transaction Approval Receipt Email
+async function sendPaymentApprovalEmail({
+    customerEmail,
+    customerName,
+    customerPhone,
+    itemDescription,
+    amount,
+    paymentType,
+    utrNumber,
+    actualInterest,
+    extraTowardsPrincipal,
+    newPrincipal,
+    isReleased,
+    approvalDate
+}) {
+    if (!customerEmail || !customerEmail.includes('@') || customerEmail === 'N/A') {
+        console.log(`[Email] Customer email missing or invalid (${customerEmail}), skipping transaction email.`);
+        return false;
+    }
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+        console.log('[Email] EMAIL_USER or EMAIL_PASS not configured in .env, skipping email.');
+        return false;
+    }
+
+    const receiptNo = 'LJS-TXN-' + Date.now().toString().slice(-6);
+    const dateFormatted = formatReceiptDate(approvalDate);
+    const paidAmt = parseFloat(amount || 0);
+    const byaajAmt = parseFloat(actualInterest || 0);
+    const moolAmt = parseFloat(extraTowardsPrincipal || 0);
+    const bakiMool = parseFloat(newPrincipal || 0);
+
+    const statusBadge = isReleased
+        ? `<div style="background-color: #d1fae5; color: #065f46; border: 1px solid #10b981; padding: 12px 16px; border-radius: 8px; font-weight: bold; text-align: center; margin: 16px 0;">
+             🎉 LOAN FULLY SETTLED &bull; GEHNA RELEASED (गहना छूट गया)
+           </div>`
+        : `<div style="background-color: #eff6ff; color: #1e40af; border: 1px solid #3b82f6; padding: 12px 16px; border-radius: 8px; font-weight: bold; text-align: center; margin: 16px 0;">
+             ✅ TRANSACTION APPROVED &amp; VERIFIED (भुगतान स्वीकृत)
+           </div>`;
+
+    const statusRow = isReleased
+        ? `<tr>
+             <td style="padding: 10px 0; color: #475569; font-size: 14px;"><strong>Account Status:</strong></td>
+             <td style="padding: 10px 0; color: #059669; text-align: right; font-weight: bold; font-size: 15px;">Loan Fully Cleared (Closed)</td>
+           </tr>`
+        : `<tr>
+             <td style="padding: 10px 0; color: #475569; font-size: 14px;"><strong>Remaining Principal (बाकी मूल):</strong></td>
+             <td style="padding: 10px 0; color: #dc2626; text-align: right; font-weight: bold; font-size: 16px;">${formatCurrency(bakiMool)}</td>
+           </tr>`;
+
+    const mailOptions = {
+        from: `"LJS Jewellers" <${process.env.EMAIL_USER}>`,
+        to: customerEmail,
+        subject: `Payment Approved - Receipt #${receiptNo} | LJS Jewellers`,
+        html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 20px; background-color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1e293b;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
+            
+            <!-- Luxury Header -->
+            <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 28px 24px; text-align: center; border-bottom: 3px solid #d4af37;">
+              <div style="display: inline-block; background: linear-gradient(135deg, #d4af37, #f59e0b); color: #0f172a; width: 44px; height: 44px; line-height: 44px; border-radius: 10px; font-size: 22px; font-weight: bold; margin-bottom: 8px;">✨</div>
+              <h1 style="margin: 0; font-size: 24px; letter-spacing: 1.5px; font-weight: 800; color: #ffffff; text-transform: uppercase;">LJS JEWELLERS</h1>
+              <p style="margin: 4px 0 0 0; font-size: 12px; color: #d4af37; letter-spacing: 2px; text-transform: uppercase; font-weight: 600;">Gold &amp; Silver Pawn Brokerage &bull; Official Receipt</p>
+            </div>
+
+            <!-- Main Content -->
+            <div style="padding: 26px 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 16px;">
+                <div>
+                  <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: bold;">Receipt No.</span>
+                  <div style="font-size: 15px; font-weight: 800; color: #0f172a;">${receiptNo}</div>
+                </div>
+                <div style="text-align: right;">
+                  <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: bold;">Approval Date</span>
+                  <div style="font-size: 13px; font-weight: 600; color: #334155;">${dateFormatted}</div>
+                </div>
+              </div>
+
+              ${statusBadge}
+
+              <p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 16px 0 20px 0;">
+                Namaste <strong>${customerName}</strong> ji, aapka transaction approve aur verify ho gaya hai. Niche aapke transaction aur khate ka pura vivaran (receipt breakdown) diya gaya hai:
+              </p>
+
+              <!-- Payment Breakdown Card -->
+              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px 20px; margin-bottom: 22px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 8px 0; color: #64748b; font-size: 13px;">Customer Name:</td>
+                    <td style="padding: 8px 0; color: #0f172a; text-align: right; font-weight: 700; font-size: 14px;">${customerName} ${customerPhone ? `(${customerPhone})` : ''}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #64748b; font-size: 13px;">Item Pledged (गिरवी गहना):</td>
+                    <td style="padding: 8px 0; color: #0f172a; text-align: right; font-weight: 600; font-size: 14px;">${itemDescription}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #64748b; font-size: 13px;">Payment Mode:</td>
+                    <td style="padding: 8px 0; color: #0f172a; text-align: right; font-weight: 600; font-size: 13px;">
+                      ${paymentType} ${utrNumber ? `<br><span style="font-size: 11px; color: #64748b;">(UTR: ${utrNumber})</span>` : ''}
+                    </td>
+                  </tr>
+                  
+                  <tr style="border-top: 1px dashed #cbd5e1;">
+                    <td style="padding: 12px 0 6px 0; color: #0f172a; font-size: 15px; font-weight: 700;">Amount Paid (कुल जमा राशि):</td>
+                    <td style="padding: 12px 0 6px 0; color: #059669; text-align: right; font-size: 18px; font-weight: 800;">${formatCurrency(paidAmt)}</td>
+                  </tr>
+
+                  <tr>
+                    <td style="padding: 4px 0 4px 12px; color: #64748b; font-size: 12px;">&bull; Byaaj me jama (Interest Settled):</td>
+                    <td style="padding: 4px 0 4px 0; color: #b45309; text-align: right; font-size: 13px; font-weight: 600;">${formatCurrency(byaajAmt)}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 4px 0 8px 12px; color: #64748b; font-size: 12px;">&bull; Mool me jama (Principal Paid):</td>
+                    <td style="padding: 4px 0 8px 0; color: #2563eb; text-align: right; font-size: 13px; font-weight: 600;">${formatCurrency(moolAmt)}</td>
+                  </tr>
+
+                  <tr style="border-top: 1px solid #cbd5e1;">
+                    ${statusRow}
+                  </tr>
+                </table>
+              </div>
+
+              <!-- Notice Box -->
+              <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px;">
+                <p style="margin: 0; font-size: 12px; color: #92400e; line-height: 1.5;">
+                  <strong>Note:</strong> Aapka payment interest ledger aur passbook me update ho gaya hai. Loan date approval ki date se reset ho chuki hai. Aap apne online Customer Portal par login karke passbook aur live balance check kar sakte hain.
+                </p>
+              </div>
+
+              <div style="text-align: center; margin-top: 24px;">
+                <a href="http://localhost:3001/portal.html" style="display: inline-block; background: linear-gradient(135deg, #0f172a, #1e293b); color: #d4af37; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: bold; font-size: 13px; border: 1px solid #d4af37;">
+                  View Online Passbook &rarr;
+                </a>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="background-color: #0f172a; color: #94a3b8; text-align: center; padding: 18px 20px; font-size: 11px; border-top: 1px solid #334155;">
+              <p style="margin: 0; color: #cbd5e1; font-weight: 600;">LJS Jewellers (Laxmi Narayan Jewellers)</p>
+              <p style="margin: 4px 0 0 0;">This is an automated system-generated electronic receipt sent upon transaction approval.</p>
+              <p style="margin: 6px 0 0 0; color: #64748b;">&copy; ${new Date().getFullYear()} LJS Jewellers. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+        `
+    };
+
+    return new Promise((resolve) => {
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.error(`[Email Error] Failed to send payment receipt to ${customerEmail}:`, error.message);
+                return resolve(false);
+            }
+            console.log(`[Email Success] Payment approval receipt sent to ${customerEmail} (ID: ${info.messageId})`);
+            resolve(true);
+        });
+    });
+}
+
+// 2. Send Pawn Creation Approval Receipt Email
+async function sendPawnCreationEmail({
+    customerEmail,
+    customerName,
+    customerPhone,
+    description,
+    amount,
+    interestRate,
+    itemWeightGrams,
+    itemMetalType,
+    dateAdded
+}) {
+    const cleanEmail = (customerEmail || '').trim();
+    if (!cleanEmail || !cleanEmail.includes('@') || cleanEmail.toUpperCase() === 'N/A') {
+        console.log(`[Email] Skipping pawn creation email - invalid or missing email (${customerEmail})`);
+        return false;
+    }
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+        console.log('[Email] EMAIL_USER or EMAIL_PASS not configured in .env, skipping email.');
+        return false;
+    }
+
+    const receiptNo = 'LJS-PAWN-' + Date.now().toString().slice(-6);
+    const dateFormatted = formatReceiptDate(dateAdded);
+    const loanAmt = parseFloat(amount || 0);
+    const rate = parseFloat(interestRate || 0);
+
+    const mailOptions = {
+        from: `"LJS Jewellers" <${process.env.EMAIL_USER}>`,
+        to: cleanEmail,
+        subject: `New Pawn Receipt #${receiptNo} - Approved | LJS Jewellers`,
+        html: `
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="utf-8"></head>
+        <body style="margin: 0; padding: 20px; background-color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1e293b;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
+            <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 28px 24px; text-align: center; border-bottom: 3px solid #d4af37;">
+              <div style="display: inline-block; background: linear-gradient(135deg, #d4af37, #f59e0b); color: #0f172a; width: 44px; height: 44px; line-height: 44px; border-radius: 10px; font-size: 22px; font-weight: bold; margin-bottom: 8px;">🪙</div>
+              <h1 style="margin: 0; font-size: 24px; letter-spacing: 1.5px; font-weight: 800; color: #ffffff; text-transform: uppercase;">LJS JEWELLERS</h1>
+              <p style="margin: 4px 0 0 0; font-size: 12px; color: #d4af37; letter-spacing: 2px; text-transform: uppercase; font-weight: 600;">Gold &amp; Silver Pawn Loan Receipt</p>
+            </div>
+            <div style="padding: 26px 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 16px;">
+                <div>
+                  <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: bold;">Receipt No.</span>
+                  <div style="font-size: 15px; font-weight: 800; color: #0f172a;">${receiptNo}</div>
+                </div>
+                <div style="text-align: right;">
+                  <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: bold;">Date</span>
+                  <div style="font-size: 13px; font-weight: 600; color: #334155;">${dateFormatted}</div>
+                </div>
+              </div>
+
+              <div style="background-color: #f0fdf4; color: #166534; border: 1px solid #86efac; padding: 12px 16px; border-radius: 8px; font-weight: bold; text-align: center; margin: 16px 0;">
+                ✅ GIRVI RECORD APPROVED &amp; SAFELY STORED (गिरवी रसीद स्वीकृत)
+              </div>
+
+              <p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 16px 0 20px 0;">
+                Dear <strong>${customerName}</strong>, aapka naya girvi record safal roop se darz kar liya gaya hai:
+              </p>
+
+              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px 20px; margin-bottom: 22px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 8px 0; color: #64748b; font-size: 13px;">Item Pledged:</td>
+                    <td style="padding: 8px 0; color: #0f172a; text-align: right; font-weight: 700; font-size: 14px;">${description}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #64748b; font-size: 13px;">Metal &amp; Weight:</td>
+                    <td style="padding: 8px 0; color: #0f172a; text-align: right; font-weight: 600; font-size: 14px;">${itemMetalType || 'Gold'} &bull; ${itemWeightGrams ? itemWeightGrams + 'g' : 'N/A'}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #64748b; font-size: 13px;">Interest Rate:</td>
+                    <td style="padding: 8px 0; color: #0f172a; text-align: right; font-weight: 600; font-size: 14px;">${rate}% / Month</td>
+                  </tr>
+                  <tr style="border-top: 1px dashed #cbd5e1;">
+                    <td style="padding: 12px 0 6px 0; color: #0f172a; font-size: 15px; font-weight: 700;">Loan Amount Given:</td>
+                    <td style="padding: 12px 0 6px 0; color: #d4af37; text-align: right; font-size: 18px; font-weight: 800;">${formatCurrency(loanAmt)}</td>
+                  </tr>
+                </table>
+              </div>
+
+              <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px;">
+                <p style="margin: 0; font-size: 12px; color: #92400e; line-height: 1.4;">
+                  <strong>Rule:</strong> Minimum 1 month interest applies if returned within 1-5 days. Half month interest applies if returned within 6-15 days. Day-wise interest applies thereafter.
+                </p>
+              </div>
+            </div>
+            <div style="background-color: #0f172a; color: #94a3b8; text-align: center; padding: 18px 20px; font-size: 11px;">
+              <p style="margin: 0; color: #cbd5e1;">LJS Jewellers &bull; Trusted Since Generations</p>
+            </div>
+          </div>
+        </body>
+        </html>
+        `
+    };
+
+    return new Promise((resolve) => {
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.error(`[Email Error] Failed to send pawn receipt to ${cleanEmail}:`, error.message);
+                return resolve(false);
+            }
+            console.log(`[Email Success] Pawn creation receipt sent to ${cleanEmail} (ID: ${info.messageId})`);
+            resolve(true);
+        });
+    });
+}
+
+// 3. Send Customer Account Welcome & Credentials Email
+async function sendCustomerWelcomeEmail({
+    customerEmail,
+    customerName,
+    phone,
+    username,
+    password
+}) {
+    if (!customerEmail || !customerEmail.includes('@') || customerEmail === 'N/A') return false;
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) return false;
+
+    const mailOptions = {
+        from: `"LJS Jewellers" <${process.env.EMAIL_USER}>`,
+        to: customerEmail,
+        subject: `Welcome to LJS Jewellers - Your Customer Portal Login`,
+        html: `
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="utf-8"></head>
+        <body style="margin: 0; padding: 20px; background-color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1e293b;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
+            <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 28px 24px; text-align: center; border-bottom: 3px solid #d4af37;">
+              <h1 style="margin: 0; font-size: 24px; letter-spacing: 1.5px; font-weight: 800; color: #ffffff;">LJS JEWELLERS</h1>
+              <p style="margin: 4px 0 0 0; font-size: 12px; color: #d4af37; letter-spacing: 2px;">Welcome to Digital Customer Portal</p>
+            </div>
+            <div style="padding: 26px 24px;">
+              <p style="font-size: 15px; line-height: 1.6; color: #334155;">
+                Namaste <strong>${customerName}</strong> ji, LJS Jewellers me aapka swagat hai! Aapka customer account approve aur create ho chuka hai.
+              </p>
+              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px 20px; margin: 20px 0;">
+                <h3 style="margin-top: 0; color: #0f172a; font-size: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">Aapke Login Credentials:</h3>
+                <p style="margin: 8px 0; font-size: 14px;"><strong>Username / Mobile:</strong> <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">${username || phone}</code></p>
+                <p style="margin: 8px 0; font-size: 14px;"><strong>Portal Security PIN:</strong> <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 16px; font-weight: bold; color: #2563eb;">${password}</code></p>
+              </div>
+              <p style="font-size: 13px; color: #64748b;">
+                Aap is PIN ke dwara apne customer portal par login karke apni passbook, active loan, interest breakdown, aur online payment kar sakte hain.
+              </p>
+              <div style="text-align: center; margin-top: 24px;">
+                <a href="http://localhost:3001/portal.html" style="display: inline-block; background: linear-gradient(135deg, #0f172a, #1e293b); color: #d4af37; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: bold; font-size: 13px; border: 1px solid #d4af37;">
+                  Login to Customer Portal &rarr;
+                </a>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+        `
+    };
+
+    return new Promise((resolve) => {
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.error(`[Email Error] Failed to send welcome email to ${customerEmail}:`, error.message);
+                return resolve(false);
+            }
+            console.log(`[Email Success] Welcome email sent to ${customerEmail}`);
+            resolve(true);
+        });
+    });
+}
+
 // API Routes
 
 // Staff Submission API (Queues entries for Admin Approval)
@@ -177,6 +544,17 @@ app.post('/api/admin/approve/:id', (req, res) => {
                 function (err2) {
                     if (err2) return res.status(500).json({ error: err2.message });
                     db.run("UPDATE pending_approvals SET status = 'Approved' WHERE id = ?", [id]);
+                    
+                    if (email && email.includes('@')) {
+                        sendCustomerWelcomeEmail({
+                            customerEmail: email,
+                            customerName: name,
+                            phone: phone,
+                            username: username,
+                            password: rawPassword
+                        }).catch(e => console.error('Welcome email error:', e));
+                    }
+
                     res.json({ message: 'Customer approved & added to database successfully!' });
                 }
             );
@@ -189,16 +567,42 @@ app.post('/api/admin/approve/:id', (req, res) => {
                 function (err2) {
                     if (err2) return res.status(500).json({ error: err2.message });
                     db.run("UPDATE pending_approvals SET status = 'Approved' WHERE id = ?", [id]);
+
+                    db.get("SELECT * FROM customers WHERE id = ?", [customer_id], (cErr, cust) => {
+                        if (cErr) {
+                            console.error('[Email] Error fetching customer for pawn email:', cErr);
+                        } else if (!cust) {
+                            console.log(`[Email] Customer not found for id=${customer_id}, skipping email.`);
+                        } else if (!cust.email || !cust.email.includes('@')) {
+                            console.log(`[Email] Customer email missing/invalid (${cust.email}), skipping pawn email.`);
+                        } else {
+                            console.log(`[Email] Sending pawn approval receipt to ${cust.email}...`);
+                            sendPawnCreationEmail({
+                                customerEmail: cust.email,
+                                customerName: cust.name,
+                                customerPhone: cust.phone,
+                                description,
+                                amount,
+                                interestRate: interest_rate || 0,
+                                itemWeightGrams: item_weight_grams || 0,
+                                itemMetalType: item_metal_type || 'Gold',
+                                dateAdded
+                            }).then(sent => {
+                                console.log(`[Email] Pawn creation email ${sent ? 'sent ✅' : 'FAILED ❌'} to ${cust.email}`);
+                            }).catch(e => console.error('[Email] Pawn creation email error:', e));
+                        }
+                    });
+
                     res.json({ message: 'Pawn record approved & saved!' });
                 }
             );
         } else if (row.type === 'RECEIVE_PAYMENT') {
-            const { pawn_id, amount, payment_type } = data;
+            const { pawn_id, customer_id, amount, payment_type, utr_number, notes } = data;
             const paymentDate = new Date().toISOString();
             const paidAmt = parseFloat(amount || 0);
 
             db.get(
-                `SELECT p.*, c.name as customer_name, c.phone as customer_phone 
+                `SELECT p.*, c.name as customer_name, c.phone as customer_phone, c.email as customer_email 
                  FROM pawn_records p 
                  LEFT JOIN customers c ON p.customer_id = c.id 
                  WHERE p.id = ?`,
@@ -211,18 +615,21 @@ app.post('/api/admin/approve/:id', (req, res) => {
                             if (err2) return res.status(500).json({ error: err2.message });
 
                             let newPrincipal = 0;
+                            let actualInterest = 0;
+                            let extraTowardsPrincipal = 0;
+
                             if (pawn) {
                                 // 1. Calculate interest up to today using standard shop rule
                                 const calculatedInterest = calculateInterest(pawn.amount, pawn.interest_rate, pawn.date_added, pawn.status, null);
 
                                 // Actual interest collected is only up to the due interest, rest goes to principal
-                                const actualInterest = Math.min(paidAmt, calculatedInterest);
-                                const extraTowardsPrincipal = Math.max(0, paidAmt - calculatedInterest);
+                                actualInterest = Math.min(paidAmt, calculatedInterest);
+                                extraTowardsPrincipal = Math.max(0, paidAmt - calculatedInterest);
                                 newPrincipal = Math.max(0, Math.round(pawn.amount - extraTowardsPrincipal));
 
                                 const ledgerNote = extraTowardsPrincipal > 0 
                                     ? `Byaaj: ₹${actualInterest}, Mool Jama: ₹${extraTowardsPrincipal}`
-                                    : 'Online UPI Payment';
+                                    : (payment_type || 'Online UPI Payment');
 
                                 db.run(
                                     `INSERT INTO interest_ledger (pawn_id, customer_name, customer_phone, item_description, principal_amount, interest_amount, payment_date, payment_type, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -251,10 +658,41 @@ app.post('/api/admin/approve/:id', (req, res) => {
                                         [paymentDate, newPrincipal, pawn_id]
                                     );
                                 }
+
+                                // Auto-send Payment Approval Receipt Email to Customer
+                                const sendReceipt = (email, name, phone) => {
+                                    if (email && email.includes('@') && email !== 'N/A') {
+                                        sendPaymentApprovalEmail({
+                                            customerEmail: email,
+                                            customerName: name || 'Customer',
+                                            customerPhone: phone || '',
+                                            itemDescription: pawn.description || 'Pledged Item',
+                                            amount: paidAmt,
+                                            paymentType: payment_type || 'Online UPI Payment',
+                                            utrNumber: utr_number || data.utr || null,
+                                            actualInterest: actualInterest,
+                                            extraTowardsPrincipal: extraTowardsPrincipal,
+                                            newPrincipal: newPrincipal,
+                                            isReleased: newPrincipal <= 0,
+                                            approvalDate: paymentDate
+                                        }).catch(e => console.error('Payment receipt email error:', e));
+                                    }
+                                };
+
+                                if (pawn.customer_email) {
+                                    sendReceipt(pawn.customer_email, pawn.customer_name, pawn.customer_phone);
+                                } else if (pawn.customer_id || customer_id) {
+                                    const targetCustId = pawn.customer_id || customer_id;
+                                    db.get("SELECT * FROM customers WHERE id = ?", [targetCustId], (cErr, cust) => {
+                                        if (!cErr && cust) {
+                                            sendReceipt(cust.email, cust.name, cust.phone);
+                                        }
+                                    });
+                                }
                             }
 
                             db.run("UPDATE pending_approvals SET status = 'Approved' WHERE id = ?", [id]);
-                            res.json({ message: (pawn && newPrincipal <= 0) ? 'Loan fully cleared! Gehna marked as Released.' : 'Payment approved & loan date auto-reset to today!' });
+                            res.json({ message: (pawn && newPrincipal <= 0) ? 'Loan fully cleared! Gehna marked as Released & receipt emailed to customer.' : 'Payment approved & receipt emailed to customer!' });
                         }
                     );
                 }
@@ -362,6 +800,16 @@ app.post('/api/customers', upload.single('aadhar_photo'), async (req, res) => {
                 res.status(500).json({ error: err.message });
                 return;
             }
+            if (email && email.trim() && email.includes('@')) {
+                sendCustomerWelcomeEmail({
+                    customerEmail: email.trim(),
+                    customerName: name,
+                    phone: phone,
+                    username: finalUsername,
+                    password: finalPassword
+                }).catch(e => console.error('[Email] Customer welcome email error:', e));
+            }
+
             res.json({
                 message: 'Customer added successfully',
                 id: this.lastID,
@@ -393,11 +841,13 @@ app.delete('/api/customers/:id', (req, res) => {
         return res.status(401).json({ error: 'Galat Security PIN! Record delete nahi hua.' });
     }
 
-    db.run('DELETE FROM customers WHERE id = ?', id, function (err) {
+    db.run('DELETE FROM customers WHERE id = ?', [id], function (err) {
         if (err) {
-            res.status(500).json({ error: err.message });
+            console.error('[Delete] Customer delete error:', err);
+            res.status(500).json({ error: err.message || 'Delete failed' });
             return;
         }
+        console.log(`[Delete] Customer id=${id} deleted successfully.`);
         res.json({ message: 'Customer deleted successfully' });
     });
 });
@@ -437,9 +887,35 @@ app.post('/api/customers/:id/pawn', upload.single('item_photo'), async (req, res
                 res.status(500).json({ error: err.message });
                 return;
             }
+
+            const newPawnId = this.lastID;
+
+            // Send Pawn Creation Receipt Email to Customer
+            db.get('SELECT * FROM customers WHERE id = ?', [id], (cErr, cust) => {
+                const targetEmail = (cust && cust.email) ? cust.email.trim() : '';
+                if (!cErr && targetEmail && targetEmail.includes('@') && targetEmail.toUpperCase() !== 'N/A') {
+                    console.log(`[Email] Sending pawn creation receipt to ${targetEmail}...`);
+                    sendPawnCreationEmail({
+                        customerEmail: targetEmail,
+                        customerName: cust.name,
+                        customerPhone: cust.phone,
+                        description: description,
+                        amount: amount,
+                        interestRate: rate,
+                        itemWeightGrams: weight,
+                        itemMetalType: metal,
+                        dateAdded: dateAdded
+                    }).then(sent => {
+                        if (sent) console.log(`[Email] Pawn receipt sent successfully to ${targetEmail}`);
+                    }).catch(e => console.error('[Email] Pawn creation email error:', e));
+                } else {
+                    console.log(`[Email] Skipping pawn email - customer email missing or invalid (id=${id}, email=${cust ? cust.email : 'not found'})`);
+                }
+            });
+
             res.json({
                 message: 'Pawn receipt added successfully',
-                id: this.lastID
+                id: newPawnId
             });
         }
     );
@@ -627,9 +1103,31 @@ app.post('/api/customers/:id/pawn/:pawnId/renew', (req, res) => {
                         ],
                         function (insErr) {
                             if (insErr) return res.status(500).json({ error: insErr.message });
+                            
+                            const newId = this.lastID;
+                            
+                            // Send Pawn Renewal Receipt Email
+                            db.get('SELECT * FROM customers WHERE id = ?', [customerId], (cErr, cust) => {
+                                const targetEmail = (cust && cust.email) ? cust.email.trim() : '';
+                                if (!cErr && targetEmail && targetEmail.includes('@') && targetEmail.toUpperCase() !== 'N/A') {
+                                    console.log(`[Email] Sending renewed pawn receipt to ${targetEmail}...`);
+                                    sendPawnCreationEmail({
+                                        customerEmail: targetEmail,
+                                        customerName: cust.name,
+                                        customerPhone: cust.phone,
+                                        description: newDescription,
+                                        amount: newPrincipal,
+                                        interestRate: newRate,
+                                        itemWeightGrams: oldPawn.item_weight_grams || 0,
+                                        itemMetalType: oldPawn.item_metal_type || 'Gold',
+                                        dateAdded: renewDate
+                                    }).catch(e => console.error('[Email] Pawn renew email error:', e));
+                                }
+                            });
+
                             res.json({
                                 message: 'Pawn successfully renewed! Fresh receipt created.',
-                                newPawnId: this.lastID
+                                newPawnId: newId
                             });
                         }
                     );
@@ -646,7 +1144,7 @@ app.post('/api/pawns/:pawnId/payments', (req, res) => {
     const paymentDate = new Date().toISOString();
 
     db.get(
-        `SELECT p.*, c.name as customer_name, c.phone as customer_phone 
+        `SELECT p.*, c.name as customer_name, c.phone as customer_phone, c.email as customer_email 
          FROM pawn_records p 
          LEFT JOIN customers c ON p.customer_id = c.id 
          WHERE p.id = ?`,
@@ -701,6 +1199,36 @@ app.post('/api/pawns/:pawnId/payments', (req, res) => {
                                 `UPDATE pawn_records SET date_added = ?, amount = ? WHERE id = ?`,
                                 [paymentDate, newPrincipal, pawnId]
                             );
+                        }
+
+                        // Send Receipt Email to Customer
+                        const sendReceipt = (email, name, phone) => {
+                            if (email && email.includes('@') && email !== 'N/A') {
+                                sendPaymentApprovalEmail({
+                                    customerEmail: email,
+                                    customerName: name || 'Customer',
+                                    customerPhone: phone || '',
+                                    itemDescription: pawn.description || 'Pledged Item',
+                                    amount: paidAmt,
+                                    paymentType: payment_type || 'Cash / Counter Payment',
+                                    utrNumber: null,
+                                    actualInterest: actualInterest,
+                                    extraTowardsPrincipal: extraTowardsPrincipal,
+                                    newPrincipal: newPrincipal,
+                                    isReleased: newPrincipal <= 0,
+                                    approvalDate: paymentDate
+                                }).catch(e => console.error('Payment receipt email error:', e));
+                            }
+                        };
+
+                        if (pawn.customer_email) {
+                            sendReceipt(pawn.customer_email, pawn.customer_name, pawn.customer_phone);
+                        } else if (pawn.customer_id) {
+                            db.get("SELECT * FROM customers WHERE id = ?", [pawn.customer_id], (cErr, cust) => {
+                                if (!cErr && cust) {
+                                    sendReceipt(cust.email, cust.name, cust.phone);
+                                }
+                            });
                         }
                     }
 
@@ -1163,15 +1691,6 @@ app.get('/api/reports/interest-ledger', (req, res) => {
             });
         });
     });
-});
-
-// Email Transporter Setup (moved to global scope for reuse)
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
 });
 
 // Email a pawn receipt
@@ -1822,6 +2341,27 @@ app.all('/api/phonepe/callback', async (req, res) => {
         return res.redirect('/portal.html?payment=failed&reason=server_error');
     }
 });
+
+// ============================================
+// ADMIN AI COPILOT / SMART ASSISTANT ENDPOINT
+// ============================================
+const { processAdminAssistantQuery } = require('./admin-assistant');
+
+app.post('/api/admin/assistant', async (req, res) => {
+    try {
+        const { prompt } = req.body;
+        const result = await processAdminAssistantQuery({
+            prompt,
+            db,
+            calculateInterest
+        });
+        res.json(result);
+    } catch (err) {
+        console.error('Admin Assistant API Error:', err);
+        res.status(500).json({ success: false, message: 'Server error processing AI assistant query.' });
+    }
+});
+
 
 if (require.main === module) {
     app.listen(PORT, '0.0.0.0', async () => {

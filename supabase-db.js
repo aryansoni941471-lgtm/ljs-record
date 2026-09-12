@@ -262,8 +262,15 @@ async function handleQuery(sql, params) {
     }
 
     // 15b. All Pawn Records
-    if (/SELECT \* FROM pawn_records$/i.test(cleanSql) || cleanSql === 'SELECT * FROM pawn_records') {
-        const { data, error } = await supabase.from('pawn_records').select('*');
+    if (/SELECT \* FROM pawn_records/i.test(cleanSql) && !cleanSql.includes('WHERE') && !cleanSql.includes('JOIN')) {
+        const { data, error } = await supabase.from('pawn_records').select('*').order('id', { ascending: false });
+        if (error) throw error;
+        return data || [];
+    }
+
+    // 15c. All Pawn Payments
+    if (/SELECT \* FROM pawn_payments/i.test(cleanSql) && !cleanSql.includes('WHERE') && !cleanSql.includes('JOIN') && !cleanSql.includes('SUM')) {
+        const { data, error } = await supabase.from('pawn_payments').select('*').order('id', { ascending: false });
         if (error) throw error;
         return data || [];
     }
@@ -523,12 +530,13 @@ async function handleQuery(sql, params) {
     // 32. Single Pawn Record with Customer JOIN (WHERE p.id = ? AND p.customer_id = ?)
     if (/FROM pawn_records p.*JOIN customers c.*WHERE p\.id = \?/i.test(cleanSql)) {
         const pawnId = params[0];
-        const { data: pawns, error } = await supabase.from('pawn_records').select('*, customers(name, phone)').eq('id', pawnId);
+        const { data: pawns, error } = await supabase.from('pawn_records').select('*, customers(name, phone, email)').eq('id', pawnId);
         if (error) throw error;
         return (pawns || []).map(p => ({
             ...p,
             customer_name: p.customers?.name || '',
-            customer_phone: p.customers?.phone || ''
+            customer_phone: p.customers?.phone || '',
+            customer_email: p.customers?.email || ''
         }));
     }
 

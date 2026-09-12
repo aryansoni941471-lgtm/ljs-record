@@ -96,6 +96,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const highRiskBox = document.querySelector('.high-risk-box');
         const overdueBox = document.querySelector('.overdue-box');
         const navInterestLedgerBtn = document.getElementById('navInterestLedgerBtn');
+        const aiTriggerBtn = document.getElementById('aiAssistantTriggerBtn');
+
+        if (aiTriggerBtn) {
+            aiTriggerBtn.style.display = currentRole === 'admin' ? 'flex' : 'none';
+        }
 
         if (currentRole === 'staff') {
             if (kpiCardsWrap) kpiCardsWrap.style.display = 'none';
@@ -2247,5 +2252,438 @@ _Thank you for choosing LJS Jewellers_`
                 alert('❌ Failed to renew pawn. Check console for details.');
             }
         });
+    }
+
+    // =========================================================
+    // ADMIN AI COPILOT (SMART ASSISTANT) FRONTEND CLIENT
+    // =========================================================
+    const aiAssistantTriggerBtn = document.getElementById('aiAssistantTriggerBtn');
+    const aiAssistantDrawer = document.getElementById('aiAssistantDrawer');
+    const aiCloseDrawerBtn = document.getElementById('aiCloseDrawerBtn');
+    const aiClearChatBtn = document.getElementById('aiClearChatBtn');
+    const aiPromptInput = document.getElementById('aiPromptInput');
+    const aiSendBtn = document.getElementById('aiSendBtn');
+    const aiVoiceBtn = document.getElementById('aiVoiceBtn');
+    const aiVoiceStatus = document.getElementById('aiVoiceStatus');
+    const aiMessagesContainer = document.getElementById('aiMessagesContainer');
+    const aiChipsBar = document.getElementById('aiChipsBar');
+
+    function openAiDrawer() {
+        if (aiAssistantDrawer) {
+            aiAssistantDrawer.classList.add('active');
+            if (aiPromptInput) {
+                setTimeout(() => aiPromptInput.focus(), 300);
+            }
+        }
+    }
+
+    function closeAiDrawer() {
+        if (aiAssistantDrawer) {
+            aiAssistantDrawer.classList.remove('active');
+        }
+    }
+
+    if (aiAssistantTriggerBtn) {
+        aiAssistantTriggerBtn.addEventListener('click', openAiDrawer);
+    }
+
+    if (aiCloseDrawerBtn) {
+        aiCloseDrawerBtn.addEventListener('click', closeAiDrawer);
+    }
+
+    if (aiAssistantDrawer) {
+        aiAssistantDrawer.addEventListener('click', (e) => {
+            if (e.target === aiAssistantDrawer) {
+                closeAiDrawer();
+            }
+        });
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && aiAssistantDrawer && aiAssistantDrawer.classList.contains('active')) {
+            closeAiDrawer();
+        }
+    });
+
+    if (aiClearChatBtn) {
+        aiClearChatBtn.addEventListener('click', () => {
+            if (!aiMessagesContainer) return;
+            aiMessagesContainer.innerHTML = `
+                <div class="ai-msg ai-msg-bot">
+                    <div class="ai-msg-avatar">🤖</div>
+                    <div class="ai-msg-content">
+                        <div class="ai-msg-bubble">
+                            <p><strong>Namaste Admin Ji! 🙏</strong></p>
+                            <p>Chat clear kar di gayi hai. Aap naya prompt de sakte hain.</p>
+                        </div>
+                        <span class="ai-msg-time">Live AI Ready</span>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    // Preset chip clicks
+    if (aiChipsBar) {
+        aiChipsBar.querySelectorAll('.ai-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                const promptText = chip.getAttribute('data-prompt');
+                if (promptText) {
+                    window.sendAiPrompt(promptText);
+                }
+            });
+        });
+    }
+
+    // Markdown Parser helper for AI messages
+    function parseAiMarkdown(text) {
+        if (!text) return '';
+        let escaped = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        
+        // Bold **text**
+        escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Italic *text*
+        escaped = escaped.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        // Bullet points • or -
+        escaped = escaped.replace(/^[•\-]\s*(.*)$/gm, '<div style="margin-left: 8px; display: flex; gap: 4px;"><span>•</span><span>$1</span></div>');
+        // Line breaks
+        escaped = escaped.replace(/\n\n/g, '<div style="height: 8px;"></div>');
+        escaped = escaped.replace(/\n/g, '<br>');
+
+        return escaped;
+    }
+
+    function appendUserMessage(text) {
+        if (!aiMessagesContainer) return;
+        const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'ai-msg ai-msg-user';
+        msgDiv.innerHTML = `
+            <div class="ai-msg-avatar">👤</div>
+            <div class="ai-msg-content">
+                <div class="ai-msg-bubble">
+                    <p style="margin: 0;">${escapeHtml(text)}</p>
+                </div>
+                <span class="ai-msg-time">${timeStr}</span>
+            </div>
+        `;
+        aiMessagesContainer.appendChild(msgDiv);
+        aiMessagesContainer.scrollTop = aiMessagesContainer.scrollHeight;
+    }
+
+    function appendBotLoading() {
+        if (!aiMessagesContainer) return null;
+        const loaderDiv = document.createElement('div');
+        loaderDiv.className = 'ai-msg ai-msg-bot ai-loader-msg';
+        loaderDiv.innerHTML = `
+            <div class="ai-msg-avatar">🤖</div>
+            <div class="ai-msg-content">
+                <div class="ai-msg-bubble" style="padding: 10px 14px;">
+                    <div class="ai-typing-dots">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+            </div>
+        `;
+        aiMessagesContainer.appendChild(loaderDiv);
+        aiMessagesContainer.scrollTop = aiMessagesContainer.scrollHeight;
+        return loaderDiv;
+    }
+
+    function renderAiCardsHtml(cards = [], quickActions = []) {
+        let html = '';
+
+        if (cards && cards.length > 0) {
+            html += '<div class="ai-card-wrap">';
+            cards.forEach(card => {
+                if (card.type === 'rokad_stat') {
+                    html += `
+                        <div class="ai-stat-card">
+                            <div style="font-size: 0.76rem; font-weight: 700; color: #fef08a; display:flex; justify-content:space-between;">
+                                <span>📅 Rokad Overview</span>
+                                <span>${card.date}</span>
+                            </div>
+                            <div class="ai-stat-grid">
+                                <div class="ai-stat-item">
+                                    <div class="ai-stat-label">🟢 Total Jama</div>
+                                    <div class="ai-stat-value jama">₹${Math.round(card.totalJama).toLocaleString('en-IN')}</div>
+                                </div>
+                                <div class="ai-stat-item">
+                                    <div class="ai-stat-label">🔴 Total Naame</div>
+                                    <div class="ai-stat-value naame">₹${Math.round(card.totalNaame).toLocaleString('en-IN')}</div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; font-size:0.8rem;">
+                                <span style="color:#94a3b8;">Net In Hand:</span>
+                                <strong style="color: ${card.netCashFlow >= 0 ? '#10b981' : '#f43f5e'};">
+                                    ${card.netCashFlow >= 0 ? '+' : ''}₹${Math.round(card.netCashFlow).toLocaleString('en-IN')}
+                                </strong>
+                            </div>
+                        </div>
+                    `;
+                } else if (card.type === 'overdue_card') {
+                    html += `
+                        <div class="ai-stat-card" style="border-left: 3px solid #ef4444;">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                <div>
+                                    <strong style="color:#f8fafc; font-size:0.88rem;">${escapeHtml(card.customerName)}</strong>
+                                    <div style="font-size:0.75rem; color:#94a3b8;">📞 ${escapeHtml(card.phone || 'N/A')}</div>
+                                </div>
+                                <span style="background:rgba(239,68,68,0.2); color:#fca5a5; font-size:0.68rem; padding:2px 6px; border-radius:4px; font-weight:700;">
+                                    ⏳ ${card.months} mo overdue
+                                </span>
+                            </div>
+                            <div style="margin-top:6px; font-size:0.8rem; color:#cbd5e1;">
+                                Item: <em>${escapeHtml(card.item)}</em>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:0.8rem; background:rgba(255,255,255,0.03); padding:6px; border-radius:4px;">
+                                <span>Principal: <strong>₹${Math.round(card.principal).toLocaleString('en-IN')}</strong></span>
+                                <span>Total Due: <strong style="color:#f59e0b;">₹${Math.round(card.totalDue).toLocaleString('en-IN')}</strong></span>
+                            </div>
+                            <div style="display:flex; gap:6px; margin-top:8px;">
+                                <button type="button" class="ai-action-btn" data-action="open_customer" data-customer-id="${card.customerId}" style="flex:1;">👁️ View Profile</button>
+                                ${card.phone ? `<button type="button" class="ai-action-btn" data-action="whatsapp_customer" data-phone="${escapeHtml(card.phone)}" data-name="${escapeHtml(card.customerName)}" data-total-due="${card.totalDue}" style="background:#16a34a; color:#fff; border:none; flex:1;">💬 WhatsApp</button>` : ''}
+                            </div>
+                        </div>
+                    `;
+                } else if (card.type === 'customer_profile_card') {
+                    const c = card.customer;
+                    html += `
+                        <div class="ai-stat-card" style="border-color: rgba(212, 175, 55, 0.6); background: rgba(30, 41, 59, 0.9);">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <strong style="color:#fef08a; font-size:0.95rem;">${escapeHtml(c.name)}</strong>
+                                <span style="font-size:0.75rem; color:#94a3b8;">ID #${c.id}</span>
+                            </div>
+                            <div style="font-size:0.76rem; color:#cbd5e1; margin-top:3px;">
+                                📞 ${escapeHtml(c.phone || 'N/A')} | 🏠 ${escapeHtml(c.address || 'N/A')}
+                            </div>
+                            <div class="ai-stat-grid">
+                                <div class="ai-stat-item">
+                                    <div class="ai-stat-label">Active Principal</div>
+                                    <div class="ai-stat-value gold">₹${Math.round(card.totalActiveLoan).toLocaleString('en-IN')}</div>
+                                </div>
+                                <div class="ai-stat-item">
+                                    <div class="ai-stat-label">Net Payable Today</div>
+                                    <div class="ai-stat-value" style="color:#38bdf8;">₹${Math.round(card.netTotalCustomerDue).toLocaleString('en-IN')}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            html += '</div>';
+        }
+
+        // Quick action buttons
+        if (quickActions && quickActions.length > 0) {
+            html += '<div class="ai-quick-actions-row">';
+            quickActions.forEach(qa => {
+                if (qa.action === 'navigate_tab') {
+                    html += `<button type="button" class="ai-action-btn" data-action="navigate_tab" data-tab="${escapeHtml(qa.tab || '')}">${escapeHtml(qa.label)}</button>`;
+                } else if (qa.action === 'send_prompt') {
+                    html += `<button type="button" class="ai-action-btn" data-action="send_prompt" data-prompt="${escapeHtml(qa.prompt || '')}">${escapeHtml(qa.label)}</button>`;
+                } else if (qa.action === 'open_customer') {
+                    html += `<button type="button" class="ai-action-btn" data-action="open_customer" data-customer-id="${qa.customerId}">${escapeHtml(qa.label)}</button>`;
+                } else if (qa.action === 'whatsapp_customer') {
+                    html += `<button type="button" class="ai-action-btn" data-action="whatsapp_customer" data-phone="${escapeHtml(qa.phone || '')}" data-name="${escapeHtml(qa.name || '')}" data-total-due="${qa.totalDue || 0}" style="background:#16a34a; color:#fff; border:none;">${escapeHtml(qa.label)}</button>`;
+                }
+            });
+            html += '</div>';
+        }
+
+        return html;
+    }
+
+    function appendBotResponse(data) {
+        if (!aiMessagesContainer) return;
+        const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'ai-msg ai-msg-bot';
+
+        const parsedSummary = parseAiMarkdown(data.summary || data.message || 'Hisab details processed.');
+        const richCardsHtml = renderAiCardsHtml(data.cards, data.quickActions);
+
+        msgDiv.innerHTML = `
+            <div class="ai-msg-avatar">🤖</div>
+            <div class="ai-msg-content">
+                <div class="ai-msg-bubble">
+                    ${parsedSummary}
+                    ${richCardsHtml}
+                </div>
+                <span class="ai-msg-time">${timeStr} • AI Munimji</span>
+            </div>
+        `;
+        aiMessagesContainer.appendChild(msgDiv);
+        aiMessagesContainer.scrollTop = aiMessagesContainer.scrollHeight;
+    }
+
+    // Attach click listener on aiMessagesContainer for robust event delegation
+    if (aiMessagesContainer) {
+        aiMessagesContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('.ai-action-btn[data-action]');
+            if (!btn) return;
+            const action = btn.getAttribute('data-action');
+            if (action === 'open_customer') {
+                const custId = btn.getAttribute('data-customer-id');
+                if (custId) window.openCustomerProfile(custId);
+            } else if (action === 'whatsapp_customer') {
+                const phone = btn.getAttribute('data-phone');
+                const name = btn.getAttribute('data-name');
+                const totalDue = btn.getAttribute('data-total-due');
+                window.sendWhatsAppSlip(phone, name, totalDue);
+            } else if (action === 'send_prompt') {
+                const prompt = btn.getAttribute('data-prompt');
+                if (prompt) window.sendAiPrompt(prompt);
+            } else if (action === 'navigate_tab') {
+                const tab = btn.getAttribute('data-tab');
+                if (tab) window.switchAppTab(tab);
+            }
+        });
+    }
+
+    // Global action dispatcher for buttons rendered inside AI drawer
+    window.sendAiPrompt = function (promptText) {
+        if (aiPromptInput) {
+            aiPromptInput.value = promptText;
+        }
+        openAiDrawer();
+        window.handleAiFormSubmit();
+    };
+
+    window.switchAppTab = function (tabName) {
+        closeAiDrawer();
+        if (tabName === 'rokad' && navRokadBtn) navRokadBtn.click();
+        else if (tabName === 'analytics' && navAnalyticsBtn) navAnalyticsBtn.click();
+        else if (tabName === 'recovery') {
+            const navRecoveryBtnEl = document.getElementById('navRecoveryBtn');
+            if (navRecoveryBtnEl) navRecoveryBtnEl.click();
+        } else if (tabName === 'khaata') {
+            const navKhaataBtnEl = document.getElementById('navKhaataBtn');
+            if (navKhaataBtnEl) navKhaataBtnEl.click();
+        } else if (navDashboardBtn) {
+            navDashboardBtn.click();
+        }
+    };
+
+    window.openCustomerProfile = async function (customerId) {
+        closeAiDrawer();
+        if (!customers || customers.length === 0) {
+            await fetchCustomers();
+        }
+        openCustomerKhaata(customerId);
+    };
+
+    window.sendWhatsAppSlip = function (phone, name, totalDue) {
+        if (!phone) {
+            alert('❌ Customer phone number is not available.');
+            return;
+        }
+        const cleanPhone = phone.toString().replace(/[^0-9]/g, '').slice(-10);
+        if (!cleanPhone || cleanPhone.length < 10) {
+            alert('❌ Valid 10-digit mobile number not found.');
+            return;
+        }
+        const customerName = name || 'Customer';
+        const formattedDue = '₹' + Math.round(Number(totalDue) || 0).toLocaleString('en-IN');
+        const text = `Namaste ${customerName} ji,\nLJS Jewellers se aapka current girvi hisab update:\nTotal Baki (Principal + Byaj): ${formattedDue}.\nKripya samay par jama karein.\nDhanyawad,\nLJS Jewellers`;
+        const url = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(text)}`;
+        window.open(url, '_blank');
+    };
+
+    window.handleAiFormSubmit = async function () {
+        if (!aiPromptInput) return;
+        const prompt = aiPromptInput.value.trim();
+        if (!prompt) return;
+
+        appendUserMessage(prompt);
+        aiPromptInput.value = '';
+        if (aiVoiceStatus) aiVoiceStatus.style.display = 'none';
+
+        const loader = appendBotLoading();
+
+        try {
+            const response = await fetch('/api/admin/assistant', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt })
+            });
+
+            if (loader && loader.parentElement) {
+                loader.parentElement.removeChild(loader);
+            }
+
+            if (!response.ok) {
+                throw new Error('Server error from AI Assistant');
+            }
+
+            const data = await response.json();
+            appendBotResponse(data);
+        } catch (err) {
+            console.error('Error in AI Assistant request:', err);
+            if (loader && loader.parentElement) {
+                loader.parentElement.removeChild(loader);
+            }
+            appendBotResponse({
+                success: false,
+                summary: '❌ **Kshama karein!** Hisab nikalte waqt server connect nahi ho paya. Kripya dobara koshish karein.'
+            });
+        }
+    };
+
+    // Voice Speech Recognition (Speech-to-Text)
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    let isRecording = false;
+
+    if (SpeechRecognition && aiVoiceBtn) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'hi-IN'; // Supports Hindi + Indian English
+
+        recognition.onstart = () => {
+            isRecording = true;
+            aiVoiceBtn.classList.add('recording');
+            if (aiVoiceStatus) aiVoiceStatus.style.display = 'flex';
+        };
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            if (transcript && aiPromptInput) {
+                aiPromptInput.value = transcript;
+                window.handleAiFormSubmit();
+            }
+        };
+
+        recognition.onerror = (event) => {
+            console.warn('Speech recognition error:', event.error);
+            isRecording = false;
+            aiVoiceBtn.classList.remove('recording');
+            if (aiVoiceStatus) aiVoiceStatus.style.display = 'none';
+        };
+
+        recognition.onend = () => {
+            isRecording = false;
+            aiVoiceBtn.classList.remove('recording');
+            if (aiVoiceStatus) aiVoiceStatus.style.display = 'none';
+        };
+
+        aiVoiceBtn.addEventListener('click', () => {
+            if (isRecording) {
+                recognition.stop();
+            } else {
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.error('Mic start error:', e);
+                }
+            }
+        });
+    } else if (aiVoiceBtn) {
+        aiVoiceBtn.title = 'Voice recognition is not supported on this browser';
+        aiVoiceBtn.style.opacity = '0.5';
     }
 });

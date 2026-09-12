@@ -1053,6 +1053,96 @@
         </div>
     </div>
 
+    <!-- Floating Admin AI Assistant Button -->
+    <button id="aiAssistantTriggerBtn" class="ai-assistant-fab" title="AI Munimji Copilot">
+        <span class="fab-pulse"></span>
+        <div class="fab-icon-wrap">
+            <span class="fab-sparkle">✨</span>
+            <span class="fab-bot-icon">🤖</span>
+        </div>
+        <div class="fab-text-wrap">
+            <span class="fab-title">AI Munimji</span>
+            <span class="fab-sub">Prompt Se Hisab</span>
+        </div>
+    </button>
+
+    <!-- Slide-in Admin AI Copilot Drawer -->
+    <div id="aiAssistantDrawer" class="ai-drawer-overlay">
+        <div class="ai-drawer-panel">
+            <!-- Header -->
+            <div class="ai-drawer-header">
+                <div class="ai-header-left">
+                    <div class="ai-bot-avatar">
+                        <span>🤖</span>
+                        <span class="ai-online-dot"></span>
+                    </div>
+                    <div>
+                        <div class="ai-title-row">
+                            <h3>AI Munimji (Copilot)</h3>
+                            <span class="ai-badge-admin">👑 Admin Intelligence</span>
+                        </div>
+                        <p class="ai-sub-status">Live Database & Financial Query Engine</p>
+                    </div>
+                </div>
+                <div class="ai-header-actions">
+                    <button id="aiClearChatBtn" class="ai-btn-icon" title="Clear Chat">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="16" height="16"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                    <button id="aiCloseDrawerBtn" class="ai-btn-icon" title="Close">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Suggestion Chips -->
+            <div class="ai-chips-bar" id="aiChipsBar">
+                <button class="ai-chip" data-prompt="Aaj ka rokad summary">📊 Aaj Ka Rokad</button>
+                <button class="ai-chip" data-prompt="6 mahine se purani overdue girvi">🚨 6+ Mahine Overdue</button>
+                <button class="ai-chip" data-prompt="Total market me kitna paisa laga hai">💎 Portfolio Snapshot</button>
+                <button class="ai-chip" data-prompt="Top 5 highest loan customers">👑 Top Borrowers</button>
+                <button class="ai-chip" data-prompt="Aaj ka gold aur silver rate">🪙 Metal Rates</button>
+            </div>
+
+            <!-- Chat Messages Container -->
+            <div class="ai-messages-container" id="aiMessagesContainer">
+                <!-- Initial Welcome Message -->
+                <div class="ai-msg ai-msg-bot">
+                    <div class="ai-msg-avatar">🤖</div>
+                    <div class="ai-msg-content">
+                        <div class="ai-msg-bubble">
+                            <p><strong>Namaste Admin Ji! 🙏</strong></p>
+                            <p>Main aapka <strong>AI Munimji</strong> hu. Aap mujhse koi bhi hisab, customer ka baki balance, daily rokad ya overdue girvi ki details mang sakte hain.</p>
+                            <div class="ai-welcome-suggestions">
+                                <span class="ai-sug-title">Try asking:</span>
+                                <span class="ai-sug-item" onclick="window.sendAiPrompt('Aaj ka rokad summary')">👉 <em>"Aaj ka rokad summary"</em></span>
+                                <span class="ai-sug-item" onclick="window.sendAiPrompt('6 mahine se purani girvi')">👉 <em>"6 mahine se purani girvi"</em></span>
+                                <span class="ai-sug-item" onclick="window.sendAiPrompt('Ramesh ka hisab batao')">👉 <em>"[Customer Name] ka hisab batao"</em></span>
+                            </div>
+                        </div>
+                        <span class="ai-msg-time">Live AI Ready</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Bar with Voice (Mic) and Send Button -->
+            <div class="ai-input-wrapper">
+                <form id="aiChatForm" class="ai-input-form" onsubmit="event.preventDefault(); window.handleAiFormSubmit();">
+                    <button type="button" id="aiVoiceBtn" class="ai-mic-btn" title="Voice Se Bolein (Hindi/English)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                    </button>
+                    <input type="text" id="aiPromptInput" class="ai-input-field" placeholder="Prompt likhein ya bole... (jaise: Ramesh ka hisab)" autocomplete="off">
+                    <button type="submit" id="aiSendBtn" class="ai-send-btn" title="Send Prompt">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    </button>
+                </form>
+                <div id="aiVoiceStatus" class="ai-voice-status" style="display: none;">
+                    <span class="ai-voice-dot"></span>
+                    <span>Listening... Aap boliye (Hindi/English)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Chart.js, QRCode.js and script.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
