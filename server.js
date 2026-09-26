@@ -68,9 +68,26 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Serve portal.html (Unified Login Page) on root route
+// Serve Landing Page (index.html) on root route
 app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Direct Page Route Aliases
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
+app.get('/portal', (req, res) => {
     res.sendFile(path.join(__dirname, 'portal.html'));
+});
+
+app.get('/passbook', (req, res) => {
+    res.sendFile(path.join(__dirname, 'passbook.html'));
+});
+
+app.get('/ledger', (req, res) => {
+    res.sendFile(path.join(__dirname, 'interest-ledger.html'));
 });
 
 console.log('Connected to Supabase Cloud Database.');

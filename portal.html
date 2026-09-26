@@ -1718,7 +1718,7 @@
             // Session check on load
             const currentRole = localStorage.getItem('ljs_session_role');
             if (currentRole === 'admin') {
-                window.location.href = '/index.html';
+                window.location.href = '/admin.html';
                 return;
             }
 
@@ -1756,7 +1756,7 @@
 
                     if (data.role === 'admin') {
                         localStorage.setItem('ljs_session_role', 'admin');
-                        window.location.href = '/index.html';
+                        window.location.href = '/admin.html';
                         return;
                     }
 

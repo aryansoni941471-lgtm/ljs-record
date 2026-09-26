@@ -1,1152 +1,1072 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="hi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LJS Jewellers - Customer Records & Pawn Management</title>
-    <!-- PWA Web App Manifest & Mobile Meta Tags -->
+    <title>LJS Jewellers & Record | Near PNB, Main Market, Kumher (Deeg)</title>
+    <meta name="description" content="LJS Jewellers & Pawn Record - सुरक्षित स्वर्ण ऋण, पारदर्शी ब्याज एवं डिजिटल पासबुक। Near PNB (Main Market), Kumher, Deeg.">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#0f172a">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="LJS Admin">
-    <link rel="apple-touch-icon" href="/icon-192.png">
+    <meta name="theme-color" content="#0b1120">
     <link rel="icon" type="image/svg+xml" href="/icon.svg">
-    <link rel="stylesheet" href="style.css">
+    <link rel="apple-touch-icon" href="/icon-192.png">
+    
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-</head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
+    <style>
+        :root {
+            /* Royal Dark + Light Gold Palette */
+            --bg-body: #0b1120;
+            --bg-body-secondary: #0f172a;
+            --bg-card: rgba(15, 23, 42, 0.75);
+            --bg-card-hover: rgba(30, 41, 59, 0.9);
+            --bg-elevated: #1e293b;
+            
+            --gold-primary: #d4af37;
+            --gold-light: #fef08a;
+            --gold-dark: #996515;
+            --gold-gradient: linear-gradient(135deg, #fef08a 0%, #d4af37 45%, #b45309 100%);
+            --gold-gradient-soft: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%);
+            --gold-border: rgba(212, 175, 55, 0.35);
+            --gold-glow: 0 0 30px rgba(212, 175, 55, 0.25);
+            
+            --text-heading: #f8fafc;
+            --text-body: #cbd5e1;
+            --text-muted: #94a3b8;
+            --text-gold: #facc15;
+            
+            --font-serif: 'Cinzel', serif;
+            --font-sans: 'Plus Jakarta Sans', sans-serif;
+            
+            --radius-sm: 10px;
+            --radius-md: 16px;
+            --radius-lg: 24px;
+            --radius-pill: 9999px;
+            
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --shadow-card: 0 15px 35px -10px rgba(0, 0, 0, 0.5), 0 0 20px rgba(212, 175, 55, 0.08);
+            --shadow-card-hover: 0 25px 45px -10px rgba(0, 0, 0, 0.7), 0 0 30px rgba(212, 175, 55, 0.25);
+            --border-glass: 1px solid rgba(212, 175, 55, 0.22);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-body);
+            font-family: var(--font-sans);
+            line-height: 1.6;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(212, 175, 55, 0.09) 0%, transparent 45%),
+                radial-gradient(circle at 85% 75%, rgba(180, 83, 9, 0.09) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.6) 0%, transparent 100%);
+            min-height: 100vh;
+        }
+
+        /* Ambient Glowing Blobs */
+        .ambient-blob {
+            position: fixed;
+            width: 550px;
+            height: 550px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(212, 175, 55, 0.07), transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+            filter: blur(70px);
+        }
+        .blob-1 { top: -120px; left: -100px; }
+        .blob-2 { bottom: 5%; right: -120px; }
+
+        /* Container */
+        .container {
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Main Navbar */
+        .navbar {
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(212, 175, 55, 0.18);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 99;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        .nav-inner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            text-decoration: none;
+            color: inherit;
+        }
+        .logo-img {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+            border: 1px solid var(--gold-primary);
+            transition: var(--transition);
+        }
+        .brand-logo:hover .logo-img {
+            transform: scale(1.05) rotate(2deg);
+        }
+        .brand-text h1 {
+            font-family: var(--font-serif);
+            font-size: 1.35rem;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            background: var(--gold-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1.1;
+        }
+        .brand-text p {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            list-style: none;
+        }
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.92rem;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+        .nav-links a:hover {
+            color: var(--gold-light);
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.65rem 1.4rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            font-family: var(--font-sans);
+            border-radius: var(--radius-pill);
+            cursor: pointer;
+            text-decoration: none;
+            transition: var(--transition);
+            border: none;
+        }
+        .btn-gold {
+            background: var(--gold-gradient);
+            color: #0f172a;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.35);
+        }
+        .btn-gold:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(212, 175, 55, 0.5);
+            filter: brightness(1.05);
+        }
+        .btn-outline-gold {
+            background: rgba(212, 175, 55, 0.08);
+            color: var(--gold-light);
+            border: 1px solid var(--gold-border);
+        }
+        .btn-outline-gold:hover {
+            background: rgba(212, 175, 55, 0.2);
+            border-color: var(--gold-primary);
+            transform: translateY(-2px);
+            color: #fff;
+        }
+        .btn-signin {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: #fef08a;
+            border: 1px solid rgba(212, 175, 55, 0.45);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+        .btn-signin:hover {
+            background: var(--gold-gradient);
+            color: #0f172a;
+            border-color: transparent;
+            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.4);
+            transform: translateY(-2px);
+        }
+
+        /* Hero Section with Light Background Watermark Branding */
+        .hero {
+            padding: 5rem 0 4rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Faint Watermark Logo + LJS Jewellers in Hero Background */
+        .hero-watermark-bg {
+            position: absolute;
+            top: 48%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            user-select: none;
+            z-index: 0;
+            width: 100%;
+            max-width: 950px;
+        }
+        .watermark-logo {
+            width: 280px;
+            height: 280px;
+            opacity: 0.09;
+            filter: drop-shadow(0 0 40px rgba(254, 240, 138, 0.5));
+            animation: watermarkFloat 8s ease-in-out infinite alternate;
+        }
+        .watermark-text {
+            font-family: var(--font-serif);
+            font-size: clamp(3rem, 9vw, 6.8rem);
+            font-weight: 900;
+            letter-spacing: 14px;
+            background: linear-gradient(180deg, rgba(254, 240, 138, 0.14) 0%, rgba(212, 175, 55, 0.04) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            white-space: nowrap;
+            margin-top: -30px;
+        }
+        @keyframes watermarkFloat {
+            0% { transform: scale(1) translateY(0); }
+            100% { transform: scale(1.04) translateY(-10px); }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.45rem 1.3rem;
+            border-radius: var(--radius-pill);
+            background: rgba(212, 175, 55, 0.12);
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            color: var(--gold-light);
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
+        }
+        .hero h2 {
+            font-family: var(--font-serif);
+            font-size: clamp(2.2rem, 5.5vw, 3.8rem);
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1.25rem;
+            color: #ffffff;
+            letter-spacing: -0.5px;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .hero h2 span {
+            background: var(--gold-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero p.lead {
+            font-size: clamp(1.05rem, 2vw, 1.25rem);
+            color: #cbd5e1;
+            max-width: 760px;
+            margin: 0 auto 2.5rem;
+            font-weight: 400;
+            line-height: 1.7;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.4);
+        }
+
+        .hero-actions {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 3.5rem;
+        }
+
+        /* Trust Stats Bar (Dual-Tone Light & Dark Glass) */
+        .trust-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin: 1rem 0;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 1.75rem 1.25rem;
+            text-align: center;
+            transition: var(--transition);
+            box-shadow: var(--shadow-card);
+            backdrop-filter: blur(12px);
+        }
+        .stat-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(212, 175, 55, 0.5);
+            box-shadow: var(--shadow-card-hover);
+        }
+        .stat-icon {
+            font-size: 2.2rem;
+            margin-bottom: 0.5rem;
+            display: inline-block;
+        }
+        .stat-num {
+            font-family: var(--font-serif);
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--gold-light);
+            margin-bottom: 0.2rem;
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* Section Styling */
+        .section {
+            padding: 5rem 0;
+            position: relative;
+        }
+        .section-header {
+            text-align: center;
+            max-width: 680px;
+            margin: 0 auto 3.5rem;
+        }
+        .section-tag {
+            font-family: var(--font-sans);
+            color: var(--gold-primary);
+            font-size: 0.85rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        .section-title {
+            font-family: var(--font-serif);
+            font-size: clamp(1.9rem, 3.5vw, 2.6rem);
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+        .section-title span {
+            background: var(--gold-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .section-desc {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        /* Features Grid */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.75rem;
+        }
+        .feature-card {
+            background: var(--bg-card);
+            border: var(--border-glass);
+            border-radius: var(--radius-lg);
+            padding: 2.25rem 2rem;
+            transition: var(--transition);
+            box-shadow: var(--shadow-card);
+            backdrop-filter: blur(12px);
+            position: relative;
+            overflow: hidden;
+        }
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--gold-gradient);
+            opacity: 0;
+            transition: var(--transition);
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(212, 175, 55, 0.45);
+            box-shadow: var(--shadow-card-hover);
+        }
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+        .feature-icon-wrap {
+            width: 58px;
+            height: 58px;
+            border-radius: var(--radius-md);
+            background: rgba(212, 175, 55, 0.12);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin-bottom: 1.25rem;
+            color: var(--gold-light);
+        }
+        .feature-title {
+            font-family: var(--font-serif);
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 0.6rem;
+        }
+        .feature-text {
+            color: var(--text-body);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* Prominent Address & Contact Section */
+        .address-section {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.6) 0%, rgba(11, 17, 32, 0.95) 100%);
+            border-top: 1px solid rgba(212, 175, 55, 0.2);
+            padding: 5rem 0 3rem;
+        }
+        .location-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 2.5rem;
+            margin-bottom: 3rem;
+        }
+        .address-card-primary {
+            background: var(--bg-card);
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            border-radius: var(--radius-lg);
+            padding: 2.75rem 2.25rem;
+            box-shadow: var(--shadow-card), var(--gold-glow);
+            backdrop-filter: blur(12px);
+            position: relative;
+        }
+        .address-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.9rem;
+            background: var(--gold-gradient);
+            color: #0f172a;
+            font-size: 0.8rem;
+            font-weight: 800;
+            border-radius: var(--radius-pill);
+            margin-bottom: 1.25rem;
+            text-transform: uppercase;
+        }
+        .address-headline {
+            font-family: var(--font-serif);
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 1rem;
+        }
+        .address-detail-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            margin: 1.75rem 0;
+        }
+        .address-detail-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        .address-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(212, 175, 55, 0.15);
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: var(--gold-light);
+            flex-shrink: 0;
+        }
+        .address-info-text strong {
+            display: block;
+            font-size: 1rem;
+            color: #ffffff;
+            margin-bottom: 0.2rem;
+            font-weight: 700;
+        }
+        .address-info-text p {
+            color: var(--text-body);
+            font-size: 0.95rem;
+        }
+
+        .contact-quick-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        /* Business Hours Card */
+        .hours-card {
+            background: var(--bg-card);
+            border: var(--border-glass);
+            border-radius: var(--radius-lg);
+            padding: 2.25rem;
+            box-shadow: var(--shadow-card);
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .hours-card h3 {
+            font-family: var(--font-serif);
+            font-size: 1.3rem;
+            color: var(--gold-light);
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .hours-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.85rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 0.92rem;
+        }
+        .hours-row:last-child {
+            border-bottom: none;
+        }
+        .hours-day {
+            color: var(--text-body);
+            font-weight: 500;
+        }
+        .hours-time {
+            font-weight: 700;
+            color: var(--gold-primary);
+        }
+
+        /* Sign In Modal */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+        .modal-backdrop.active {
+            display: flex;
+        }
+        .modal-card {
+            background: #0f172a;
+            border: 1px solid var(--gold-primary);
+            border-radius: var(--radius-lg);
+            width: 100%;
+            max-width: 480px;
+            padding: 2.5rem 2.25rem;
+            position: relative;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), var(--gold-glow);
+            animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes modalPop {
+            from { transform: scale(0.92); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1.25rem;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.6rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .modal-close:hover {
+            color: #ffffff;
+        }
+        .modal-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .modal-header h3 {
+            font-family: var(--font-serif);
+            font-size: 1.6rem;
+            color: #ffffff;
+            margin-top: 0.6rem;
+        }
+        .login-choice-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1.1rem;
+        }
+        .login-choice-btn {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.1rem 1.25rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: var(--radius-md);
+            color: #ffffff;
+            text-decoration: none;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+        .login-choice-btn:hover {
+            background: rgba(212, 175, 55, 0.15);
+            border-color: var(--gold-primary);
+            transform: translateX(4px);
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
+        }
+        .choice-icon {
+            font-size: 2rem;
+        }
+        .choice-title {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: var(--gold-light);
+            display: block;
+        }
+        .choice-sub {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        /* Footer */
+        .site-footer {
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 2.5rem 0;
+            text-align: center;
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            background: rgba(7, 11, 20, 0.95);
+        }
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 1.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .footer-links a {
+            color: var(--text-body);
+            text-decoration: none;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+        .footer-links a:hover {
+            color: var(--gold-light);
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .location-grid {
+                grid-template-columns: 1fr;
+            }
+            .nav-links {
+                display: none;
+            }
+            .watermark-text {
+                font-size: 3.2rem;
+                letter-spacing: 6px;
+            }
+            .watermark-logo {
+                width: 180px;
+                height: 180px;
+            }
+        }
+        @media (max-width: 600px) {
+            .top-rates-bar {
+                font-size: 0.75rem;
+                justify-content: center;
+            }
+            .hero {
+                padding: 3.5rem 0 2.5rem;
+            }
+            .brand-text h1 {
+                font-size: 1.15rem;
+            }
+            .brand-text p {
+                font-size: 0.65rem;
+            }
+            .btn {
+                padding: 0.55rem 1rem;
+                font-size: 0.82rem;
+            }
+            .watermark-text {
+                font-size: 2.2rem;
+                letter-spacing: 4px;
+            }
+            .watermark-logo {
+                width: 140px;
+                height: 140px;
+            }
+        }
+    </style>
+</head>
 <body>
-    <!-- Top Luxury Header -->
-    <header class="brand-header">
-        <div class="brand-header-inner">
-            <div class="brand-title-wrap">
-                <div class="brand-logo-icon">
-                    <span>💎</span>
-                </div>
-                <div>
+
+    <!-- Ambient Glowing Blobs -->
+    <div class="ambient-blob blob-1"></div>
+    <div class="ambient-blob blob-2"></div>
+
+    <!-- Main Navigation Bar with Logo & Sign In -->
+    <nav class="navbar">
+        <div class="container nav-inner">
+            <!-- Brand Logo -->
+            <a href="index.html" class="brand-logo">
+                <img src="/icon.svg" alt="LJS Jewellers Logo" class="logo-img">
+                <div class="brand-text">
                     <h1>LJS JEWELLERS</h1>
-                    <p>Customer Records & Pawn Management</p>
+                    <p>Pawn & Customer Record</p>
                 </div>
+            </a>
+
+            <!-- Navigation Links -->
+            <ul class="nav-links">
+                <li><a href="#features">सुविधाएं (Features)</a></li>
+                <li><a href="#address-section">पता & संपर्क (Contact)</a></li>
+                <li><a href="portal.html">पासबुक पोर्टल</a></li>
+            </ul>
+
+            <!-- Actions: Sign In & Portal -->
+            <div class="nav-actions">
+                <a href="portal.html" class="btn btn-outline-gold" title="Customer Self-Service Portal">
+                    <span>📱</span>
+                    <span>Customer Portal</span>
+                </a>
+                <button onclick="openSignInModal()" class="btn btn-signin" id="topSignInBtn">
+                    <span>🔐</span>
+                    <span>Sign In</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 3. Hero Section with Watermark Logo & Text in Background -->
+    <header class="hero">
+        <!-- Faint Brand Watermark Behind Text -->
+        <div class="hero-watermark-bg" aria-hidden="true">
+            <img src="/icon.svg" alt="" class="watermark-logo">
+            <div class="watermark-text">LJS JEWELLERS</div>
+        </div>
+
+        <div class="container hero-content">
+            <div class="hero-badge">
+                <span>👑</span>
+                <span>विश्वसनीय स्वर्ण ऋण एवं पारदर्शी ग्राहक सेवा</span>
+            </div>
+            
+            <h2>
+                सुरक्षित स्वर्ण ऋण एवं<br>
+                <span>डिजिटल खाता रिकॉर्ड</span>
+            </h2>
+            
+            <p class="lead">
+                LJS Jewellers में आपके सोने-चांदी की 100% सुरक्षित लॉकर कस्टडी, उचित ब्याज दर एवं घर बैठे 24/7 डिजिटल पासबुक की सुविधा।
+            </p>
+
+            <div class="hero-actions">
+                <a href="portal.html" class="btn btn-gold" style="padding: 0.85rem 1.8rem; font-size: 1rem;">
+                    <span>📱</span>
+                    <span>डिजिटल पासबुक खोलें</span>
+                </a>
+                <a href="#address-section" class="btn btn-outline-gold" style="padding: 0.85rem 1.8rem; font-size: 1rem;">
+                    <span>📍</span>
+                    <span>दुकान का पता देखें</span>
+                </a>
+                <button onclick="openSignInModal()" class="btn btn-signin" style="padding: 0.85rem 1.8rem; font-size: 1rem;">
+                    <span>🔐</span>
+                    <span>Sign In / लॉगिन</span>
+                </button>
             </div>
 
-            <!-- Live Metal Rates Ticker -->
-            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                <div class="metal-rates-bar">
-                    <div class="rate-item">
-                        <span class="rate-label">⚡ Gold Rate:</span>
-                        <div class="rate-input-wrap">
-                            <input type="number" id="dashGoldRate" placeholder="e.g. 6000">
-                            <button id="saveGoldRateBtn" class="btn-rate-save">Save</button>
-                        </div>
-                    </div>
-                    <div class="rate-divider"></div>
-                    <div class="rate-item">
-                        <span class="rate-label">🪙 Silver Rate:</span>
-                        <div class="rate-input-wrap">
-                            <input type="number" id="dashSilverRate" placeholder="e.g. 80">
-                            <button id="saveSilverRateBtn" class="btn-rate-save">Save</button>
-                        </div>
-                    </div>
+            <!-- Trust Stats -->
+            <div class="trust-stats">
+                <div class="stat-card">
+                    <div class="stat-icon">🛡️</div>
+                    <div class="stat-num">100%</div>
+                    <div class="stat-label">सुरक्षित बैंक-ग्रेड लॉकर</div>
                 </div>
-
-                <button id="commonQrBtn" style="padding: 0.6rem 1.1rem; background: var(--gold-gradient); color: var(--navy-header); font-family: var(--font-body); font-weight: 800; font-size: 0.85rem; border: none; border-radius: var(--radius-pill); cursor: pointer; display: flex; align-items: center; gap: 0.4rem; box-shadow: var(--shadow-gold);">
-                    🎴 Common Counter QR
-                </button>
-
-                <!-- Role Mode Switcher Badge -->
-                <div id="roleSwitcherWrap" style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.15); padding: 0.35rem 0.85rem; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.2);">
-                    <span id="roleIndicator" style="font-weight: 800; font-size: 0.85rem; color: #fff;">👑 Mode: Admin Owner</span>
-                    <button id="switchRoleBtn" style="padding: 0.3rem 0.75rem; font-size: 0.78rem; font-weight: 800; border: none; border-radius: var(--radius-pill); cursor: pointer; background: var(--gold-gradient); color: var(--navy-header);">Switch to Staff</button>
+                <div class="stat-card">
+                    <div class="stat-icon">⚡</div>
+                    <div class="stat-num">5 मिनट</div>
+                    <div class="stat-label">तुरंत गोल्ड लोन अप्रूवल</div>
                 </div>
-
-                <button id="adminLogoutBtn" onclick="localStorage.removeItem('ljs_session_role'); window.location.href='/portal.html';" style="padding: 0.5rem 1rem; background: rgba(244, 63, 94, 0.2); color: #fecdd3; border: 1px solid rgba(244, 63, 94, 0.4); font-family: var(--font-body); font-weight: 800; font-size: 0.8rem; border-radius: var(--radius-pill); cursor: pointer; display: flex; align-items: center; gap: 0.4rem;">
-                    🚪 Logout
-                </button>
+                <div class="stat-card">
+                    <div class="stat-icon">📜</div>
+                    <div class="stat-num">0%</div>
+                    <div class="stat-label">कोई गुप्त चार्ज नहीं</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📲</div>
+                    <div class="stat-num">24/7</div>
+                    <div class="stat-label">डिजिटल पासबुक एक्सेस</div>
+                </div>
             </div>
         </div>
     </header>
 
-    <div class="container">
-        <!-- Segmented Navigation Tabs -->
-        <nav class="nav-bar">
-            <button id="navDashboardBtn" class="nav-btn active-tab">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
-                Dashboard & Customers
-            </button>
-            <button id="navRokadBtn" class="nav-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-                Daily Rokad (Cashbook)
-            </button>
-            <button id="navAnalyticsBtn" class="nav-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                Advanced Analytics
-            </button>
-            <button id="navKhaataBtn" class="nav-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M12 6v12"/></svg>
-                Customer Khaata & Pawns
-            </button>
-            <a href="interest-ledger.html" id="navInterestLedgerBtn" class="nav-btn" style="text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:18px;height:18px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                📜 Permanent Interest Ledger
-            </a>
-            <button id="navRecoveryBtn" class="nav-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                ⏳ Recovery Time Hub
-            </button>
-        </nav>
-
-        <!-- DASHBOARD VIEW -->
-        <div id="dashboardView">
-
-            <!-- KPI Dashboard Summary Cards -->
-            <div id="kpiCardsWrap" class="dashboard-cards">
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <span class="stat-title">Active Market Amount</span>
-                        <div class="stat-icon-wrap">💼</div>
-                    </div>
-                    <p id="dashTotalPrincipal" class="stat-value">₹0</p>
-                </div>
-                <div class="stat-card stat-success">
-                    <div class="stat-header">
-                        <span class="stat-title">Interest Collected</span>
-                        <div class="stat-icon-wrap" style="background: var(--success-bg); color: var(--success);">📈</div>
-                    </div>
-                    <p id="dashTotalInterest" class="stat-value" style="color: var(--success);">₹0</p>
-                    <div style="margin-top: 0.4rem;">
-                        <a href="interest-ledger.html" style="font-size:0.78rem; color:var(--success); font-weight:800; text-decoration:underline;">📜 View Full Interest History →</a>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <span class="stat-title">Released Items</span>
-                        <div class="stat-icon-wrap">🔓</div>
-                    </div>
-                    <p id="dashTotalReleased" class="stat-value">0</p>
-                </div>
+    <!-- 4. Key Features Section -->
+    <section class="section" id="features">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">हमारी विशेषताएं</span>
+                <h2 class="section-title">LJS Record क्यों है <span>सबसे भरोसेमंद?</span></h2>
+                <p class="section-desc">हम आधुनिक तकनीक और पारंपरिक विश्वास के साथ आपके गहनों की सुरक्षा और हिसाब-किताब का संपूर्ण समाधान प्रदान करते हैं।</p>
             </div>
 
-            <!-- Pending Admin Approvals Section (Visible in Admin Mode) -->
-            <div id="pendingApprovalsBox" class="alert-card" style="background: #fff; border: 2px dashed #f59e0b; margin-bottom: 1.5rem;">
-                <div class="card-header">
-                    <h2 style="color: #b45309; display: flex; align-items: center; gap: 0.5rem;">
-                        <span>🚨</span> Pending Staff Approvals
-                    </h2>
-                    <span id="pendingApprovalsCount" class="badge" style="background: #fef3c7; color: #b45309; font-weight: 800;">0</span>
-                </div>
-                <div class="table-container">
-                    <table id="pendingApprovalsTable">
-                        <thead>
-                            <tr>
-                                <th>Date / Staff</th>
-                                <th>Type</th>
-                                <th>Submitted Entry Details</th>
-                                <th style="text-align: right;">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="pendingApprovalsList">
-                            <!-- Injected via JS -->
-                        </tbody>
-                    </table>
-                </div>
-                <div id="pendingApprovalsEmptyState" class="empty-state">
-                    <p style="color: var(--success); font-weight: 600;">✅ All staff entries approved! No pending requests.</p>
-                </div>
-            </div>
-
-            <!-- High Risk Accounts Section -->
-            <div class="alert-card high-risk-box">
-                <div class="card-header">
-                    <h2>⚠️ High Risk Accounts (Loan > Value)</h2>
-                    <span id="highRiskCount" class="badge badge-error">0</span>
-                </div>
-                <div class="table-container">
-                    <table id="highRiskTable">
-                        <thead>
-                            <tr>
-                                <th>Customer</th>
-                                <th>Gehna Details</th>
-                                <th>Total Baki</th>
-                                <th>Market Value</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="highRiskList">
-                            <tr id="highRiskEmptyState">
-                                <td colspan="5" class="empty-state">No high risk accounts found.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Overdue Accounts Section -->
-            <div class="alert-card overdue-box">
-                <div class="card-header">
-                    <h2 style="color: var(--warning);">🚨 Overdue Accounts (> 6 Months)</h2>
-                    <span id="overdueCount" class="badge badge-warning">0</span>
-                </div>
-                <div class="table-container">
-                    <table id="overdueTable">
-                        <thead>
-                            <tr>
-                                <th>Customer</th>
-                                <th>Date Added</th>
-                                <th>Amount</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="overdueList">
-                            <!-- Overdue rows injected via JS -->
-                        </tbody>
-                    </table>
-                </div>
-                <div id="overdueEmptyState" class="empty-state">
-                    <p>No overdue accounts right now.</p>
-                </div>
-            </div>
-
-            <!-- Main Content Layout (Add Form + Customer Table) -->
-            <div class="main-content">
-                <!-- Add Customer Card -->
-                <section class="card">
-                    <div class="card-header" style="padding-left: 0; padding-top: 0;">
-                        <h2>👤 Add New Customer</h2>
-                    </div>
-                    <form id="customerForm">
-                        <div class="form-group">
-                            <label for="name">Full Name *</label>
-                            <input type="text" id="name" required placeholder="e.g. Ramesh Kumar">
-                        </div>
-                        <div class="form-group">
-                            <label for="phone">Phone Number *</label>
-                            <input type="tel" id="phone" required placeholder="e.g. 9876543210">
-                        </div>
-                        <div class="form-group">
-                            <label for="email">Email Address</label>
-                            <input type="email" id="email" placeholder="e.g. ramesh@example.com">
-                        </div>
-                        <div class="form-group">
-                            <label for="dob">Date of Birth</label>
-                            <input type="date" id="dob">
-                        </div>
-                        <div class="form-group">
-                            <label for="aadharPhoto">Aadhar Card Photo (Optional)</label>
-                            <input type="file" id="aadharPhoto" accept="image/*">
-                        </div>
-                        <button type="submit" class="btn-primary btn-gold">
-                            <span>✨</span> Save Customer Record
-                        </button>
-                    </form>
-                </section>
-
-                <!-- Customer Database Card -->
-                <section class="card">
-                    <div class="card-header" style="padding-left:0; padding-top:0;">
-                        <h2>👥 Customer Database</h2>
-                        <span id="customerCount" class="badge">0</span>
-                    </div>
-
-                    <div class="search-container">
-                        <input type="text" id="customerSearch" placeholder="Search by customer name or phone...">
-                    </div>
-
-                    <div class="table-container" id="customerTableContainer">
-                        <table id="customerTable">
-                            <thead>
-                                <tr>
-                                    <th>Photo</th>
-                                    <th>Name</th>
-                                    <th>Credit Score</th>
-                                    <th>Phone</th>
-                                    <th>Login PIN</th>
-                                    <th>Email</th>
-                                    <th>D.O.B</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="customerList">
-                                <!-- Populated via JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                    <div id="emptyState" class="empty-state">
-                        <p>No customers added yet.</p>
-                    </div>
-                </section>
-            </div>
-        </div> <!-- End Dashboard View -->
-
-        <!-- DAILY ROKAD VIEW -->
-        <div id="rokadView" style="display: none;">
-            <div class="card">
-                <div class="card-header" style="flex-wrap: wrap; gap: 1rem;">
-                    <h2>📔 Daily Rokad (Cashbook)</h2>
-                    <div style="display: flex; gap: 0.75rem; align-items: center; margin-left: auto;">
-                        <input type="date" id="rokadDateInput" style="width: auto;">
-                        <button id="fetchRokadBtn" class="btn-primary" style="width: auto; padding: 0.6rem 1.2rem;">Fetch Rokad</button>
-                        <button id="downloadRokadBtn" class="btn-primary" style="width: auto; padding: 0.6rem 1.2rem; background: var(--success);">📥 Excel</button>
-                    </div>
+            <div class="features-grid">
+                <!-- Feature 1 -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrap">💎</div>
+                    <h3 class="feature-title">गोल्ड & सिल्वर गिरवी लोन</h3>
+                    <p class="feature-text">सोने व चांदी के आभूषणों पर तुरंत उच्चतम मूल्य व न्यूनतम ब्याज दर पर आसान लोन सुविधा।</p>
                 </div>
 
-                <div class="rokad-grid" style="margin-top: 1rem;">
-                    <!-- Jama (Income) -->
-                    <div class="rokad-column jama-side">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                            <h3 style="color: var(--success); font-size: 1.15rem; font-weight: 700;">Jama (Income / Received)</h3>
-                            <span id="rokadTotalJama" style="font-size: 1.4rem; font-weight: 800; color: var(--success);">₹0</span>
-                        </div>
-                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">* Full payments on released items & partial interest payments</p>
-                        
-                        <div class="table-container" style="max-height: 420px; overflow-y: auto;">
-                            <table id="rokadJamaTable">
-                                <thead>
-                                    <tr>
-                                        <th>Customer</th>
-                                        <th>Description</th>
-                                        <th style="text-align: right;">Amount (₹)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="rokadJamaList">
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Naame (Expense) -->
-                    <div class="rokad-column naame-side">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                            <h3 style="color: var(--error); font-size: 1.15rem; font-weight: 700;">Naame (Expense / Given)</h3>
-                            <span id="rokadTotalNaame" style="font-size: 1.4rem; font-weight: 800; color: var(--error);">₹0</span>
-                        </div>
-                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">* Money given out for new pawned items kept today</p>
-
-                        <div class="table-container" style="max-height: 420px; overflow-y: auto;">
-                            <table id="rokadNaameTable">
-                                <thead>
-                                    <tr>
-                                        <th>Customer</th>
-                                        <th>Description</th>
-                                        <th style="text-align: right;">Amount (₹)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="rokadNaameList">
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                <!-- Feature 2 -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrap">📖</div>
+                    <h3 class="feature-title">डिजिटल पासबुक (Live Khata)</h3>
+                    <p class="feature-text">अब डायरी या पर्ची का झंझट खत्म। अपने मोबाइल पर जमा-निकासी, ब्याज और बकाये का पूरा हिसाब लाइव देखें।</p>
                 </div>
 
-                <!-- Net Cash Flow Widget -->
-                <div class="net-flow-widget">
-                    <span style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted);">Net Cash Flow For Selected Date</span>
-                    <div id="rokadNetFlow" style="font-size: 2.5rem; font-weight: 800; margin-top: 0.25rem;">₹0</div>
+                <!-- Feature 3 -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrap">🔒</div>
+                    <h3 class="feature-title">100% सुरक्षित लॉकर कस्टडी</h3>
+                    <p class="feature-text">आपके सभी आभूषण सीलबंद पैकेट में 24 घंटे सुरक्षा निगरानी और सुरक्षित लॉकर में रखे जाते हैं।</p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrap">💬</div>
+                    <h3 class="feature-title">WhatsApp & SMS रसीदें</h3>
+                    <p class="feature-text">हर लेन-देन, ब्याज भुगतान और गिरवी छुड़ाने पर तुरंत डिजिटल रसीद और WhatsApp संदेश प्राप्त करें।</p>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrap">⚖️</div>
+                    <h3 class="feature-title">पारदर्शी ब्याज गणना</h3>
+                    <p class="feature-text">दैनिक/मासिक ब्याज का स्पष्ट और सटीक कैलकुलेशन। कोई भी अतिरिक्त या छिपा हुआ शुल्क नहीं।</p>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrap">✨</div>
+                    <h3 class="feature-title">हॉलमार्क आभूषण निर्माण</h3>
+                    <p class="feature-text">शुद्ध 916 हॉलमार्क सोने एवं 92.5 चांदी के आधुनिक व पारंपरिक फैंसी गहनों के निर्माता एवं विक्रेता।</p>
                 </div>
             </div>
         </div>
+    </section>
 
-        <!-- ADVANCED ANALYTICS VIEW -->
-        <div id="analyticsView" style="display: none;">
-            <div class="card">
-                <div class="card-header" style="flex-wrap: wrap; gap: 1rem;">
-                    <h2>📊 Advanced Analytics</h2>
-                    <div style="display: flex; gap: 0.75rem; align-items: center; margin-left: auto; flex-wrap: wrap;">
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <label for="analyticsStartDate" style="margin:0; font-size: 0.8rem;">From:</label>
-                            <input type="date" id="analyticsStartDate" style="width: 140px;">
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <label for="analyticsEndDate" style="margin:0; font-size: 0.8rem;">To:</label>
-                            <input type="date" id="analyticsEndDate" style="width: 140px;">
-                        </div>
-                        <button id="fetchAnalyticsBtn" class="btn-primary" style="width: auto; padding: 0.6rem 1.2rem;">Apply Filter</button>
-                        <button id="downloadAnalyticsBtn" class="btn-primary" style="width: auto; padding: 0.6rem 1.2rem; background: var(--success);">📥 Excel</button>
-                    </div>
-                </div>
-
-                <!-- Analytics Summary Cards -->
-                <div class="dashboard-cards" style="margin-top: 1rem;">
-                    <div class="stat-card stat-success">
-                        <span class="stat-title">Total Money In (Jama)</span>
-                        <p id="analyticsTotalJama" class="stat-value" style="color: var(--success); margin-top: 0.5rem;">₹0</p>
-                    </div>
-                    <div class="stat-card stat-error">
-                        <span class="stat-title">Total Money Out (Naame)</span>
-                        <p id="analyticsTotalNaame" class="stat-value" style="color: var(--error); margin-top: 0.5rem;">₹0</p>
-                    </div>
-                    <div class="stat-card">
-                        <span class="stat-title">Net Flow</span>
-                        <p id="analyticsNetFlow" class="stat-value" style="margin-top: 0.5rem;">₹0</p>
-                    </div>
-                </div>
-
-                <!-- Chart Canvas Container -->
-                <div style="position: relative; height: 380px; width: 100%; margin: 1.5rem 0;">
-                    <canvas id="analyticsChart"></canvas>
-                </div>
-
-                <!-- Analytics Table -->
-                <div class="table-container" style="max-height: 380px; overflow-y: auto;">
-                    <table id="analyticsTable">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th style="color: var(--success); text-align: right;">Money In (Jama)</th>
-                                <th style="color: var(--error); text-align: right;">Money Out (Naame)</th>
-                                <th style="color: var(--navy-header); text-align: right;">Net Flow</th>
-                            </tr>
-                        </thead>
-                        <tbody id="analyticsTableBody">
-                            <!-- Populated via JS -->
-                        </tbody>
-                    </table>
-                </div>
+    <!-- 5. Full Address & Contact Section (Prominently Near PNB Main Market Kumher Deeg) -->
+    <section class="address-section" id="address-section">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">दुकान का पता & संपर्क</span>
+                <h2 class="section-title">पधारें <span>LJS Jewellers</span> पर</h2>
+                <p class="section-desc">कुम्हेर (डीग) के मुख्य बाजार में पीएनबी बैंक के समीप सेवा में सदैव तत्पर।</p>
             </div>
-        </div>
 
-        <!-- CUSTOMER KHAATA & PAWNS FULL PAGE VIEW -->
-        <div id="khaataView" style="display: none;">
-            <!-- Top Search & Customer Selector Banner -->
-            <div class="card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; border: none; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.3);">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div class="location-grid">
+                <!-- Address Box -->
+                <div class="address-card-primary">
+                    <div class="address-badge">📍 मुख्य प्रतिष्ठान (Main Store)</div>
+                    <h3 class="address-headline">LJS Jewellers & Pawn Records</h3>
+                    
+                    <ul class="address-detail-list">
+                        <li class="address-detail-item">
+                            <div class="address-icon">🏢</div>
+                            <div class="address-info-text">
+                                <strong>पूरा पता (Full Address):</strong>
+                                <p style="font-size: 1.15rem; color: #fef08a; font-weight: 700; margin-top: 0.2rem;">
+                                    Near PNB (Main Market), Kumher, Deeg (Rajasthan) - 321201
+                                </p>
+                            </div>
+                        </li>
+
+                        <li class="address-detail-item">
+                            <div class="address-icon">🗺️</div>
+                            <div class="address-info-text">
+                                <strong>लैंडमार्क (Landmark):</strong>
+                                <p>पंजाब नेशनल बैंक (PNB) के पास, मुख्य बाजार, कुम्हेर, जिला - डीग</p>
+                            </div>
+                        </li>
+
+                        <li class="address-detail-item">
+                            <div class="address-icon">📞</div>
+                            <div class="address-info-text">
+                                <strong>हेल्पलाइन & संपर्क:</strong>
+                                <p>दुकान पर पधारें अथवा किसी भी जानकारी के लिए संपर्क करें।</p>
+                            </div>
+                        </li>
+                    </ul>
+
+                    <div class="contact-quick-actions">
+                        <a href="https://maps.google.com/?q=Kumher+Main+Market+Deeg" target="_blank" class="btn btn-gold">
+                            <span>🗺️ Google Maps पर रास्ता देखें</span>
+                        </a>
+                        <a href="portal.html" class="btn btn-outline-gold">
+                            <span>📱 कस्टमर पोर्टल खोलें</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Business Hours Card -->
+                <div class="hours-card">
                     <div>
-                        <h2 style="color: #f8fafc; font-family: var(--font-heading); margin: 0; font-size: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                            <span>📖</span> Customer Khaata & Gehna Ledger
-                        </h2>
-                        <p style="color: #94a3b8; font-size: 0.88rem; margin-top: 0.25rem;">Select or search customer account to manage pawns & transactions</p>
-                    </div>
-
-                    <!-- Customer Search & Switch Pad -->
-                    <div style="position: relative; width: 340px; max-width: 100%;">
-                        <input type="text" id="khaataCustomerSearch" placeholder="🔍 Search customer name or phone..." style="width: 100%; padding: 0.65rem 1rem; font-size: 0.9rem; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white;">
-                        <div id="khaataCustomerDropdown" style="display: none; position: absolute; top: 110%; left: 0; right: 0; background: white; color: var(--text-main); border-radius: var(--radius-md); box-shadow: 0 10px 30px rgba(0,0,0,0.25); max-height: 250px; overflow-y: auto; z-index: 100; border: 1px solid var(--gray-border);">
-                            <!-- Populated via JS -->
+                        <h3><span>⏰</span> दुकान का समय (Timings)</h3>
+                        <div class="hours-row">
+                            <span class="hours-day">सोमवार - शनिवार</span>
+                            <span class="hours-time">09:00 AM - 08:00 PM</span>
+                        </div>
+                        <div class="hours-row">
+                            <span class="hours-day">रविवार (Sunday)</span>
+                            <span class="hours-time">09:00 AM - 07:00 PM</span>
+                        </div>
+                        <div class="hours-row">
+                            <span class="hours-day">डिजिटल पासबुक</span>
+                            <span class="hours-time" style="color: #34d399;">24x7 ऑनलाइन चालू</span>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Empty State when no customer is selected -->
-            <div id="khaataNoCustomerState" class="card empty-state" style="padding: 4rem 2rem; text-align: center;">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">👤</div>
-                <h3 style="color: var(--navy-header); font-size: 1.3rem; margin-bottom: 0.5rem;">No Customer Account Selected</h3>
-                <p style="color: var(--text-muted); max-width: 450px; margin: 0 auto 1.5rem;">Please select a customer from the search bar above or click <strong>📖 Open Khaata</strong> on any customer in the Dashboard database.</p>
-            </div>
-
-            <!-- Main Khaata Content Area -->
-            <div id="khaataContentArea" style="display: none;">
-                <!-- Full Width Customer Info Banner -->
-                <div class="card" style="margin-bottom: 1.5rem; border-top: 4px solid var(--accent-blue);">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1.25rem;">
-                        <div>
-                            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                                <h1 id="fullKhaataCustomerName" style="font-family: var(--font-heading); color: var(--navy-header); font-size: 1.8rem; margin: 0;">-</h1>
-                                <span id="fullKhaataLoginPinBadge" class="badge" style="background:#fffbeb; color:#b45309; font-weight:800; font-family:monospace; font-size:0.95rem; padding: 0.35rem 0.75rem;">🔑 PIN: -</span>
-                            </div>
-                            <p id="fullKhaataCustomerDetails" style="color: var(--text-muted); font-size: 0.95rem; font-weight: 500; margin-top: 0.5rem;">Phone: - | Email: - | D.O.B: -</p>
-                        </div>
-
-                        <!-- Action Toolbar -->
-                        <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
-                            <button id="fullKhaataAddPawnBtn" class="btn-primary" style="width: auto; padding: 0.65rem 1.2rem; background: var(--accent-blue); font-weight: 700;">➕ Add New Pawn</button>
-                            <button id="fullKhaataQrBtn" class="btn-primary" style="width: auto; padding: 0.65rem 1.1rem; background: var(--success); font-weight: 700;">📱 Customer QR</button>
-                            <button id="fullKhaataCardBtn" class="btn-primary" style="width: auto; padding: 0.65rem 1.1rem; background: #f59e0b; font-weight: 700;">🎴 Passbook Card</button>
-                            <button id="fullKhaataWhatsappBtn" class="btn-primary" style="width: auto; padding: 0.65rem 1.1rem; background: #6366f1; font-weight: 700;">💬 Send PIN</button>
-                            <button id="backToDashBtn" class="btn-primary" style="width: auto; padding: 0.65rem 1.1rem; background: #64748b; font-weight: 700;">🔙 Dashboard</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Financial KPI Cards & Kalam Search Pad -->
-                <div class="card" style="margin-bottom: 1.5rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem;">
-                        <div style="flex: 1; min-width: 280px;">
-                            <label style="font-size: 0.85rem; font-weight: 700; color: var(--navy-header); display: block; margin-bottom: 0.4rem;">🔍 Kalam Search Pad</label>
-                            <input type="text" id="fullKalamSearchInput" placeholder="Search kalam by item name, metal, weight, amount..." style="width: 100%; padding: 0.65rem 1rem; font-size: 0.95rem; border: 1px solid var(--gray-border); border-radius: var(--radius-sm);">
-                        </div>
-                        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
-                            <div style="background: #f1f5f9; padding: 0.75rem 1.25rem; border-radius: var(--radius-md); text-align: center;">
-                                <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Active Kalam</span>
-                                <p id="fullKhaataTotalKalam" style="font-size: 1.4rem; font-weight: 800; color: var(--accent-blue); margin-top: 0.2rem;">0</p>
-                            </div>
-                            <div style="background: #fef2f2; padding: 0.75rem 1.25rem; border-radius: var(--radius-md); text-align: center;">
-                                <span style="font-size: 0.8rem; color: #991b1b; font-weight: 600;">Total Outstanding Baki</span>
-                                <p id="fullKhaataTotalBaki" style="font-size: 1.4rem; font-weight: 800; color: #dc2626; margin-top: 0.2rem;">₹0</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Pawn Items Table -->
-                <div class="card">
-                    <div class="card-header" style="padding-left:0; padding-top:0;">
-                        <h2>📋 Gehna & Pawn Records</h2>
-                    </div>
-
-                    <div class="table-container">
-                        <table id="pawnTable">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Kalam / Gehna Description</th>
-                                    <th>🔐 Locker</th>
-                                    <th>Principal (₹)</th>
-                                    <th>Interest (₹)</th>
-                                    <th>Paid (Jama)</th>
-                                    <th>Balance (Baki)</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="pawnList">
-                                <!-- Populated via JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                    <div id="pawnEmptyState" class="empty-state" style="display: none;">
-                        <p>No pawn records found for this customer.</p>
+                    <div style="background: rgba(212, 175, 55, 0.1); border-radius: var(--radius-sm); border: 1px solid rgba(212, 175, 55, 0.3); padding: 1.1rem; margin-top: 1.5rem; text-align: center;">
+                        <p style="font-size: 0.88rem; color: var(--gold-light); font-weight: 700;">
+                            ✨ सोने-चांदी की खरीद, बिक्री एवं गिरवी सेवा हेतु संपर्क करें
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
+    </section>
 
-        <!-- RECOVERY TIME HUB VIEW -->
-        <div id="recoveryView" style="display: none;">
-            <div class="card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color: white; border: none; box-shadow: 0 10px 25px -5px rgba(49, 46, 129, 0.4);">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem;">
-                    <div>
-                        <h2 style="color: #f8fafc; font-family: var(--font-heading); margin: 0; font-size: 1.6rem; display: flex; align-items: center; gap: 0.5rem;">
-                            <span>⏳</span> Recovery Time Hub (Oldest Accounts Target Engine)
-                        </h2>
-                        <p style="color: #c7d2fe; font-size: 0.9rem; margin-top: 0.35rem;">Enter your recovery target amount to automatically calculate & queue the oldest overdue pawns required to reach your target!</p>
-                    </div>
-
-                    <!-- Target Recovery Input & Action Pad -->
-                    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-                        <div style="position: relative;">
-                            <span style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--navy-header); font-weight: 800; font-size: 1.1rem;">₹</span>
-                            <input type="number" id="recoveryTargetInput" placeholder="Target Recovery (e.g. 100000)" style="padding: 0.65rem 1rem 0.65rem 2.2rem; font-size: 0.95rem; font-weight: 800; border-radius: var(--radius-pill); border: 2px solid #818cf8; width: 240px; background: white; color: black;">
-                        </div>
-                        <button id="calculateRecoveryBtn" class="btn-primary" style="background: var(--gold-gradient); color: var(--navy-header); font-weight: 800; padding: 0.7rem 1.3rem; border: none; border-radius: var(--radius-pill); box-shadow: var(--shadow-gold); cursor: pointer;">
-                            🎯 Calculate Recovery Queue
-                        </button>
-                        <button id="downloadRecoveryBtn" class="btn-primary" style="background: #10b981; font-weight: 800; padding: 0.7rem 1.1rem; border-radius: var(--radius-pill);">
-                            📥 Excel Report
-                        </button>
-                    </div>
-                </div>
+    <!-- 6. Footer -->
+    <footer class="site-footer">
+        <div class="container">
+            <div class="footer-links">
+                <a href="#features">Features</a>
+                <a href="portal.html">Customer Portal</a>
+                <a href="passbook.html">Passbook</a>
+                <a href="javascript:void(0)" onclick="openSignInModal()">Staff Sign In</a>
             </div>
-
-            <!-- Recovery KPI Summary Cards -->
-            <div class="dashboard-cards" style="margin-bottom: 1.5rem;">
-                <div class="stat-card">
-                    <span class="stat-title">Target Recovery Amount</span>
-                    <p id="recTargetDisplay" class="stat-value" style="color: var(--accent-blue); margin-top: 0.4rem;">₹0</p>
-                </div>
-                <div class="stat-card stat-success">
-                    <span class="stat-title">Total Recoverable (Principal + Interest)</span>
-                    <p id="recCalculatedDisplay" class="stat-value" style="color: var(--success); margin-top: 0.4rem;">₹0</p>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-title">Queued Oldest Pawns</span>
-                    <p id="recCountDisplay" class="stat-value" style="color: var(--warning); margin-top: 0.4rem;">0 Items</p>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-title">Oldest Record Date</span>
-                    <p id="recOldestDateDisplay" class="stat-value" style="font-size: 1.1rem; margin-top: 0.4rem;">-</p>
-                </div>
-            </div>
-
-            <!-- Recovery Queue Table -->
-            <div class="card">
-                <div class="card-header">
-                    <h2>📋 Priority Recovery Target List (Oldest Pawns First)</h2>
-                    <span id="recBadge" class="badge badge-warning">0 Queue</span>
-                </div>
-
-                <div class="table-container">
-                    <table id="recoveryTable">
-                        <thead>
-                            <tr>
-                                <th>Age (Date)</th>
-                                <th>Customer & Phone</th>
-                                <th>Gehna / Item Description</th>
-                                <th>🔐 Locker</th>
-                                <th>Principal (₹)</th>
-                                <th>Interest Due (₹)</th>
-                                <th>Total Recoverable (₹)</th>
-                                <th style="text-align: right;">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="recoveryList">
-                            <!-- Populated via JS -->
-                        </tbody>
-                    </table>
-                </div>
-                <div id="recoveryEmptyState" class="empty-state">
-                    <p>Enter a target recovery amount above and click <strong>🎯 Calculate Recovery Queue</strong> to view oldest priority accounts.</p>
-                </div>
-            </div>
-        </div>
-    </div> <!-- End Container -->
-
-    <!-- MODAL 1: Add Pawn Receipt -->
-    <div id="addPawnModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal" id="closeAddPawn">&times;</span>
-            <h2 style="margin-bottom: 1.25rem;">📄 Add Pawn Receipt</h2>
-            <form id="addPawnForm">
-                <input type="hidden" id="pawnCustomerId">
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; background: #f8fafc; padding: 0.75rem; border-radius: 8px;">
-                    <input type="checkbox" id="pawnIsUdhari" style="width: auto;">
-                    <label for="pawnIsUdhari" style="margin: 0; cursor: pointer;">Unsecured Udhari (No Gehna)</label>
-                </div>
-                <div class="form-group">
-                    <label for="pawnAmount">Amount Given (₹) *</label>
-                    <input type="number" id="pawnAmount" required placeholder="e.g. 50000">
-                </div>
-                <div class="form-group">
-                    <label for="pawnDescription">Item Description *</label>
-                    <textarea id="pawnDescription" required rows="2" placeholder="e.g. 2 Gold Bangles, 1 Ring"></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="pawnLockerLocation">🔐 Gehna Vault / Locker Location</label>
-                    <input type="text" id="pawnLockerLocation" placeholder="e.g. Vault-1 / Box-B12">
-                </div>
-                <div id="pawnItemDetailsGroup">
-                    <div style="display: flex; gap: 1rem;">
-                        <div class="form-group" style="flex: 1;">
-                            <label for="itemMetalType">Metal Type</label>
-                            <select id="itemMetalType">
-                                <option value="Gold">Gold</option>
-                                <option value="Silver">Silver</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="flex: 1;">
-                            <label for="itemWeight">Weight (grams)</label>
-                            <input type="number" id="itemWeight" step="0.01" placeholder="e.g. 15.5">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="itemPhoto">Item Photo (Optional)</label>
-                        <input type="file" id="itemPhoto" accept="image/*">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="pawnInterestRate">Interest Rate (% per month) *</label>
-                    <input type="number" id="pawnInterestRate" required placeholder="e.g. 2" step="0.1" value="2">
-                </div>
-                <button type="submit" class="btn-primary btn-gold">Save Pawn Receipt</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL 2: Melt Pawn -->
-    <div id="meltModal" class="modal">
-        <div class="modal-content" style="max-width: 420px;">
-            <span class="close-modal" id="closeMeltModal">&times;</span>
-            <h2 style="color: var(--error); margin-bottom: 0.5rem;">🔥 Melt Gehna</h2>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">Record the pure weight extracted after melting.</p>
-            <form id="meltForm">
-                <input type="hidden" id="meltPawnId">
-                <input type="hidden" id="meltCustomerId">
-                <div class="form-group">
-                    <label for="meltPureWeight">Pure Weight Recovered (grams) *</label>
-                    <input type="number" step="0.01" id="meltPureWeight" required placeholder="e.g. 8.50">
-                </div>
-                <div class="form-group">
-                    <label for="meltNotes">Notes (Optional)</label>
-                    <textarea id="meltNotes" rows="2" placeholder="e.g. Sent to factory"></textarea>
-                </div>
-                <button type="submit" class="btn-primary" style="background: var(--error);">Confirm Melt</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL 2B: Renew Pawn / Byaaj Closing -->
-    <div id="renewPawnModal" class="modal">
-        <div class="modal-content" style="max-width: 520px; border-radius: var(--radius-lg); padding: 1.75rem;">
-            <span class="close-modal" id="closeRenewModal">&times;</span>
-            <h2 style="color: var(--navy-header); margin-bottom: 0.25rem; font-family: var(--font-heading); display: flex; align-items: center; gap: 0.5rem;">
-                <span>🔄</span> Pawn Renewal & Byaaj Closing
-            </h2>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">Close old overdue receipt by collecting interest, and auto-issue a fresh active receipt with today's date.</p>
-
-            <form id="renewPawnForm">
-                <input type="hidden" id="renewPawnId">
-                <input type="hidden" id="renewCustomerId">
-
-                <!-- Old Loan Summary Box -->
-                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 1.25rem; font-size: 0.88rem;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
-                        <span style="color: var(--text-muted);">Pawn Item:</span>
-                        <strong id="renewOldDesc" style="color: var(--navy-header);">-</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
-                        <span style="color: var(--text-muted);">Original Principal:</span>
-                        <strong id="renewOldPrincipal" style="color: var(--navy-header);">₹0</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
-                        <span style="color: var(--text-muted);">Calculated Total Interest:</span>
-                        <strong id="renewOldInterest" style="color: #d97706;">₹0</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
-                        <span style="color: var(--text-muted);">Already Paid (Jama):</span>
-                        <strong id="renewOldJama" style="color: #16a34a;">₹0</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
-                        <span style="color: var(--text-muted);">Net Remaining Balance (Baki):</span>
-                        <strong id="renewOldBaki" style="color: #dc2626;">₹0</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="color: var(--text-muted);">Days Elapsed:</span>
-                        <span id="renewOldDays" style="font-weight: 700; color: var(--accent-blue);">-</span>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="renewInterestCollected">💰 Interest Amount Settled & Collected (₹) *</label>
-                    <input type="number" id="renewInterestCollected" required placeholder="e.g. 3000">
-                </div>
-
-                <div style="display: flex; gap: 0.75rem;">
-                    <div class="form-group" style="flex: 1;">
-                        <label for="renewPrincipalAdjustType">Principal Adjustment</label>
-                        <select id="renewPrincipalAdjustType">
-                            <option value="NONE">No Change (Keep Same)</option>
-                            <option value="REDUCE">Customer Paid Extra Principal (-)</option>
-                            <option value="TOPUP">Customer Borrowed Extra Principal (+)</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label for="renewAdjustAmount">Adjustment Amt (₹)</label>
-                        <input type="number" id="renewAdjustAmount" value="0" placeholder="0">
-                    </div>
-                </div>
-
-                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-weight: 700; color: #166534; font-size: 0.9rem;">New Active Loan Principal:</span>
-                    <strong id="renewNewPrincipalDisplay" style="font-size: 1.2rem; color: #15803d;">₹0</strong>
-                </div>
-
-                <div style="display: flex; gap: 0.75rem;">
-                    <div class="form-group" style="flex: 1;">
-                        <label for="renewInterestRate">New Rate (% / mo) *</label>
-                        <input type="number" step="0.1" id="renewInterestRate" required value="2">
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label for="renewLockerLocation">🔐 Locker Box</label>
-                        <input type="text" id="renewLockerLocation" placeholder="e.g. Vault-1 / Box-B12">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="renewNotes">Notes / Description (Optional)</label>
-                    <input type="text" id="renewNotes" placeholder="e.g. 6 Months Byaaj Closed & Renewed">
-                </div>
-
-                <button type="submit" class="btn-primary btn-gold" style="font-weight: 800; font-size: 1rem; padding: 0.75rem;">
-                    🔄 Confirm Byaaj Closing & Renew Receipt
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL 3: Customer Khaata Hub & Pawn Receipts -->
-    <div id="viewPawnModal" class="modal">
-        <div class="modal-content modal-large" style="max-width: 950px; border-radius: var(--radius-lg); padding: 1.75rem;">
-            <span class="close-modal" id="closeViewPawn">&times;</span>
-            
-            <!-- Khaata Header Banner -->
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; border-bottom: 2px solid var(--gray-border); padding-bottom: 1.25rem; margin-bottom: 1.25rem;">
-                <div>
-                    <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                        <h2 id="viewPawnCustomerName" style="font-family: var(--font-heading); color: var(--navy-header); margin: 0; font-size: 1.6rem;">Customer Khaata</h2>
-                        <span id="khaataLoginPinBadge" class="badge" style="background:#fffbeb; color:#b45309; font-weight:800; font-family:monospace; font-size:0.9rem;">🔑 PIN: -</span>
-                    </div>
-                    <p id="viewPawnCustomerDetails" style="color: var(--text-muted); font-weight: 500; margin-top: 0.35rem; font-size: 0.95rem;">Phone: - | Email: -</p>
-                </div>
-
-                <!-- Customer Action Toolbar inside Khaata -->
-                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                    <button id="khaataAddPawnBtn" class="btn-primary" style="width: auto; padding: 0.55rem 1rem; font-size: 0.85rem; background: var(--accent-blue);">➕ Add New Pawn</button>
-                    <button id="khaataQrBtn" class="btn-primary" style="width: auto; padding: 0.55rem 1rem; font-size: 0.85rem; background: var(--success);">📱 QR Code</button>
-                    <button id="khaataCardBtn" class="btn-primary" style="width: auto; padding: 0.55rem 1rem; font-size: 0.85rem; background: #f59e0b;">🎴 Passbook Card</button>
-                    <button id="khaataWhatsappBtn" class="btn-primary" style="width: auto; padding: 0.55rem 1rem; font-size: 0.85rem; background: #6366f1;">💬 Send PIN</button>
-                </div>
-            </div>
-
-            <!-- Kalam Search & Account Summary Pad -->
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; background: #f8fafc; padding: 0.85rem 1.1rem; border-radius: var(--radius-md); border: 1px solid #e2e8f0; margin-bottom: 1.25rem;">
-                <div style="flex: 1; min-width: 250px;">
-                    <input type="text" id="kalamSearchInput" placeholder="🔍 Search kalam (item, weight, amount...)" style="width: 100%; padding: 0.5rem 0.85rem; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: var(--radius-sm);">
-                </div>
-                <div style="display: flex; gap: 1.25rem; font-size: 0.9rem; font-weight: 700;">
-                    <span style="color: var(--navy-header);">📦 Total Kalam: <span id="khaataTotalKalam" style="color: var(--accent-blue);">0</span></span>
-                    <span style="color: var(--navy-header);">💼 Total Baki: <span id="khaataTotalBaki" style="color: #dc2626;">₹0</span></span>
-                </div>
-            </div>
-            
-            <div class="table-container">
-                <table id="pawnTable">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Description</th>
-                            <th>Principal (₹)</th>
-                            <th>Interest (₹)</th>
-                            <th>Paid (Jama)</th>
-                            <th>Balance (Baki)</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="pawnList">
-                        <!-- Populated via JS -->
-                    </tbody>
-                </table>
-            </div>
-            <div id="pawnEmptyState" class="empty-state" style="display: none;">
-                <p>No pawn receipts found for this customer.</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Quick Khaata Customer Select Modal -->
-    <div id="quickKhaataModal" class="modal">
-        <div class="modal-content" style="max-width: 520px; border-radius: var(--radius-lg); padding: 1.75rem;">
-            <span class="close-modal" id="closeQuickKhaata">&times;</span>
-            <h2 style="font-family: var(--font-heading); color: var(--navy-header); margin-bottom: 0.5rem;">📖 Select Customer Khaata</h2>
-            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">Search customer by name or phone number to open account:</p>
-
-            <input type="text" id="quickCustomerSearch" placeholder="🔍 Type customer name or phone..." style="width: 100%; padding: 0.75rem 1rem; font-size: 0.95rem; border: 1px solid var(--gray-border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
-
-            <div id="quickCustomerList" style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;">
-                <!-- Populated via JS -->
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL 4: Make Payment -->
-    <div id="paymentModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal" id="closePayment">&times;</span>
-            <h2 style="margin-bottom: 1.25rem;">💰 Make Partial Payment</h2>
-            <form id="paymentForm">
-                <input type="hidden" id="payPawnId">
-                <div class="form-group">
-                    <label for="payAmount">Amount Received (₹) *</label>
-                    <input type="number" id="payAmount" required placeholder="e.g. 1000">
-                </div>
-                <div class="form-group">
-                    <label for="payType">Notes / Description *</label>
-                    <input type="text" id="payType" required placeholder="e.g. Received cash from son">
-                </div>
-                <button type="submit" class="btn-primary btn-gold">Save Payment</button>
-            </form>
-
-            <h3 style="margin-top: 1.5rem; font-size: 0.95rem; font-weight: 700;">Payment History</h3>
-            <div style="max-height: 180px; overflow-y: auto; margin-top: 0.5rem;">
-                <table style="width: 100%;">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Notes</th>
-                            <th>Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody id="paymentHistoryList"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL 5: Visiting Card Pawn Receipt -->
-    <div id="cardReceiptModal" class="modal">
-        <div class="modal-content" style="max-width: 480px;">
-            <span class="close-modal" id="closeCardReceipt">&times;</span>
-            <h2 style="text-align: center; margin-bottom: 1rem;">🎴 Visiting Card Receipt</h2>
-
-            <div id="visitingCardPreview" class="visiting-card">
-                <div class="card-header-print">
-                    <h1 class="brand-title">LJS JEWELLERS</h1>
-                    <p class="brand-subtitle">Trusted Since Generations</p>
-                </div>
-                <div class="card-body-print">
-                    <h3 class="receipt-title">PAWN RECEIPT</h3>
-                    <form id="cardReceiptForm">
-                        <input type="hidden" id="cardCustomerId">
-                        <div class="card-row">
-                            <span class="card-label">Date:</span>
-                            <input type="date" id="cardDate" class="card-input" required>
-                        </div>
-                        <div class="card-row">
-                            <span class="card-label">Customer:</span>
-                            <span id="cardCustomerName" style="font-weight: 700;"></span>
-                        </div>
-                        <div class="card-row">
-                            <span class="card-label">Phone:</span>
-                            <span id="cardCustomerPhone"></span>
-                        </div>
-                        <div class="card-divider"></div>
-                        <div class="card-row">
-                            <span class="card-label">Item Details:</span>
-                            <input type="text" id="cardDescription" class="card-input" placeholder="e.g. 2 Gold Bangles" required>
-                        </div>
-                        <div class="card-row">
-                            <span class="card-label">Locker Box:</span>
-                            <input type="text" id="cardLockerLocation" class="card-input" placeholder="e.g. Vault-1 / Box-B12">
-                        </div>
-                        <div class="card-row">
-                            <span class="card-label">Weight (g):</span>
-                            <input type="number" step="0.01" id="cardWeight" class="card-input" placeholder="e.g. 15.5">
-                        </div>
-                        <div class="card-row">
-                            <span class="card-label">Metal:</span>
-                            <select id="cardMetal" class="card-input">
-                                <option value="Gold">Gold</option>
-                                <option value="Silver">Silver</option>
-                            </select>
-                        </div>
-                        <div class="card-row">
-                            <span class="card-label">Interest Rate:</span>
-                            <div style="display:flex; align-items:center;">
-                                <input type="number" step="0.1" id="cardRate" class="card-input" value="2" required style="width: 50px; text-align:right;">
-                                <span style="margin-left:4px; font-size: 0.8rem;">% / mo</span>
-                            </div>
-                        </div>
-                        <div class="card-divider"></div>
-                        <div class="card-row highlight-row">
-                            <span class="card-label">Amount:</span>
-                            <div style="display:flex; align-items:center;">
-                                <span class="currency-symbol">₹</span>
-                                <input type="number" id="cardAmount" class="card-input amount-input" placeholder="0" required>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <div style="text-align: center; margin-top: 1.25rem;">
-                <button type="button" id="savePrintCardBtn" class="btn-primary btn-gold" style="font-size: 1rem; padding: 0.85rem;">
-                    💾 Save & 🖨️ Print Receipt Card
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL 6: Customer QR Passbook Modal -->
-    <div id="customerQrModal" class="modal">
-        <div class="modal-content" style="max-width: 440px; text-align: center;">
-            <span class="close-modal" id="closeCustomerQr">&times;</span>
-            <h2 style="margin-bottom: 0.25rem;">📱 Customer Digital QR Pass</h2>
-            <p id="qrCustomerName" style="font-weight: 700; color: var(--navy-header); font-size: 1.1rem; margin-bottom: 0.25rem;"></p>
-            <p id="qrCustomerPhone" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;"></p>
-
-            <div style="margin-bottom: 1rem;">
-                <span id="qrStatusBadge" class="badge" style="padding: 0.4rem 1rem; font-size: 0.85rem; border-radius: 9999px;">🟢 Active Pass</span>
-            </div>
-
-            <!-- QR Code Render Container -->
-            <div id="qrCodeContainer" style="display: flex; justify-content: center; align-items: center; padding: 1.25rem; background: #ffffff; border: 2px solid var(--gold-primary); border-radius: 12px; width: 220px; height: 220px; margin: 0 auto 1.25rem auto; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.15);">
-            </div>
-
-            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.25rem;">
-                Customer can scan this QR code using their mobile camera to view their complete Gehna, Byaaj & Payment ledger.
+            <p>© 2026 LJS Jewellers & Record. All Rights Reserved.</p>
+            <p style="margin-top: 0.3rem; font-size: 0.85rem; color: var(--text-muted);">
+                Near PNB (Main Market), Kumher, Deeg, Rajasthan
             </p>
-
-            <div style="display: flex; flex-direction: column; gap: 0.65rem;">
-                <button id="toggleQrStatusBtn" class="btn-primary" style="background: var(--error);">
-                    🔴 Deactivate QR Pass
-                </button>
-                <div style="display: flex; gap: 0.5rem;">
-                    <button id="shareQrWaBtn" class="btn-primary" style="background: #25D366; flex: 1;">
-                        💬 WhatsApp Link
-                    </button>
-                    <button id="copyQrLinkBtn" class="btn-primary" style="background: var(--accent-blue); flex: 1;">
-                        🔗 Copy Link
-                    </button>
-                </div>
-            </div>
         </div>
-    </div>
+    </footer>
 
-    <!-- MODAL 7: Common Counter QR Poster Modal -->
-    <div id="commonQrModal" class="modal">
-        <div class="modal-content" style="max-width: 480px; text-align: center;">
-            <span class="close-modal" id="closeCommonQr">&times;</span>
-            <h2 style="font-family: var(--font-heading); margin-bottom: 0.25rem;">💎 LJS JEWELLERS</h2>
-            <p style="font-size: 0.85rem; color: var(--gold-hover); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem;">Shop Counter QR Code Poster</p>
-
-            <div style="background: #fffdf5; border: 2px solid var(--gold-primary); border-radius: 16px; padding: 1.5rem; box-shadow: 0 4px 20px rgba(212, 175, 55, 0.15); margin-bottom: 1.25rem;" id="commonQrPrintArea">
-                <h3 style="font-size: 1.1rem; color: var(--navy-header); font-weight: 800; margin-bottom: 0.35rem;">SCAN TO VIEW YOUR KHATA</h3>
-                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Gehna, Loan, Byaaj & Jama Balance Live Portal</p>
-
-                <div id="commonQrContainer" style="display: flex; justify-content: center; align-items: center; padding: 1rem; background: #ffffff; border: 1px solid var(--gold-border); border-radius: 12px; width: 220px; height: 220px; margin: 0 auto 1rem auto;">
-                </div>
-
-                <div style="font-size: 0.85rem; color: var(--navy-header); font-weight: 700;">
-                    Username: <span style="color: var(--accent-blue);">Your Phone Number</span> <br>
-                    Password: <span style="color: var(--warning);">Your Secret 6-Digit PIN</span>
-                </div>
+    <!-- 7. Sign In Selection Modal -->
+    <div class="modal-backdrop" id="signInModal" onclick="handleBackdropClick(event)">
+        <div class="modal-card">
+            <button class="modal-close" onclick="closeSignInModal()">&times;</button>
+            
+            <div class="modal-header">
+                <img src="/icon.svg" alt="LJS Logo" style="width: 52px; height: 52px; border-radius: 12px; border: 1px solid var(--gold-primary);">
+                <h3>Sign In to LJS Record</h3>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.3rem;">कृपया अपना लॉगिन प्रकार चुनें</p>
             </div>
 
-            <div style="display: flex; gap: 0.5rem;">
-                <button id="printCommonQrBtn" class="btn-primary btn-gold" style="flex: 1;">
-                    🖨️ Print Counter Poster
-                </button>
-                <button id="copyCommonQrLinkBtn" class="btn-primary" style="background: var(--accent-blue); flex: 1;">
-                    🔗 Copy Portal URL
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Hidden Print Container -->
-    <div id="printBillContainer" style="display: none;">
-        <div style="text-align: center; border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 15px;">
-            <h1 style="margin: 0; font-size: 24px; font-family: 'Cinzel', serif;">LJS JEWELLERS</h1>
-            <p style="margin: 5px 0 0; font-size: 14px;">Trusted Since Generations</p>
-        </div>
-        <h2 style="text-align: center; font-size: 18px; margin-bottom: 20px; text-decoration: underline;">PAWN RECEIPT</h2>
-        <table style="width: 100%; margin-bottom: 20px; font-size: 14px; line-height: 1.5;">
-            <tr>
-                <td width="40%"><strong>Date:</strong></td>
-                <td id="printDate"></td>
-            </tr>
-            <tr>
-                <td><strong>Customer:</strong></td>
-                <td id="printCustomer"></td>
-            </tr>
-            <tr>
-                <td><strong>Phone:</strong></td>
-                <td id="printPhone"></td>
-            </tr>
-            <tr>
-                <td colspan="2"><hr style="border-top: 1px solid #ccc; margin: 10px 0;"></td>
-            </tr>
-            <tr>
-                <td><strong>Description:</strong></td>
-                <td id="printDesc"></td>
-            </tr>
-            <tr>
-                <td><strong>Interest Rate:</strong></td>
-                <td id="printRate"></td>
-            </tr>
-            <tr>
-                <td colspan="2"><hr style="border-top: 1px solid #ccc; margin: 10px 0;"></td>
-            </tr>
-            <tr>
-                <td style="font-size: 18px;"><strong>Amount Given:</strong></td>
-                <td style="font-size: 18px; font-weight: bold;" id="printAmount"></td>
-            </tr>
-        </table>
-        <div style="text-align: center; margin-top: 40px; font-size: 12px; color: #555;">
-            <p>Signature / Stamp</p>
-            <p style="margin-top: 20px; border-top: 1px solid #000; display: inline-block; padding-top: 5px;">Customer Signature</p>
-            <br><br>
-            <p>Thank you for choosing LJS Jewellers!</p>
-        </div>
-    </div>
-
-    <!-- Floating Admin AI Assistant Button -->
-    <button id="aiAssistantTriggerBtn" class="ai-assistant-fab" title="AI Munimji Copilot">
-        <span class="fab-pulse"></span>
-        <div class="fab-icon-wrap">
-            <span class="fab-sparkle">✨</span>
-            <span class="fab-bot-icon">🤖</span>
-        </div>
-        <div class="fab-text-wrap">
-            <span class="fab-title">AI Munimji</span>
-            <span class="fab-sub">Prompt Se Hisab</span>
-        </div>
-    </button>
-
-    <!-- Slide-in Admin AI Copilot Drawer -->
-    <div id="aiAssistantDrawer" class="ai-drawer-overlay">
-        <div class="ai-drawer-panel">
-            <!-- Header -->
-            <div class="ai-drawer-header">
-                <div class="ai-header-left">
-                    <div class="ai-bot-avatar">
-                        <span>🤖</span>
-                        <span class="ai-online-dot"></span>
-                    </div>
+            <div class="login-choice-grid">
+                <!-- Choice 1: Admin & Staff Login -->
+                <a href="admin.html" class="login-choice-btn">
+                    <span class="choice-icon">🔐</span>
                     <div>
-                        <div class="ai-title-row">
-                            <h3>AI Munimji (Copilot)</h3>
-                            <span class="ai-badge-admin">👑 Admin Intelligence</span>
-                        </div>
-                        <p class="ai-sub-status">Live Database & Financial Query Engine</p>
+                        <span class="choice-title">Admin & Staff Portal</span>
+                        <span class="choice-sub">दुकान प्रबंधन, ग्राहक खाता, गिरवी प्रविष्टि एवं रिपोर्ट्स</span>
                     </div>
-                </div>
-                <div class="ai-header-actions">
-                    <button id="aiClearChatBtn" class="ai-btn-icon" title="Clear Chat">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="16" height="16"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                    </button>
-                    <button id="aiCloseDrawerBtn" class="ai-btn-icon" title="Close">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                </div>
-            </div>
+                </a>
 
-            <!-- Quick Suggestion Chips -->
-            <div class="ai-chips-bar" id="aiChipsBar">
-                <button class="ai-chip" data-prompt="Aaj ka rokad summary">📊 Aaj Ka Rokad</button>
-                <button class="ai-chip" data-prompt="6 mahine se purani overdue girvi">🚨 6+ Mahine Overdue</button>
-                <button class="ai-chip" data-prompt="Total market me kitna paisa laga hai">💎 Portfolio Snapshot</button>
-                <button class="ai-chip" data-prompt="Top 5 highest loan customers">👑 Top Borrowers</button>
-                <button class="ai-chip" data-prompt="Aaj ka gold aur silver rate">🪙 Metal Rates</button>
-            </div>
-
-            <!-- Chat Messages Container -->
-            <div class="ai-messages-container" id="aiMessagesContainer">
-                <!-- Initial Welcome Message -->
-                <div class="ai-msg ai-msg-bot">
-                    <div class="ai-msg-avatar">🤖</div>
-                    <div class="ai-msg-content">
-                        <div class="ai-msg-bubble">
-                            <p><strong>Namaste Admin Ji! 🙏</strong></p>
-                            <p>Main aapka <strong>AI Munimji</strong> hu. Aap mujhse koi bhi hisab, customer ka baki balance, daily rokad ya overdue girvi ki details mang sakte hain.</p>
-                            <div class="ai-welcome-suggestions">
-                                <span class="ai-sug-title">Try asking:</span>
-                                <span class="ai-sug-item" onclick="window.sendAiPrompt('Aaj ka rokad summary')">👉 <em>"Aaj ka rokad summary"</em></span>
-                                <span class="ai-sug-item" onclick="window.sendAiPrompt('6 mahine se purani girvi')">👉 <em>"6 mahine se purani girvi"</em></span>
-                                <span class="ai-sug-item" onclick="window.sendAiPrompt('Ramesh ka hisab batao')">👉 <em>"[Customer Name] ka hisab batao"</em></span>
-                            </div>
-                        </div>
-                        <span class="ai-msg-time">Live AI Ready</span>
+                <!-- Choice 2: Customer Portal -->
+                <a href="portal.html" class="login-choice-btn">
+                    <span class="choice-icon">👤</span>
+                    <div>
+                        <span class="choice-title">Customer Self-Service</span>
+                        <span class="choice-sub">ग्राहक पासबुक, लाइव लोन स्थिति और लेन-देन विवरण</span>
                     </div>
-                </div>
-            </div>
+                </a>
 
-            <!-- Input Bar with Voice (Mic) and Send Button -->
-            <div class="ai-input-wrapper">
-                <form id="aiChatForm" class="ai-input-form" onsubmit="event.preventDefault(); window.handleAiFormSubmit();">
-                    <button type="button" id="aiVoiceBtn" class="ai-mic-btn" title="Voice Se Bolein (Hindi/English)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                    </button>
-                    <input type="text" id="aiPromptInput" class="ai-input-field" placeholder="Prompt likhein ya bole... (jaise: Ramesh ka hisab)" autocomplete="off">
-                    <button type="submit" id="aiSendBtn" class="ai-send-btn" title="Send Prompt">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                    </button>
-                </form>
-                <div id="aiVoiceStatus" class="ai-voice-status" style="display: none;">
-                    <span class="ai-voice-dot"></span>
-                    <span>Listening... Aap boliye (Hindi/English)</span>
-                </div>
+                <!-- Choice 3: Passbook View -->
+                <a href="passbook.html" class="login-choice-btn">
+                    <span class="choice-icon">📖</span>
+                    <div>
+                        <span class="choice-title">Digital Passbook Direct</span>
+                        <span class="choice-sub">खाता या मोबाइल नंबर से डायरेक्ट पासबुक पर्ची देखें</span>
+                    </div>
+                </a>
             </div>
         </div>
     </div>
 
-    <!-- Chart.js, QRCode.js and script.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="script.js"></script>
+    <!-- JavaScript Logic -->
+    <script>
+        // Modal Handlers
+        function openSignInModal() {
+            document.getElementById('signInModal').classList.add('active');
+        }
+        function closeSignInModal() {
+            document.getElementById('signInModal').classList.remove('active');
+        }
+        function handleBackdropClick(e) {
+            if (e.target.id === 'signInModal') {
+                closeSignInModal();
+            }
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeSignInModal();
+        });
+    </script>
 </body>
-
 </html>
