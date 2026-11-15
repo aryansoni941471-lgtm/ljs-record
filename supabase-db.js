@@ -1,41 +1,57 @@
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
-const sqlite3 = require('sqlite3').verbose();
 require('dotenv').config();
 
-const localSqliteDb = new sqlite3.Database(path.join(__dirname, 'database.sqlite'));
-
-// Ensure bills table exists in local SQLite
-localSqliteDb.run(`
-CREATE TABLE IF NOT EXISTS bills (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    bill_no TEXT UNIQUE NOT NULL,
-    bill_type TEXT NOT NULL,
-    customer_id INTEGER,
-    customer_name TEXT NOT NULL,
-    customer_phone TEXT NOT NULL,
-    customer_address TEXT,
-    customer_gstin TEXT,
-    customer_pan TEXT,
-    bill_date TEXT,
-    items TEXT,
-    subtotal REAL DEFAULT 0,
-    making_total REAL DEFAULT 0,
-    discount REAL DEFAULT 0,
-    taxable_amount REAL DEFAULT 0,
-    gst_rate REAL DEFAULT 0,
-    cgst_amount REAL DEFAULT 0,
-    sgst_amount REAL DEFAULT 0,
-    total_gst REAL DEFAULT 0,
-    grand_total REAL DEFAULT 0,
-    round_off REAL DEFAULT 0,
-    payment_mode TEXT DEFAULT 'Cash',
-    payment_status TEXT DEFAULT 'Paid',
-    paid_amount REAL DEFAULT 0,
-    balance_amount REAL DEFAULT 0,
-    notes TEXT,
-    created_at TEXT
-)`);
+// Safe Local SQLite Fallback (Only used for offline local dev, NEVER on Vercel/serverless)
+let localSqliteDb = null;
+if (!process.env.VERCEL) {
+    try {
+        const sqlite3 = require('sqlite3').verbose();
+        const dbPath = path.join(__dirname, 'database.sqlite');
+        localSqliteDb = new sqlite3.Database(dbPath, (err) => {
+            if (err) {
+                console.warn('[DB] Local SQLite unavailable, operating in cloud-only mode:', err.message);
+                localSqliteDb = null;
+            } else {
+                localSqliteDb.run(`
+                    CREATE TABLE IF NOT EXISTS bills (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        bill_no TEXT UNIQUE NOT NULL,
+                        bill_type TEXT NOT NULL,
+                        customer_id INTEGER,
+                        customer_name TEXT NOT NULL,
+                        customer_phone TEXT NOT NULL,
+                        customer_address TEXT,
+                        customer_gstin TEXT,
+                        customer_pan TEXT,
+                        bill_date TEXT,
+                        items TEXT,
+                        subtotal REAL DEFAULT 0,
+                        making_total REAL DEFAULT 0,
+                        discount REAL DEFAULT 0,
+                        taxable_amount REAL DEFAULT 0,
+                        gst_rate REAL DEFAULT 0,
+                        cgst_amount REAL DEFAULT 0,
+                        sgst_amount REAL DEFAULT 0,
+                        total_gst REAL DEFAULT 0,
+                        grand_total REAL DEFAULT 0,
+                        round_off REAL DEFAULT 0,
+                        payment_mode TEXT DEFAULT 'Cash',
+                        payment_status TEXT DEFAULT 'Paid',
+                        paid_amount REAL DEFAULT 0,
+                        balance_amount REAL DEFAULT 0,
+                        notes TEXT,
+                        created_at TEXT
+                    )
+                `, (cErr) => {
+                    if (cErr) console.warn('[DB] SQLite table init notice:', cErr.message);
+                });
+            }
+        });
+    } catch (e) {
+        localSqliteDb = null;
+    }
+}
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_KEY || '';
@@ -114,7 +130,9 @@ async function handleQuery(sql, params) {
                 } else if (/WHERE bill_no = \?/i.test(cleanSql)) {
                     q = q.eq('bill_no', params[0]);
                 } else if (/WHERE \(?customer_phone = \? OR customer_id = \?/i.test(cleanSql)) {
-                    q = q.or(`customer_phone.eq.${params[0]},customer_id.eq.${params[1]}`);
+                    const phoneP = params[0] || '';
+                    const idP = params[1] || 0;
+                    q = q.or(`customer_phone.eq.${phoneP},customer_id.eq.${idP}`);
                 } else if (/WHERE customer_phone = \?/i.test(cleanSql)) {
                     q = q.eq('customer_phone', params[0]);
                 } else if (/WHERE customer_id = \?/i.test(cleanSql)) {
@@ -124,23 +142,26 @@ async function handleQuery(sql, params) {
                     q = q.order('id', { ascending: false });
                 }
                 const { data, error } = await q;
-                if (!error && Array.isArray(data) && data.length > 0) {
+                if (!error && Array.isArray(data)) {
                     return data;
                 }
             } catch (err) {
-                // fall through to local SQLite
+                // fall through to local SQLite if available
             }
         }
-        return new Promise((resolve) => {
-            localSqliteDb.all(sql, params, (err, rows) => {
-                if (err) {
-                    console.error('Local SQLite bills query error:', err);
-                    resolve([]);
-                } else {
-                    resolve(rows || []);
-                }
+        if (localSqliteDb) {
+            return new Promise((resolve) => {
+                localSqliteDb.all(sql, params, (err, rows) => {
+                    if (err) {
+                        console.error('Local SQLite bills query error:', err);
+                        resolve([]);
+                    } else {
+                        resolve(rows || []);
+                    }
+                });
             });
-        });
+        }
+        return [];
     }
 
     if (!supabase) {
@@ -709,29 +730,34 @@ async function handleRun(sql, params) {
 
     // 0a. Bills Run (Resilient Dual Supabase + SQLite)
     if (/INSERT INTO bills/i.test(cleanSql)) {
-        const localResult = await new Promise((resolve, reject) => {
-            localSqliteDb.run(sql, params, function(err) {
-                if (err) reject(err);
-                else resolve({ lastID: this.lastID || 0, changes: this.changes || 1 });
-            });
-        });
-
+        let insertedId = 0;
         if (supabase) {
             try {
-                const colsMatch = cleanSql.match(/\(([^)]+)\)\s+VALUES\s*\(([^)]+)\)/i);
+                const colsMatch = cleanSql.match(/\(([^)]+)\)\s+VALUES/i);
                 if (colsMatch) {
                     const cols = colsMatch[1].split(',').map(c => c.trim());
                     const record = {};
                     cols.forEach((col, idx) => {
                         record[col] = params[idx];
                     });
-                    await supabase.from('bills').insert(record);
+                    const res = await safeInsert('bills', record);
+                    if (res && res.id) insertedId = res.id;
                 }
             } catch (supErr) {
-                console.warn('Note: Could not sync bill to Supabase (local saved):', supErr.message);
+                console.warn('Note: Could not sync bill to Supabase:', supErr.message);
             }
         }
-        return localResult;
+
+        if (localSqliteDb) {
+            return new Promise((resolve) => {
+                localSqliteDb.run(sql, params, function(err) {
+                    if (err) console.warn('Local SQLite bill insert notice:', err.message);
+                    resolve({ lastID: this ? (this.lastID || insertedId || 1) : (insertedId || 1), changes: 1 });
+                });
+            });
+        }
+
+        return { lastID: insertedId || 1, changes: 1 };
     }
 
     if (/DELETE FROM bills/i.test(cleanSql)) {
@@ -744,11 +770,14 @@ async function handleRun(sql, params) {
                 }
             } catch(e){}
         }
-        return new Promise((resolve) => {
-            localSqliteDb.run(sql, params, function(err) {
-                resolve({ lastID: 0, changes: this ? (this.changes || 1) : 1 });
+        if (localSqliteDb) {
+            return new Promise((resolve) => {
+                localSqliteDb.run(sql, params, function(err) {
+                    resolve({ lastID: 0, changes: this ? (this.changes || 1) : 1 });
+                });
             });
-        });
+        }
+        return { lastID: 0, changes: 1 };
     }
 
     if (!supabase) {
