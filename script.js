@@ -78,7 +78,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let customers = [];
     let filteredCustomers = [];
-    let currentRole = localStorage.getItem('user_role') || 'admin';
+    let currentRole = 'staff';
+    let selectedGateRole = 'admin';
+    let isDataInitialized = false;
+
+    // Security Gate Element References
+    const adminSecurityGate = document.getElementById('adminSecurityGate');
+    const gatePinInput = document.getElementById('gatePinInput');
+    const gatePinLabel = document.getElementById('gatePinLabel');
+    const gateErrorMsg = document.getElementById('gateErrorMsg');
+    const tabAdminRole = document.getElementById('tabAdminRole');
+    const tabStaffRole = document.getElementById('tabStaffRole');
 
     // Role Switcher Element Refs
     const roleIndicator = document.getElementById('roleIndicator');
@@ -88,6 +98,170 @@ document.addEventListener('DOMContentLoaded', () => {
     const pendingApprovalsList = document.getElementById('pendingApprovalsList');
     const pendingApprovalsEmptyState = document.getElementById('pendingApprovalsEmptyState');
     const kpiCardsWrap = document.getElementById('kpiCardsWrap');
+
+    window.setSecurityRole = function(role) {
+        selectedGateRole = role;
+        if (tabAdminRole) tabAdminRole.classList.toggle('active', role === 'admin');
+        if (tabStaffRole) tabStaffRole.classList.toggle('active', role === 'staff');
+        if (gatePinLabel) {
+            gatePinLabel.textContent = role === 'admin' 
+                ? 'Enter Admin Master Security PIN:' 
+                : 'Enter Staff Counter Security PIN:';
+        }
+        if (gatePinInput) {
+            gatePinInput.value = '';
+            gatePinInput.placeholder = role === 'admin' ? '••••••' : '••••';
+            gatePinInput.focus();
+        }
+        if (gateErrorMsg) gateErrorMsg.style.display = 'none';
+    };
+
+    window.pressGateKey = function(key) {
+        if (!gatePinInput) return;
+        if (gatePinInput.value.length < 8) {
+            gatePinInput.value += key;
+        }
+        if (gateErrorMsg) gateErrorMsg.style.display = 'none';
+    };
+
+    window.clearGatePin = function() {
+        if (gatePinInput) {
+            gatePinInput.value = '';
+            gatePinInput.focus();
+        }
+        if (gateErrorMsg) gateErrorMsg.style.display = 'none';
+    };
+
+    window.backspaceGatePin = function() {
+        if (gatePinInput && gatePinInput.value.length > 0) {
+            gatePinInput.value = gatePinInput.value.slice(0, -1);
+        }
+        if (gateErrorMsg) gateErrorMsg.style.display = 'none';
+    };
+
+    window.toggleGatePinVisibility = function() {
+        if (!gatePinInput) return;
+        gatePinInput.type = gatePinInput.type === 'password' ? 'text' : 'password';
+    };
+
+    window.handleSecurityLogin = async function(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        if (!gatePinInput) return;
+
+        const pin = gatePinInput.value.trim();
+        if (!pin) {
+            showGateError('Please enter your security PIN.');
+            return;
+        }
+
+        const submitBtn = document.getElementById('gateSubmitBtn');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span>⏳</span> Verifying PIN...';
+        }
+
+        try {
+            const res = await fetch(`${API_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pin, role: selectedGateRole })
+            });
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                showGateError(data.error || 'Incorrect PIN! Please enter a valid security PIN.');
+                if (gatePinInput) gatePinInput.value = '';
+                return;
+            }
+
+            // Save active session
+            const session = {
+                role: data.role,
+                name: data.name,
+                token: data.token,
+                expiresAt: Date.now() + (24 * 60 * 60 * 1000)
+            };
+            localStorage.setItem('ljs_admin_session', JSON.stringify(session));
+            localStorage.setItem('user_role', data.role);
+            sessionStorage.setItem('ljs_admin_session', JSON.stringify(session));
+
+            currentRole = data.role;
+            if (adminSecurityGate) adminSecurityGate.classList.add('hidden');
+
+            updateRoleUI();
+
+            if (!isDataInitialized) {
+                initializeApplicationData();
+            }
+        } catch (err) {
+            console.error('Login error:', err);
+            showGateError('Could not connect to server. Please try again.');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span>🔓</span> Unlock Dashboard';
+            }
+        }
+    };
+
+    function showGateError(msg) {
+        if (gateErrorMsg) {
+            gateErrorMsg.textContent = msg;
+            gateErrorMsg.style.display = 'block';
+            gateErrorMsg.style.animation = 'none';
+            void gateErrorMsg.offsetWidth; // trigger reflow
+            gateErrorMsg.style.animation = 'shakeError 0.3s ease';
+        }
+    }
+
+    window.handleAdminLogout = function() {
+        if (confirm('Are you sure you want to log out?')) {
+            localStorage.removeItem('ljs_admin_session');
+            localStorage.removeItem('user_role');
+            localStorage.removeItem('ljs_session_role');
+            sessionStorage.clear();
+            window.location.href = '/index.html';
+        }
+    };
+
+    function checkAdminSession() {
+        const sessionStr = localStorage.getItem('ljs_admin_session') || sessionStorage.getItem('ljs_admin_session');
+        if (!sessionStr) {
+            if (adminSecurityGate) adminSecurityGate.classList.remove('hidden');
+            if (gatePinInput) gatePinInput.focus();
+            return false;
+        }
+
+        try {
+            const session = JSON.parse(sessionStr);
+            if (!session.token || !session.expiresAt || Date.now() > session.expiresAt) {
+                localStorage.removeItem('ljs_admin_session');
+                sessionStorage.removeItem('ljs_admin_session');
+                if (adminSecurityGate) adminSecurityGate.classList.remove('hidden');
+                if (gatePinInput) gatePinInput.focus();
+                return false;
+            }
+
+            currentRole = session.role || 'staff';
+            if (adminSecurityGate) adminSecurityGate.classList.add('hidden');
+            updateRoleUI();
+            initializeApplicationData();
+            return true;
+        } catch (err) {
+            if (adminSecurityGate) adminSecurityGate.classList.remove('hidden');
+            return false;
+        }
+    }
+
+    function initializeApplicationData() {
+        if (isDataInitialized) return;
+        isDataInitialized = true;
+        fetchCustomers();
+        fetchDashboard();
+        if (currentRole === 'admin') {
+            fetchPendingApprovals();
+        }
+    }
 
     function updateRoleUI() {
         if (roleIndicator) roleIndicator.textContent = currentRole === 'admin' ? '👑 Mode: Admin Owner' : '👨‍💼 Mode: Staff Counter';
@@ -125,21 +299,47 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (switchRoleBtn) {
-        switchRoleBtn.onclick = () => {
+        switchRoleBtn.onclick = async () => {
             if (currentRole === 'admin') {
                 currentRole = 'staff';
                 localStorage.setItem('user_role', 'staff');
+                const sessionStr = localStorage.getItem('ljs_admin_session');
+                if (sessionStr) {
+                    try {
+                        const sess = JSON.parse(sessionStr);
+                        sess.role = 'staff';
+                        localStorage.setItem('ljs_admin_session', JSON.stringify(sess));
+                    } catch(e){}
+                }
                 updateRoleUI();
                 alert('👨‍💼 Switched to Staff Counter Mode!\nEntries will now go to Admin Approval Queue before updating database.');
             } else {
                 const pin = prompt('🔑 Enter Master Security PIN to switch to Admin Owner Mode:');
-                if (pin && pin.trim() === '121965') {
-                    currentRole = 'admin';
-                    localStorage.setItem('user_role', 'admin');
-                    updateRoleUI();
-                    alert('👑 Switched to Admin Owner Mode!');
-                } else {
-                    alert('❌ Incorrect Security PIN! Access denied.');
+                if (!pin) return;
+                try {
+                    const res = await fetch(`${API_URL}/auth/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ pin: pin.trim(), role: 'admin' })
+                    });
+                    const data = await res.json();
+                    if (data.success && data.role === 'admin') {
+                        currentRole = 'admin';
+                        localStorage.setItem('user_role', 'admin');
+                        const sess = {
+                            role: 'admin',
+                            name: data.name,
+                            token: data.token,
+                            expiresAt: Date.now() + (24 * 60 * 60 * 1000)
+                        };
+                        localStorage.setItem('ljs_admin_session', JSON.stringify(sess));
+                        updateRoleUI();
+                        alert('👑 Switched to Admin Owner Mode!');
+                    } else {
+                        alert('❌ Incorrect Security PIN! Access denied.');
+                    }
+                } catch(e) {
+                    alert('❌ Verification failed: ' + e.message);
                 }
             }
         };
@@ -240,10 +440,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Initialize UI by fetching from database
-    fetchCustomers();
-    fetchDashboard();
-    updateRoleUI();
+    // Check authentication and initialize UI
+    checkAdminSession();
 
     // Set default date for Rokad
     if (rokadDateInput) rokadDateInput.valueAsDate = new Date();
@@ -266,6 +464,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (khaataViewEl) khaataViewEl.style.display = 'none';
         const recoveryViewEl = document.getElementById('recoveryView');
         if (recoveryViewEl) recoveryViewEl.style.display = 'none';
+        const billingViewEl = document.getElementById('billingView');
+        if (billingViewEl) billingViewEl.style.display = 'none';
 
         if (navDashboardBtn) navDashboardBtn.classList.remove('active-tab');
         if (navRokadBtn) navRokadBtn.classList.remove('active-tab');
@@ -274,9 +474,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (navKhaataBtnEl) navKhaataBtnEl.classList.remove('active-tab');
         const navRecoveryBtnEl = document.getElementById('navRecoveryBtn');
         if (navRecoveryBtnEl) navRecoveryBtnEl.classList.remove('active-tab');
+        const navBillingBtnEl = document.getElementById('navBillingBtn');
+        if (navBillingBtnEl) navBillingBtnEl.classList.remove('active-tab');
     }
 
     // Navigation Logic
+    const navBillingBtn = document.getElementById('navBillingBtn');
+    const billingView = document.getElementById('billingView');
+    if (navBillingBtn && billingView) {
+        navBillingBtn.addEventListener('click', () => {
+            hideAllViews();
+            billingView.style.display = 'block';
+            navBillingBtn.classList.add('active-tab');
+            if (window.fetchBills) window.fetchBills();
+        });
+    }
     if (navDashboardBtn) {
         navDashboardBtn.addEventListener('click', () => {
             hideAllViews();
@@ -522,20 +734,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Render Jama (Left / Released & Payments)
             let jamaRows = [];
-            if (data.releasedPawns) {
-                jamaRows = jamaRows.concat(data.releasedPawns.map(p => `
+            if (data.releasedPawns && data.releasedPawns.length > 0) {
+                jamaRows = jamaRows.concat(data.releasedPawns.map(p => {
+                    const payBadge = p.payment_type 
+                        ? `<span class="badge" style="background:#e0e7ff; color:#3730a3; font-size:0.7rem; margin-left:4px;">💳 ${escapeHtml(p.payment_type)}</span>` 
+                        : '';
+                    return `
                     <tr>
                         <td><strong>${escapeHtml(p.customer_name)}</strong></td>
-                        <td>${escapeHtml(p.description)} <br><span class="badge" style="background:#d1fae5; color:#059669; font-size:0.7rem;">Released (Interest: ₹${parseFloat(p.calculated_interest).toFixed(0)})</span></td>
+                        <td>
+                            ${escapeHtml(p.description)}<br>
+                            <span class="badge" style="background:#d1fae5; color:#059669; font-size:0.7rem;">Released (Interest: ₹${parseFloat(p.calculated_interest || 0).toFixed(0)})</span>
+                            ${payBadge}
+                        </td>
                         <td style="text-align:right; font-weight:bold; color:var(--success);">₹${parseFloat(p.final_collection).toFixed(0)}</td>
                     </tr>
-                `));
+                    `;
+                }));
             }
-            if (data.payments) {
+            if (data.payments && data.payments.length > 0) {
                 jamaRows = jamaRows.concat(data.payments.map(p => `
                     <tr>
                         <td><strong>${escapeHtml(p.customer_name)}</strong></td>
-                        <td>${escapeHtml(p.payment_type || 'Partial Payment')} <br><span class="badge" style="background:#fef08a; color:#854d0e; font-size:0.7rem;">Note: Partial Payment</span></td>
+                        <td>
+                            ${p.description ? escapeHtml(p.description) + '<br>' : ''}
+                            <span class="badge" style="background:#fef08a; color:#854d0e; font-size:0.7rem;">${escapeHtml(p.payment_type || 'Partial Payment')}</span>
+                        </td>
                         <td style="text-align:right; font-weight:bold; color:var(--success);">₹${parseFloat(p.amount).toFixed(0)}</td>
                     </tr>
                 `));
@@ -2686,4 +2910,822 @@ _Thank you for choosing LJS Jewellers_`
         aiVoiceBtn.title = 'Voice recognition is not supported on this browser';
         aiVoiceBtn.style.opacity = '0.5';
     }
+
+    // ========================================================
+    // JEWELLERY BILLING & INVOICING ENGINE (GST & NORMAL)
+    // ========================================================
+
+    let allBillsList = [];
+    let currentBillsFilter = 'all';
+    let currentPreviewBill = null;
+
+    // Helper: Number to Words in Indian Rupees
+    function numberToWordsINR(num) {
+        const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+        const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+        num = Math.floor(Math.abs(Number(num) || 0));
+        if (num === 0) return 'Rupees Zero Only';
+
+        function convertGroup(n) {
+            let str = '';
+            if (n >= 100) {
+                str += a[Math.floor(n / 100)] + ' Hundred ';
+                n %= 100;
+            }
+            if (n >= 20) {
+                str += b[Math.floor(n / 10)] + ' ' + a[n % 10] + ' ';
+            } else if (n > 0) {
+                str += a[n] + ' ';
+            }
+            return str.trim();
+        }
+
+        let crore = Math.floor(num / 10000000);
+        num %= 10000000;
+        let lakh = Math.floor(num / 100000);
+        num %= 100000;
+        let thousand = Math.floor(num / 1000);
+        num %= 1000;
+        let remainder = num;
+
+        let res = '';
+        if (crore > 0) res += convertGroup(crore) + ' Crore ';
+        if (lakh > 0) res += convertGroup(lakh) + ' Lakh ';
+        if (thousand > 0) res += convertGroup(thousand) + ' Thousand ';
+        if (remainder > 0) res += convertGroup(remainder) + ' ';
+
+        return 'Rupees ' + res.trim() + ' Only';
+    }
+
+    // Format INR Currency
+    function formatINR(val) {
+        return '₹' + Math.round(Number(val || 0)).toLocaleString('en-IN');
+    }
+
+    // 1. Fetch Bills from Server
+    window.fetchBills = async function () {
+        try {
+            const res = await fetch('/api/bills');
+            if (!res.ok) throw new Error('Failed to fetch bills');
+            const data = await res.json();
+            allBillsList = (data && data.bills) ? data.bills : [];
+
+            // Update KPI Displays
+            const totalCount = allBillsList.length;
+            let totalTurnover = 0;
+            let totalGstSales = 0;
+            let totalGstTax = 0;
+            let totalNormalSales = 0;
+            let totalNormalCount = 0;
+
+            allBillsList.forEach(b => {
+                const grand = Number(b.grand_total || 0);
+                totalTurnover += grand;
+                if ((b.bill_type || '').toLowerCase() === 'gst') {
+                    totalGstSales += grand;
+                    totalGstTax += Number(b.total_gst || 0);
+                } else {
+                    totalNormalSales += grand;
+                    totalNormalCount++;
+                }
+            });
+
+            const countEl = document.getElementById('billCountDisplay');
+            const turnEl = document.getElementById('billTurnoverDisplay');
+            const gstEl = document.getElementById('billGstDisplay');
+            const gstTaxEl = document.getElementById('billGstTaxDisplay');
+            const normEl = document.getElementById('billNormalDisplay');
+            const normCountEl = document.getElementById('billNormalCountDisplay');
+            const badgeCountEl = document.getElementById('billsBadgeCount');
+
+            if (countEl) countEl.textContent = totalCount;
+            if (turnEl) turnEl.textContent = formatINR(totalTurnover);
+            if (gstEl) gstEl.textContent = formatINR(totalGstSales);
+            if (gstTaxEl) gstTaxEl.textContent = `GST Collected: ${formatINR(totalGstTax)}`;
+            if (normEl) normEl.textContent = formatINR(totalNormalSales);
+            if (normCountEl) normCountEl.textContent = `${totalNormalCount} Retail Bills`;
+            if (badgeCountEl) badgeCountEl.textContent = `${totalCount} Records`;
+
+            // Populate Customer Names Datalist for fast auto-complete
+            populateCustomerDatalist();
+
+            window.renderBillsTable();
+        } catch (err) {
+            console.error('Error in fetchBills:', err);
+        }
+    };
+
+    function populateCustomerDatalist() {
+        const datalist = document.getElementById('existingCustomerNamesDatalist');
+        if (!datalist) return;
+        datalist.innerHTML = '';
+        if (Array.isArray(customers)) {
+            customers.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.name;
+                opt.label = `📞 ${c.phone || ''}`;
+                datalist.appendChild(opt);
+            });
+        }
+    }
+
+    // Auto-fill phone & address when customer name is chosen
+    const billCustNameInput = document.getElementById('billCustName');
+    if (billCustNameInput) {
+        billCustNameInput.addEventListener('input', (e) => {
+            const val = e.target.value.trim().toLowerCase();
+            if (!val || !Array.isArray(customers)) return;
+            const match = customers.find(c => (c.name || '').toLowerCase() === val);
+            if (match) {
+                const phoneInput = document.getElementById('billCustPhone');
+                const addrInput = document.getElementById('billCustAddress');
+                if (phoneInput && match.phone) phoneInput.value = match.phone;
+                if (addrInput && match.address) addrInput.value = match.address;
+            }
+        });
+    }
+
+    // 2. Render Bills Table
+    window.renderBillsTable = function () {
+        const tbody = document.getElementById('billingTableBody');
+        const emptyState = document.getElementById('billingEmptyState');
+        if (!tbody) return;
+
+        const searchInput = document.getElementById('billingSearchInput');
+        const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+        let filtered = allBillsList.filter(b => {
+            // Type filter
+            if (currentBillsFilter === 'gst' && (b.bill_type || '').toLowerCase() !== 'gst') return false;
+            if (currentBillsFilter === 'normal' && (b.bill_type || '').toLowerCase() !== 'normal') return false;
+
+            // Search filter
+            if (searchTerm) {
+                const matchNo = (b.bill_no || '').toLowerCase().includes(searchTerm);
+                const matchName = (b.customer_name || '').toLowerCase().includes(searchTerm);
+                const matchPhone = (b.customer_phone || '').includes(searchTerm);
+                return matchNo || matchName || matchPhone;
+            }
+            return true;
+        });
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '';
+            if (emptyState) emptyState.style.display = 'block';
+            return;
+        }
+
+        if (emptyState) emptyState.style.display = 'none';
+
+        tbody.innerHTML = filtered.map(b => {
+            const isGst = (b.bill_type || '').toLowerCase() === 'gst';
+            const badgeClass = isGst ? 'badge-gst' : 'badge-normal';
+            const badgeLabel = isGst ? '🏛️ GST (3%)' : '📄 Retail Memo';
+
+            // Items summary
+            const items = Array.isArray(b.items) ? b.items : [];
+            const itemsCount = items.length;
+            const itemsSummaryText = items.map(it => `${it.item_name || 'Item'} (${it.net_weight || it.gross_weight || 0}g)`).slice(0, 2).join(', ') + (itemsCount > 2 ? ` +${itemsCount - 2} more` : '');
+
+            // Formatted date
+            let dateStr = b.bill_date || '';
+            try {
+                if (dateStr) {
+                    const d = new Date(dateStr);
+                    dateStr = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+                }
+            } catch(e){}
+
+            return `
+                <tr>
+                    <td>
+                        <strong style="color: #0f172a; font-size: 0.92rem;">${b.bill_no || '-'}</strong>
+                        <div style="margin-top: 0.25rem;">
+                            <span class="${badgeClass}">${badgeLabel}</span>
+                        </div>
+                    </td>
+                    <td style="color: #475569; font-weight: 600; font-size: 0.85rem;">
+                        ${dateStr}
+                    </td>
+                    <td>
+                        <strong style="color: #0f172a; font-size: 0.95rem;">${b.customer_name || 'Walk-in Customer'}</strong>
+                        <div style="font-size: 0.82rem; color: #475569;">📞 ${b.customer_phone || '-'}</div>
+                        ${b.customer_address ? `<div style="font-size: 0.75rem; color: #94a3b8;">📍 ${b.customer_address}</div>` : ''}
+                    </td>
+                    <td style="max-width: 200px;">
+                        <div style="font-size: 0.85rem; font-weight: 600; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${items.map(it => `${it.item_name} - ${it.net_weight}g`).join(', ')}">
+                            ${itemsSummaryText || 'Jewellery'}
+                        </div>
+                        <div style="font-size: 0.75rem; color: #64748b;">
+                            ${itemsCount} item${itemsCount > 1 ? 's' : ''}
+                        </div>
+                    </td>
+                    <td style="font-weight: 600; color: #334155;">
+                        ${formatINR(b.taxable_amount || b.subtotal || 0)}
+                    </td>
+                    <td style="font-weight: 700; color: ${isGst ? '#059669' : '#94a3b8'};">
+                        ${isGst ? formatINR(b.total_gst || 0) : '₹0'}
+                    </td>
+                    <td>
+                        <strong style="font-family: var(--font-serif); font-size: 1.05rem; color: #b45309;">
+                            ${formatINR(b.grand_total || 0)}
+                        </strong>
+                    </td>
+                    <td>
+                        <span style="font-size: 0.82rem; font-weight: 700; color: #0f172a;">${b.payment_mode || 'Cash'}</span>
+                        <div>
+                            <span class="badge ${b.payment_status === 'Paid' ? 'badge-success' : (b.payment_status === 'Partial' ? 'badge-warning' : 'badge-danger')}" style="font-size: 0.72rem; padding: 0.15rem 0.5rem;">
+                                ${b.payment_status || 'Paid'}
+                            </span>
+                        </div>
+                    </td>
+                    <td style="text-align: right;">
+                        <div style="display: inline-flex; gap: 0.35rem; align-items: center;">
+                            <button onclick='window.openPrintInvoiceModal(${JSON.stringify(b).replace(/'/g, "&apos;")})' class="btn-primary" style="padding: 0.4rem 0.75rem; font-size: 0.78rem; font-weight: 800; background: var(--gold-gradient); color: #0f172a; border-radius: var(--radius-pill); border: none; cursor: pointer;" title="View & Print Invoice">
+                                👁️ View / Print
+                            </button>
+                            <button onclick='window.shareBillWhatsApp(${JSON.stringify(b).replace(/'/g, "&apos;")})' style="padding: 0.4rem 0.6rem; font-size: 0.82rem; background: #25D366; color: white; border: none; border-radius: 6px; cursor: pointer;" title="Share on WhatsApp">
+                                📲
+                            </button>
+                            <button onclick="window.deleteBill(${b.id}, '${b.bill_no}')" style="padding: 0.4rem 0.55rem; font-size: 0.82rem; background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; border-radius: 6px; cursor: pointer;" title="Delete Bill">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    };
+
+    // 3. Filter Bills Tabs
+    window.filterBillsType = function (type) {
+        currentBillsFilter = type;
+        const btnAll = document.getElementById('filterAllBillsBtn');
+        const btnGst = document.getElementById('filterGstBillsBtn');
+        const btnNorm = document.getElementById('filterNormalBillsBtn');
+
+        [btnAll, btnGst, btnNorm].forEach(b => {
+            if (b) {
+                b.style.background = 'transparent';
+                b.style.color = '#64748b';
+                b.style.boxShadow = 'none';
+            }
+        });
+
+        if (type === 'all' && btnAll) {
+            btnAll.style.background = 'white';
+            btnAll.style.color = '#0f172a';
+            btnAll.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+        } else if (type === 'gst' && btnGst) {
+            btnGst.style.background = 'white';
+            btnGst.style.color = '#0f172a';
+            btnGst.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+        } else if (type === 'normal' && btnNorm) {
+            btnNorm.style.background = 'white';
+            btnNorm.style.color = '#0f172a';
+            btnNorm.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+        }
+
+        window.renderBillsTable();
+    };
+
+    // Billing Search Listener
+    const billingSearchInput = document.getElementById('billingSearchInput');
+    if (billingSearchInput) {
+        billingSearchInput.addEventListener('input', () => {
+            window.renderBillsTable();
+        });
+    }
+
+    // 4. Modal Open / Close Handlers
+    const openCreateBillModalBtn = document.getElementById('openCreateBillModalBtn');
+    const createBillModal = document.getElementById('createBillModal');
+    const closeCreateBillModal = document.getElementById('closeCreateBillModal');
+
+    window.openCreateBillModal = function () {
+        if (!createBillModal) return;
+        const form = document.getElementById('createBillForm');
+        if (form) form.reset();
+
+        // Default date to today
+        const dateInput = document.getElementById('billDate');
+        if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+
+        // Default to GST Bill
+        window.selectBillTypeOption('gst');
+
+        // Clear and add 1 default item row
+        const container = document.getElementById('billItemsContainer');
+        if (container) {
+            container.innerHTML = '';
+            window.addBillItemRow();
+        }
+
+        populateCustomerDatalist();
+        createBillModal.style.display = 'flex';
+    };
+
+    window.closeCreateBillModal = function () {
+        if (createBillModal) createBillModal.style.display = 'none';
+    };
+
+    if (openCreateBillModalBtn) openCreateBillModalBtn.onclick = window.openCreateBillModal;
+    if (closeCreateBillModal) closeCreateBillModal.onclick = window.closeCreateBillModal;
+
+    // 5. Select Bill Type (GST vs Normal)
+    window.selectBillTypeOption = function (type) {
+        const isGst = type === 'gst';
+        const optGst = document.getElementById('optBillTypeGst');
+        const optNorm = document.getElementById('optBillTypeNormal');
+        const radioGst = optGst ? optGst.querySelector('input') : null;
+        const radioNorm = optNorm ? optNorm.querySelector('input') : null;
+        const gstBreakdownWrap = document.getElementById('billGstBreakdownWrap');
+
+        if (optGst) optGst.classList.toggle('selected', isGst);
+        if (optNorm) optNorm.classList.toggle('selected', !isGst);
+        if (radioGst) radioGst.checked = isGst;
+        if (radioNorm) radioNorm.checked = !isGst;
+
+        if (gstBreakdownWrap) {
+            gstBreakdownWrap.style.display = isGst ? 'block' : 'none';
+        }
+
+        window.recalculateBillSummary();
+    };
+
+    // 6. Dynamic Bill Item Rows
+    let billItemRowCounter = 0;
+
+    window.addBillItemRow = function (data = {}) {
+        const container = document.getElementById('billItemsContainer');
+        if (!container) return;
+
+        billItemRowCounter++;
+        const rowId = `billItemRow_${billItemRowCounter}`;
+
+        // Get default rates from dashboard rate inputs if available
+        const defaultGoldRate = document.getElementById('dashGoldRate')?.value || 7200;
+        const defaultSilverRate = document.getElementById('dashSilverRate')?.value || 92;
+
+        const row = document.createElement('div');
+        row.className = 'item-entry-row';
+        row.id = rowId;
+
+        row.innerHTML = `
+            <div>
+                <input type="text" class="item-name" placeholder="e.g. Gold Hallmark Chain" value="${data.item_name || ''}">
+            </div>
+            <div>
+                <select class="item-metal" onchange="window.handleItemMetalChange('${rowId}')">
+                    <option value="Gold" ${data.metal_type === 'Gold' || !data.metal_type ? 'selected' : ''}>🟡 Gold</option>
+                    <option value="Silver" ${data.metal_type === 'Silver' ? 'selected' : ''}>⚪ Silver</option>
+                    <option value="Diamond" ${data.metal_type === 'Diamond' ? 'selected' : ''}>💎 Diamond</option>
+                    <option value="Other" ${data.metal_type === 'Other' ? 'selected' : ''}>✨ Other</option>
+                </select>
+            </div>
+            <div>
+                <select class="item-purity">
+                    <option value="22K 916" ${data.purity === '22K 916' || !data.purity ? 'selected' : ''}>22K 916</option>
+                    <option value="24K 999" ${data.purity === '24K 999' ? 'selected' : ''}>24K 999</option>
+                    <option value="18K 750" ${data.purity === '18K 750' ? 'selected' : ''}>18K 750</option>
+                    <option value="92.5 Silver" ${data.purity === '92.5 Silver' ? 'selected' : ''}>92.5 Silver</option>
+                    <option value="Standard" ${data.purity === 'Standard' ? 'selected' : ''}>Standard</option>
+                </select>
+            </div>
+            <div>
+                <input type="number" step="0.01" min="0.01" class="item-gross-wt" placeholder="Gross" value="${data.gross_weight || ''}" oninput="window.handleItemGrossWeightInput('${rowId}', this.value); window.recalculateBillSummary();">
+            </div>
+            <div>
+                <input type="number" step="0.01" class="item-net-wt" placeholder="Net Wt" value="${data.net_weight || ''}" oninput="window.recalculateBillSummary()">
+            </div>
+            <div>
+                <input type="number" step="1" class="item-rate" placeholder="Rate/g" value="${data.rate_per_gram || defaultGoldRate}" oninput="window.recalculateBillSummary()">
+            </div>
+            <div>
+                <input type="number" step="1" min="0" class="item-making" placeholder="Making ₹" value="${data.making_charges || 0}" oninput="window.recalculateBillSummary()">
+            </div>
+            <div>
+                <input type="text" class="item-row-total" readonly value="₹0" style="background:#f1f5f9; font-weight:800; color:#b45309; text-align:right;">
+            </div>
+            <div>
+                <button type="button" class="btn-remove-row" onclick="window.removeBillItemRow('${rowId}')" title="Remove Item">
+                    🗑️
+                </button>
+            </div>
+        `;
+
+        container.appendChild(row);
+        window.recalculateBillSummary();
+    };
+
+    window.handleItemGrossWeightInput = function (rowId, grossVal) {
+        const row = document.getElementById(rowId);
+        if (!row) return;
+        const netInput = row.querySelector('.item-net-wt');
+        if (netInput && !netInput.value) {
+            netInput.value = grossVal;
+        }
+    };
+
+    window.handleItemMetalChange = function (rowId) {
+        const row = document.getElementById(rowId);
+        if (!row) return;
+        const metal = row.querySelector('.item-metal').value;
+        const puritySelect = row.querySelector('.item-purity');
+        const rateInput = row.querySelector('.item-rate');
+
+        const defaultGoldRate = document.getElementById('dashGoldRate')?.value || 7200;
+        const defaultSilverRate = document.getElementById('dashSilverRate')?.value || 92;
+
+        if (metal === 'Silver') {
+            if (puritySelect) puritySelect.value = '92.5 Silver';
+            if (rateInput) rateInput.value = defaultSilverRate;
+        } else if (metal === 'Gold') {
+            if (puritySelect) puritySelect.value = '22K 916';
+            if (rateInput) rateInput.value = defaultGoldRate;
+        }
+        window.recalculateBillSummary();
+    };
+
+    window.removeBillItemRow = function (rowId) {
+        const container = document.getElementById('billItemsContainer');
+        if (!container) return;
+        const row = document.getElementById(rowId);
+        if (row) {
+            // Prevent removing if only 1 row remains
+            if (container.querySelectorAll('.item-entry-row').length <= 1) {
+                alert('At least one item row is required in the bill.');
+                return;
+            }
+            row.remove();
+            window.recalculateBillSummary();
+        }
+    };
+
+    // 7. Live Recalculate Bill Financial Summary
+    window.recalculateBillSummary = function () {
+        const container = document.getElementById('billItemsContainer');
+        if (!container) return;
+
+        let subtotal = 0;
+        let makingTotal = 0;
+
+        container.querySelectorAll('.item-entry-row').forEach(row => {
+            const netWt = parseFloat(row.querySelector('.item-net-wt')?.value || 0);
+            const rate = parseFloat(row.querySelector('.item-rate')?.value || 0);
+            const making = parseFloat(row.querySelector('.item-making')?.value || 0);
+
+            const metalAmount = Math.round(netWt * rate * 100) / 100;
+            const itemTotal = Math.round((metalAmount + making) * 100) / 100;
+
+            const totalInput = row.querySelector('.item-row-total');
+            if (totalInput) totalInput.value = formatINR(itemTotal);
+
+            subtotal += metalAmount;
+            makingTotal += making;
+        });
+
+        const discountInput = document.getElementById('billDiscountInput');
+        const discountVal = Math.max(0, parseFloat(discountInput?.value || 0));
+
+        const taxableAmount = Math.max(0, Math.round((subtotal + makingTotal - discountVal) * 100) / 100);
+
+        // Check if GST is selected
+        const optGst = document.getElementById('optBillTypeGst');
+        const isGst = optGst ? optGst.classList.contains('selected') : true;
+
+        let cgst = 0;
+        let sgst = 0;
+        let totalGst = 0;
+
+        if (isGst) {
+            cgst = Math.round((taxableAmount * 0.015) * 100) / 100; // 1.5%
+            sgst = Math.round((taxableAmount * 0.015) * 100) / 100; // 1.5%
+            totalGst = Math.round((cgst + sgst) * 100) / 100;
+        }
+
+        const unroundedGrand = taxableAmount + totalGst;
+        const grandTotal = Math.round(unroundedGrand);
+        const roundOff = Math.round((grandTotal - unroundedGrand) * 100) / 100;
+
+        // Payment status & balance
+        const statusSelect = document.getElementById('billPaymentStatus');
+        const paidInput = document.getElementById('billPaidAmount');
+        const balanceInput = document.getElementById('billBalanceAmount');
+
+        let paid = parseFloat(paidInput?.value);
+        if (isNaN(paid) || (statusSelect && statusSelect.value === 'Paid' && paidInput && !paidInput.dataset.manual)) {
+            paid = grandTotal;
+            if (paidInput) paidInput.value = grandTotal;
+        }
+
+        if (statusSelect && statusSelect.value === 'Credit') {
+            paid = 0;
+            if (paidInput) paidInput.value = 0;
+        }
+
+        const balance = Math.max(0, grandTotal - paid);
+        if (balanceInput) balanceInput.value = Math.round(balance);
+
+        // Update displays
+        document.getElementById('billSubtotalDisplay').textContent = formatINR(subtotal);
+        document.getElementById('billMakingDisplay').textContent = formatINR(makingTotal);
+        document.getElementById('billTaxableDisplay').textContent = formatINR(taxableAmount);
+        document.getElementById('billCgstDisplay').textContent = formatINR(cgst);
+        document.getElementById('billSgstDisplay').textContent = formatINR(sgst);
+        document.getElementById('billRoundOffDisplay').textContent = `${roundOff >= 0 ? '+' : ''}${roundOff.toFixed(2)}`;
+        document.getElementById('billGrandTotalDisplay').textContent = formatINR(grandTotal);
+    };
+
+    // Flag paid input when user manually types
+    const billPaidAmountInput = document.getElementById('billPaidAmount');
+    if (billPaidAmountInput) {
+        billPaidAmountInput.addEventListener('input', () => {
+            billPaidAmountInput.dataset.manual = 'true';
+        });
+    }
+
+    // 8. Submit Bill & Save to Server
+    window.submitCreateBill = async function (andPrint = false) {
+        console.log('[Billing] submitCreateBill called, andPrint =', andPrint);
+        try {
+            const custName = document.getElementById('billCustName')?.value.trim();
+            const custPhone = document.getElementById('billCustPhone')?.value.trim();
+            const custAddress = document.getElementById('billCustAddress')?.value.trim();
+            const billDate = document.getElementById('billDate')?.value;
+            const custGstin = document.getElementById('billCustGstin')?.value.trim();
+            const custPan = document.getElementById('billCustPan')?.value.trim();
+            const discount = parseFloat(document.getElementById('billDiscountInput')?.value || 0);
+            const paymentMode = document.getElementById('billPaymentMode')?.value || 'Cash';
+            const paymentStatus = document.getElementById('billPaymentStatus')?.value || 'Paid';
+            const paidAmount = parseFloat(document.getElementById('billPaidAmount')?.value || 0);
+            const notes = document.getElementById('billNotes')?.value.trim();
+
+            const optGst = document.getElementById('optBillTypeGst');
+            const billType = (optGst && optGst.classList.contains('selected')) ? 'gst' : 'normal';
+
+            if (!custName) {
+                alert('Please enter Customer Name.');
+                return;
+            }
+            if (!custPhone) {
+                alert('Please enter Customer Phone Number.');
+                return;
+            }
+
+            // Gather item rows
+            const items = [];
+            const container = document.getElementById('billItemsContainer');
+            const rows = container ? container.querySelectorAll('.item-entry-row') : [];
+
+            if (rows.length === 0) {
+                alert('Please add at least one item to the bill.');
+                return;
+            }
+
+            for (const r of rows) {
+                const itemName = r.querySelector('.item-name')?.value.trim();
+                const metal = r.querySelector('.item-metal')?.value || 'Gold';
+                const purity = r.querySelector('.item-purity')?.value || '22K 916';
+                const grossWt = parseFloat(r.querySelector('.item-gross-wt')?.value || 0);
+                const netWt = parseFloat(r.querySelector('.item-net-wt')?.value || 0);
+                const rate = parseFloat(r.querySelector('.item-rate')?.value || 0);
+                const making = parseFloat(r.querySelector('.item-making')?.value || 0);
+
+                if (!itemName) {
+                    alert('Please enter Item Name for all items.');
+                    return;
+                }
+                if (netWt <= 0) {
+                    alert(`Please enter valid Net Weight for item "${itemName}".`);
+                    return;
+                }
+                if (rate <= 0) {
+                    alert(`Please enter Rate per gram for item "${itemName}".`);
+                    return;
+                }
+
+                items.push({
+                    item_name: itemName,
+                    metal_type: metal,
+                    purity: purity,
+                    hsn_code: '7113',
+                    gross_weight: grossWt || netWt,
+                    net_weight: netWt,
+                    rate_per_gram: rate,
+                    making_charge_type: 'fixed',
+                    making_charges: making
+                });
+            }
+
+            const payload = {
+                bill_type: billType,
+                customer_name: custName,
+                customer_phone: custPhone,
+                customer_address: custAddress,
+                customer_gstin: custGstin,
+                customer_pan: custPan,
+                bill_date: billDate,
+                items: items,
+                discount: discount,
+                payment_mode: paymentMode,
+                payment_status: paymentStatus,
+                paid_amount: paidAmount,
+                notes: notes
+            };
+
+            const saveBtn = document.getElementById('saveBillBtn');
+            const savePrintBtn = document.getElementById('saveAndPrintBillBtn');
+            const saveBtnOrigText = saveBtn ? saveBtn.innerHTML : '';
+            const savePrintBtnOrigText = savePrintBtn ? savePrintBtn.innerHTML : '';
+
+            if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '⏳ Saving...'; }
+            if (savePrintBtn) { savePrintBtn.disabled = true; savePrintBtn.innerHTML = '⏳ Saving...'; }
+
+            const res = await fetch('/api/bills', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = saveBtnOrigText || '💾 Save Bill'; }
+            if (savePrintBtn) { savePrintBtn.disabled = false; savePrintBtn.innerHTML = savePrintBtnOrigText || '🖨️ Save & Print Invoice'; }
+
+            if (!res.ok || !data.success) {
+                alert('❌ Error: ' + (data.error || 'Failed to save bill.'));
+                return;
+            }
+
+            window.closeCreateBillModal();
+            await window.fetchBills();
+
+            if (andPrint && data.bill) {
+                window.openPrintInvoiceModal(data.bill);
+            } else {
+                alert(`✅ ${data.message}\nBill No: ${data.bill.bill_no}`);
+            }
+        } catch (err) {
+            console.error('Error submitting bill:', err);
+            const saveBtn2 = document.getElementById('saveBillBtn');
+            const savePrintBtn2 = document.getElementById('saveAndPrintBillBtn');
+            if (saveBtn2) { saveBtn2.disabled = false; saveBtn2.innerHTML = '💾 Save Bill'; }
+            if (savePrintBtn2) { savePrintBtn2.disabled = false; savePrintBtn2.innerHTML = '🖨️ Save & Print Invoice'; }
+            alert('❌ Failed to connect to server. Please check that the server is running and try again.\n\nDetails: ' + (err.message || err));
+        }
+    };
+
+    window.submitCreateBillAndPrint = function () {
+        window.submitCreateBill(true);
+    };
+
+    // 9. Open Printable Royal Invoice Modal
+    window.openPrintInvoiceModal = function (bill) {
+        if (!bill) return;
+        currentPreviewBill = bill;
+
+        const modal = document.getElementById('printInvoiceModal');
+        if (!modal) return;
+
+        const isGst = (bill.bill_type || '').toLowerCase() === 'gst';
+
+        // Set Headers
+        document.getElementById('previewBillTypeBadge').textContent = isGst ? '🏛️ GST Tax Invoice' : '📄 Retail Cash Memo';
+        document.getElementById('previewBillTypeBadge').className = isGst ? 'badge-gst' : 'badge-normal';
+        document.getElementById('invoiceHeaderDocTitle').textContent = isGst ? 'TAX INVOICE' : 'RETAIL CASH MEMO';
+        document.getElementById('invOriginalDuplicateBadge').textContent = isGst ? 'Original for Recipient (GST)' : 'Retail Estimate Memo';
+
+        document.getElementById('invNoDisplay').textContent = bill.bill_no || '-';
+
+        // Date & Time
+        let formattedDate = bill.bill_date || '';
+        try {
+            if (formattedDate) {
+                const d = new Date(formattedDate);
+                formattedDate = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+            }
+        } catch(e){}
+        document.getElementById('invDateDisplay').textContent = formattedDate;
+
+        let formattedTime = '12:00 PM';
+        try {
+            if (bill.created_at) {
+                const t = new Date(bill.created_at);
+                formattedTime = t.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+            }
+        } catch(e){}
+        document.getElementById('invTimeDisplay').textContent = formattedTime;
+
+        // Customer details
+        document.getElementById('invCustomerName').textContent = bill.customer_name || 'Valued Customer';
+        document.getElementById('invCustomerPhone').textContent = `📞 +91 ${bill.customer_phone || ''}`;
+        document.getElementById('invCustomerAddress').textContent = bill.customer_address ? `📍 ${bill.customer_address}` : 'Kumher, Deeg (Rajasthan)';
+        document.getElementById('invCustomerGstin').textContent = bill.customer_gstin || '-';
+        document.getElementById('invCustomerPan').textContent = bill.customer_pan || '-';
+
+        // Items table
+        const items = Array.isArray(bill.items) ? bill.items : [];
+        const tbody = document.getElementById('invoiceTableBody');
+        if (tbody) {
+            tbody.innerHTML = items.map((it, idx) => `
+                <tr>
+                    <td style="text-align: center; color: #64748b;">${idx + 1}</td>
+                    <td>
+                        <strong style="color: #0f172a;">${it.item_name || 'Jewellery'}</strong>
+                        <div style="font-size: 0.72rem; color: #64748b;">${it.metal_type || 'Gold'}</div>
+                    </td>
+                    <td>${it.hsn_code || '7113'}</td>
+                    <td><span style="font-weight: 700; color: #b45309;">${it.purity || '22K 916'}</span></td>
+                    <td style="text-align: right;">${(Number(it.gross_weight) || 0).toFixed(2)}g</td>
+                    <td style="text-align: right; font-weight: 700;">${(Number(it.net_weight) || 0).toFixed(2)}g</td>
+                    <td style="text-align: right;">${formatINR(it.rate_per_gram || 0)}</td>
+                    <td style="text-align: right;">${formatINR(it.making_charges || 0)}</td>
+                    <td style="text-align: right; font-weight: 800; color: #0f172a;">${formatINR(it.item_total || 0)}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Calculations & Financials
+        document.getElementById('invSubtotalDisplay').textContent = formatINR(bill.subtotal || 0);
+        document.getElementById('invMakingDisplay').textContent = formatINR(bill.making_total || 0);
+        document.getElementById('invDiscountDisplay').textContent = formatINR(bill.discount || 0);
+        document.getElementById('invTaxableDisplay').textContent = formatINR(bill.taxable_amount || 0);
+
+        const gstRows = document.getElementById('invGstRowsWrap');
+        if (gstRows) {
+            gstRows.style.display = isGst ? 'block' : 'none';
+        }
+        document.getElementById('invCgstDisplay').textContent = formatINR(bill.cgst_amount || 0);
+        document.getElementById('invSgstDisplay').textContent = formatINR(bill.sgst_amount || 0);
+        document.getElementById('invRoundOffDisplay').textContent = `${(Number(bill.round_off) || 0) >= 0 ? '+' : ''}${(Number(bill.round_off) || 0).toFixed(2)}`;
+        document.getElementById('invGrandTotalDisplay').textContent = formatINR(bill.grand_total || 0);
+
+        // Amount in Words
+        document.getElementById('invAmountInWords').textContent = numberToWordsINR(bill.grand_total || 0);
+
+        // Payment status & mode
+        document.getElementById('invPaymentModeDisplay').textContent = bill.payment_mode || 'Cash';
+        document.getElementById('invPaymentStatusDisplay').textContent = bill.payment_status || 'Paid';
+        document.getElementById('invPaidDisplay').textContent = formatINR(bill.paid_amount !== undefined ? bill.paid_amount : bill.grand_total);
+        document.getElementById('invBalanceDisplay').textContent = formatINR(bill.balance_amount || 0);
+
+        const notesEl = document.getElementById('invNotesDisplay');
+        if (notesEl) {
+            notesEl.textContent = bill.notes ? `Note: ${bill.notes}` : '';
+        }
+
+        // WhatsApp Share Button
+        const waBtn = document.getElementById('invoiceWhatsAppBtn');
+        if (waBtn) {
+            waBtn.onclick = () => window.shareBillWhatsApp(bill);
+        }
+
+        modal.style.display = 'flex';
+    };
+
+    window.closePrintInvoiceModal = function () {
+        const modal = document.getElementById('printInvoiceModal');
+        if (modal) modal.style.display = 'none';
+    };
+
+    window.printInvoicePaper = function () {
+        window.print();
+    };
+
+    // 10. WhatsApp Bill Share
+    window.shareBillWhatsApp = function (bill) {
+        if (!bill) return;
+        const phone = (bill.customer_phone || '').replace(/[^0-9]/g, '');
+        const items = Array.isArray(bill.items) ? bill.items : [];
+        const isGst = (bill.bill_type || '').toLowerCase() === 'gst';
+
+        let itemsText = items.map(it => `• ${it.item_name} (${it.purity}): Net Wt ${it.net_weight}g = ${formatINR(it.item_total)}`).join('\n');
+
+        const message = `*LJS JEWELLERS - ${isGst ? 'TAX INVOICE' : 'PURCHASE BILL'}* 👑\nNear PNB (Main Market), Kumher (Deeg)\n\n*Bill No:* ${bill.bill_no}\n*Date:* ${bill.bill_date}\n*Customer:* ${bill.customer_name}\n\n*Items Purchased:*\n${itemsText}\n\n*Subtotal:* ${formatINR(bill.taxable_amount)}\n${isGst ? `*GST (3%):* ${formatINR(bill.total_gst)}\n` : ''}*Grand Total:* ${formatINR(bill.grand_total)}\n*Payment Mode:* ${bill.payment_mode || 'Cash'} (${bill.payment_status || 'Paid'})\n\nView and download your digital passbook & bills anytime 24/7 on customer portal:\nhttps://ljsrecord.com/portal.html\n\n_Thank you for choosing LJS Jewellers!_`;
+
+        const waUrl = `https://wa.me/91${phone}?text=${encodeURIComponent(message)}`;
+        window.open(waUrl, '_blank');
+    };
+
+    // 11. Delete Bill
+    window.deleteBill = async function (id, billNo) {
+        if (!confirm(`Are you sure you want to void / delete Bill ${billNo}?\nThis action cannot be undone.`)) {
+            return;
+        }
+        try {
+            const res = await fetch(`/api/bills/${id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                alert(`✅ Bill ${billNo} has been deleted.`);
+                await window.fetchBills();
+            } else {
+                alert('❌ Error: ' + (data.error || 'Failed to delete bill.'));
+            }
+        } catch (err) {
+            console.error('Error deleting bill:', err);
+            alert('Failed to delete bill. Please check server connection.');
+        }
+    };
 });

@@ -7,8 +7,35 @@ const multer = require('multer');
 const fs = require('fs');
 const os = require('os');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 require('dotenv').config();
 const { db, supabase, fixAllSequences } = require('./supabase-db');
+
+// Session & Auth Token Configuration
+const AUTH_SECRET = process.env.AUTH_SECRET || 'ljs_jewellers_secret_key_2026';
+
+function generateAuthToken(role) {
+    const expiresAt = Date.now() + (24 * 60 * 60 * 1000); // 24 hours validity
+    const payload = `${role}:${expiresAt}`;
+    const signature = crypto.createHmac('sha256', AUTH_SECRET).update(payload).digest('hex');
+    return `${Buffer.from(payload).toString('base64')}.${signature}`;
+}
+
+function verifyAuthToken(token) {
+    if (!token || typeof token !== 'string' || !token.includes('.')) return null;
+    try {
+        const [payloadB64, signature] = token.split('.');
+        const payload = Buffer.from(payloadB64, 'base64').toString('utf8');
+        const expectedSig = crypto.createHmac('sha256', AUTH_SECRET).update(payload).digest('hex');
+        if (signature !== expectedSig) return null;
+        const [role, expiresAtStr] = payload.split(':');
+        const expiresAt = parseInt(expiresAtStr, 10);
+        if (Date.now() > expiresAt) return null;
+        return { role, expiresAt };
+    } catch(e) {
+        return null;
+    }
+}
 
 
 // Password security helpers
@@ -88,6 +115,126 @@ app.get('/passbook', (req, res) => {
 
 app.get('/ledger', (req, res) => {
     res.sendFile(path.join(__dirname, 'interest-ledger.html'));
+});
+
+// ============================================
+// AUTHENTICATION & ACCESS CONTROL ENDPOINTS
+// ============================================
+
+// POST /api/auth/login - Staff & Admin Authentication
+app.post('/api/auth/login', (req, res) => {
+    const { pin, username, password, role } = req.body;
+    const adminPass = String(process.env.ADMIN_PASS || '121965').trim();
+    const staffPin = String(process.env.STAFF_PIN || '1234').trim();
+    const configuredAdmin = String(process.env.ADMIN_USER || 'jitendra').trim().toLowerCase();
+
+    // 1. PIN-based Login (Touch/Keypad & Quick Entry)
+    if (pin !== undefined && pin !== null && String(pin).trim() !== '') {
+        const cleanPin = String(pin).trim();
+        if (cleanPin === adminPass) {
+            const token = generateAuthToken('admin');
+            return res.json({
+                success: true,
+                role: 'admin',
+                name: 'Admin Owner',
+                token
+            });
+        }
+        if (cleanPin === staffPin) {
+            const token = generateAuthToken('staff');
+            return res.json({
+                success: true,
+                role: 'staff',
+                name: 'Staff Counter',
+                token
+            });
+        }
+        return res.status(401).json({
+            success: false,
+            error: 'Incorrect Security PIN! Please enter a valid 4 or 6-digit PIN.'
+        });
+    }
+
+    // 2. Username/Password Login
+    if (username && password) {
+        const cleanUser = String(username).trim().toLowerCase();
+        const cleanPass = String(password).trim();
+
+        if (['admin', 'jitendra', 'owner', configuredAdmin].includes(cleanUser) && cleanPass === adminPass) {
+            const token = generateAuthToken('admin');
+            return res.json({
+                success: true,
+                role: 'admin',
+                name: 'Admin Owner',
+                token
+            });
+        }
+        if (cleanUser === 'staff' && cleanPass === staffPin) {
+            const token = generateAuthToken('staff');
+            return res.json({
+                success: true,
+                role: 'staff',
+                name: 'Staff Counter',
+                token
+            });
+        }
+    }
+
+    return res.status(400).json({
+        success: false,
+        error: 'Please enter a valid security PIN or credentials.'
+    });
+});
+
+// POST /api/auth/verify - Validate Active Token/Session
+app.post('/api/auth/verify', (req, res) => {
+    const authHeader = req.headers.authorization;
+    let token = req.body && req.body.token;
+    if (!token && authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+    }
+    const verified = verifyAuthToken(token);
+    if (!verified) {
+        return res.status(401).json({ success: false, valid: false, error: 'Session expired or invalid.' });
+    }
+    return res.json({ success: true, valid: true, role: verified.role, expiresAt: verified.expiresAt });
+});
+
+// ============================================
+// LIVE METAL RATES & HOMEPAGE TICKER ENDPOINT
+// ============================================
+
+// GET /api/rates - Public Metal Rates Endpoint for Website & Calculator
+app.get('/api/rates', (req, res) => {
+    db.all(`SELECT key, value FROM settings WHERE key IN ('gold_rate', 'silver_rate', 'rates_updated_at')`, [], (err, rows) => {
+        let goldRate = 7200; // default ₹7,200/g = ₹72,000/10g
+        let silverRate = 92;  // default ₹92/g = ₹92,000/1kg
+        let updatedAt = new Date().toISOString();
+
+        if (!err && rows && rows.length > 0) {
+            rows.forEach(r => {
+                if (r.key === 'gold_rate' && parseFloat(r.value)) goldRate = parseFloat(r.value);
+                if (r.key === 'silver_rate' && parseFloat(r.value)) silverRate = parseFloat(r.value);
+                if (r.key === 'rates_updated_at' && r.value) updatedAt = r.value;
+            });
+        }
+
+        const gold24k = goldRate;
+        const gold22k = Math.round(goldRate * 0.916);
+        const gold18k = Math.round(goldRate * 0.750);
+
+        res.json({
+            success: true,
+            gold_rate: goldRate,
+            silver_rate: silverRate,
+            gold_rate_24k: gold24k,
+            gold_rate_22k: gold22k,
+            gold_rate_18k: gold18k,
+            silver_rate_10g: Math.round(silverRate * 10),
+            silver_rate_kg: Math.round(silverRate * 1000),
+            updated_at: updatedAt
+        });
+    });
 });
 
 console.log('Connected to Supabase Cloud Database.');
@@ -1383,45 +1530,53 @@ app.get('/api/reports/rokad', (req, res) => {
         `, [dateParam + '%'], (err, rows) => {
             if (rows) {
                 data.newPawns = rows;
-                data.totalNaame = rows.reduce((sum, row) => sum + parseFloat(row.amount), 0);
+                data.totalNaame = rows.reduce((sum, row) => sum + parseFloat(row.amount || 0), 0);
             }
 
             // 2. Released Pawns (Jama)
             db.all(`
                 SELECT p.*, c.name as customer_name,
-                COALESCE((SELECT SUM(amount) FROM pawn_payments WHERE pawn_id = p.id AND payment_date NOT LIKE ?), 0) as total_jama_before
+                COALESCE((SELECT SUM(amount) FROM pawn_payments WHERE pawn_id = p.id AND payment_date NOT LIKE ?), 0) as total_jama_before,
+                COALESCE((SELECT SUM(amount) FROM pawn_payments WHERE pawn_id = p.id AND payment_date LIKE ?), 0) as total_jama_today,
+                (SELECT payment_type FROM pawn_payments WHERE pawn_id = p.id AND payment_date LIKE ? ORDER BY id DESC LIMIT 1) as today_payment_type
                 FROM pawn_records p 
                 JOIN customers c ON p.customer_id = c.id 
                 WHERE p.status = 'Released' AND p.release_date LIKE ?
-            `, [dateParam + '%', dateParam + '%'], (err, releasedRows) => {
+            `, [dateParam + '%', dateParam + '%', dateParam + '%', dateParam + '%'], (err, releasedRows) => {
+                const releasedPawnIds = new Set();
                 if (releasedRows) {
                     releasedRows.forEach(p => {
+                        releasedPawnIds.add(p.id);
                         // Calculate interest dynamically using calcServerPawnInterest
                         const interest = calcServerPawnInterest(p.amount, p.interest_rate, p.date_added, 'Released', p.release_date);
                         
-                        const principal = parseFloat(p.amount);
-                        const totalJamaBefore = parseFloat(p.total_jama_before);
-                        // Final collection on release day = (Principal + Interest) - what was paid BEFORE today
-                        const finalCollection = (principal + interest) - totalJamaBefore;
+                        const principal = parseFloat(p.amount || 0);
+                        const totalJamaBefore = parseFloat(p.total_jama_before || 0);
+                        const totalJamaToday = parseFloat(p.total_jama_today || 0);
+                        
+                        // Final collection: if payment recorded today, that's what was collected; otherwise (principal + interest) - previous payments
+                        const finalCollection = totalJamaToday > 0 ? totalJamaToday : Math.max(0, (principal + interest) - totalJamaBefore);
                         
                         p.calculated_interest = interest;
                         p.final_collection = finalCollection > 0 ? finalCollection : 0;
+                        p.payment_type = p.today_payment_type || null;
                         data.totalJama += p.final_collection;
                         data.releasedPawns.push(p);
                     });
                 }
 
-                // 3. Partial Payments (Jama)
+                // 3. Partial Payments (Jama) - Exclude payments for pawns released today so they don't get double counted
                 db.all(`
-                    SELECT pp.*, p.description, c.name as customer_name
+                    SELECT pp.*, p.description, p.status as pawn_status, p.release_date, c.name as customer_name
                     FROM pawn_payments pp
                     JOIN pawn_records p ON pp.pawn_id = p.id
                     JOIN customers c ON p.customer_id = c.id
                     WHERE pp.payment_date LIKE ?
                 `, [dateParam + '%'], (err, paymentRows) => {
                     if (paymentRows) {
-                        data.payments = paymentRows;
-                        data.totalJama += paymentRows.reduce((sum, row) => sum + parseFloat(row.amount), 0);
+                        const genuinePartialPayments = paymentRows.filter(row => !releasedPawnIds.has(row.pawn_id));
+                        data.payments = genuinePartialPayments;
+                        data.totalJama += genuinePartialPayments.reduce((sum, row) => sum + parseFloat(row.amount || 0), 0);
                     }
                     
                     res.json(data);
@@ -1475,7 +1630,8 @@ app.get('/api/reports/analytics', (req, res) => {
                 // 2. Released Items (Need to calculate principal + interest minus partial payments BEFORE release date)
                 db.all(`
                     SELECT p.*,
-                    COALESCE((SELECT SUM(amount) FROM pawn_payments WHERE pawn_id = p.id AND payment_date < p.release_date), 0) as total_jama_before
+                    COALESCE((SELECT SUM(amount) FROM pawn_payments WHERE pawn_id = p.id AND payment_date < p.release_date AND substr(payment_date, 1, 10) != substr(p.release_date, 1, 10)), 0) as total_jama_before,
+                    COALESCE((SELECT SUM(amount) FROM pawn_payments WHERE pawn_id = p.id AND substr(payment_date, 1, 10) = substr(p.release_date, 1, 10)), 0) as total_jama_today
                     FROM pawn_records p 
                     WHERE p.status = 'Released' AND p.release_date BETWEEN ? AND ?
                 `, [isoStart, isoEnd], (err, releasedRows) => {
@@ -1493,11 +1649,14 @@ app.get('/api/reports/analytics', (req, res) => {
                             const interest = calcServerPawnInterest(p.amount, p.interest_rate, p.date_added, 'Released', p.release_date);
                             
                             const principal = parseFloat(p.amount);
-                            const totalJamaBefore = parseFloat(p.total_jama_before);
-                            const finalCollection = (principal + interest) - totalJamaBefore;
+                            const totalJamaBefore = parseFloat(p.total_jama_before || 0);
+                            const totalJamaToday = parseFloat(p.total_jama_today || 0);
+                            const finalCollection = totalJamaToday > 0 ? totalJamaToday : Math.max(0, (principal + interest) - totalJamaBefore);
                             
-                            if (finalCollection > 0) {
-                                jamaMap[day] = (jamaMap[day] || 0) + finalCollection;
+                            // Subtract totalJamaToday if it was already grouped into paymentRows for this day
+                            const netAddition = totalJamaToday > 0 ? 0 : finalCollection;
+                            if (netAddition > 0) {
+                                jamaMap[day] = (jamaMap[day] || 0) + netAddition;
                             }
                         });
                     }
@@ -1556,14 +1715,23 @@ app.get('/api/reports/export', (req, res) => {
                 });
             }
 
-            // 2. Partial Payments (Jama)
-            db.all(`SELECT py.*, c.name as customer_name FROM pawn_payments py JOIN pawn_records p ON py.pawn_id = p.id JOIN customers c ON p.customer_id = c.id WHERE py.payment_date BETWEEN ? AND ?`, [isoStart, isoEnd], (err, payments) => {
+            // 2. Partial Payments (Jama) - only include payments for pawns not released on the same day
+            db.all(`SELECT py.*, c.name as customer_name, p.status as pawn_status, p.release_date
+                    FROM pawn_payments py 
+                    JOIN pawn_records p ON py.pawn_id = p.id 
+                    JOIN customers c ON p.customer_id = c.id 
+                    WHERE py.payment_date BETWEEN ? AND ?`, [isoStart, isoEnd], (err, payments) => {
                 if (payments) {
                     payments.forEach(py => {
+                        const payDay = formatDate(py.payment_date);
+                        const relDay = formatDate(py.release_date);
+                        if (py.pawn_status === 'Released' && payDay === relDay) {
+                            return; // Skip duplicate, accounted in Released Items
+                        }
                         csvRows.push([
                             formatDate(py.payment_date), 
                             py.customer_name, 
-                            'Partial Payment', 
+                            py.payment_type ? `Partial Payment (${py.payment_type})` : 'Partial Payment', 
                             'Payment Received', 
                             'Jama (In)', 
                             parseFloat(py.amount).toFixed(2)
@@ -1573,7 +1741,9 @@ app.get('/api/reports/export', (req, res) => {
 
                 // 3. Released Items (Jama)
                 db.all(`SELECT p.*, c.name as customer_name,
-                        COALESCE((SELECT SUM(amount) FROM pawn_payments WHERE pawn_id = p.id AND payment_date < p.release_date), 0) as total_jama_before
+                        COALESCE((SELECT SUM(amount) FROM pawn_payments WHERE pawn_id = p.id AND payment_date < p.release_date AND substr(payment_date, 1, 10) != substr(p.release_date, 1, 10)), 0) as total_jama_before,
+                        COALESCE((SELECT SUM(amount) FROM pawn_payments WHERE pawn_id = p.id AND substr(payment_date, 1, 10) = substr(p.release_date, 1, 10)), 0) as total_jama_today,
+                        (SELECT payment_type FROM pawn_payments WHERE pawn_id = p.id AND substr(payment_date, 1, 10) = substr(p.release_date, 1, 10) ORDER BY id DESC LIMIT 1) as today_payment_type
                         FROM pawn_records p JOIN customers c ON p.customer_id = c.id 
                         WHERE p.status = 'Released' AND p.release_date BETWEEN ? AND ?`, [isoStart, isoEnd], (err, releasedPawns) => {
                     
@@ -1583,14 +1753,17 @@ app.get('/api/reports/export', (req, res) => {
                             const interest = calcServerPawnInterest(p.amount, p.interest_rate, p.date_added, 'Released', p.release_date);
                             
                             const principal = parseFloat(p.amount);
-                            const totalJamaBefore = parseFloat(p.total_jama_before);
-                            const finalCollection = (principal + interest) - totalJamaBefore;
+                            const totalJamaBefore = parseFloat(p.total_jama_before || 0);
+                            const totalJamaToday = parseFloat(p.total_jama_today || 0);
+                            const finalCollection = totalJamaToday > 0 ? totalJamaToday : Math.max(0, (principal + interest) - totalJamaBefore);
                             
+                            const descDetails = p.today_payment_type ? `${p.description} [${p.today_payment_type}]` : `${p.description} (Released)`;
+
                             if (finalCollection > 0) {
                                 csvRows.push([
                                     formatDate(p.release_date), 
                                     p.customer_name, 
-                                    p.description, 
+                                    descDetails, 
                                     'Item Released', 
                                     'Jama (In)', 
                                     finalCollection.toFixed(2)
@@ -1791,19 +1964,21 @@ app.post('/api/customers/:id/pawn/:pawnId/email', (req, res) => {
 // Save Metal Rate Setting
 app.post('/api/settings/rate', (req, res) => {
     const { key, rate } = req.body;
+    const now = new Date().toISOString();
     db.run(
         `INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = ?`,
         [key, rate, rate],
         function (err) {
             if (err) return res.status(500).json({ error: err.message });
-            res.json({ message: 'Rate updated successfully' });
+            // Also update timestamp in settings
+            db.run(
+                `INSERT INTO settings (key, value) VALUES ('rates_updated_at', ?) ON CONFLICT(key) DO UPDATE SET value = ?`,
+                [now, now],
+                () => {}
+            );
+            res.json({ message: 'Rate updated successfully', key, rate, updated_at: now });
         }
     );
-});
-
-// Start Server
-app.listen(PORT, () => {
-    console.log(`Server is running at http://localhost:${PORT}`);
 });
 
 // ============================================
@@ -2087,15 +2262,20 @@ app.post('/api/portal/login', (req, res) => {
                 if (err) return res.status(500).json({ error: err.message });
                 const pawnIds = (pawns || []).map(p => p.id);
                 if (pawnIds.length === 0) {
-                    return res.json({
-                        active: true,
-                        customer: { id: customer.id, name: customer.name, phone: customer.phone, username: customer.username },
-                        pawns: [],
-                        totalPrincipal: 0,
-                        totalInterest: 0,
-                        totalJama: 0,
-                        netBalance: 0
+                    db.all('SELECT * FROM bills WHERE customer_phone = ? OR customer_id = ? ORDER BY id DESC', [customer.phone, customer.id], (bErr, billRows) => {
+                        const customerBills = (billRows || []).map(parseBillItems);
+                        return res.json({
+                            active: true,
+                            customer: { id: customer.id, name: customer.name, phone: customer.phone, username: customer.username },
+                            pawns: [],
+                            bills: customerBills,
+                            totalPrincipal: 0,
+                            totalInterest: 0,
+                            totalJama: 0,
+                            netBalance: 0
+                        });
                     });
+                    return;
                 }
 
                 db.all(`SELECT * FROM pawn_payments WHERE pawn_id IN (${pawnIds.join(',')})`, [], (err, payments) => {
@@ -2159,20 +2339,25 @@ app.post('/api/portal/login', (req, res) => {
 
                     const netBalance = Math.round((totalPrincipal + totalInterest) - totalJama);
 
-                    res.json({
-                        role: 'customer',
-                        active: true,
-                        customer: {
-                            id: customer.id,
-                            name: customer.name,
-                            phone: customer.phone,
-                            username: customer.username
-                        },
-                        pawns: formattedPawns,
-                        totalPrincipal: Math.round(totalPrincipal),
-                        totalInterest: Math.round(totalInterest),
-                        totalJama: Math.round(totalJama),
-                        netBalance: Math.max(0, netBalance)
+                    // Also fetch customer bills
+                    db.all('SELECT * FROM bills WHERE customer_phone = ? OR customer_id = ? ORDER BY id DESC', [customer.phone, customer.id], (bErr, billRows) => {
+                        const customerBills = (billRows || []).map(parseBillItems);
+                        res.json({
+                            role: 'customer',
+                            active: true,
+                            customer: {
+                                id: customer.id,
+                                name: customer.name,
+                                phone: customer.phone,
+                                username: customer.username
+                            },
+                            pawns: formattedPawns,
+                            bills: customerBills,
+                            totalPrincipal: Math.round(totalPrincipal),
+                            totalInterest: Math.round(totalInterest),
+                            totalJama: Math.round(totalJama),
+                            netBalance: Math.max(0, netBalance)
+                        });
                     });
                 });
             });
@@ -2194,8 +2379,6 @@ app.put('/api/customers/:id/portal-status', (req, res) => {
 // -------------------------------------------------------------
 // ONLINE PAYMENT ENDPOINTS (PhonePe PG + Manual UPI QR with UTR)
 // -------------------------------------------------------------
-
-const crypto = require('crypto');
 
 // 1. Submit Manual UPI QR Payment with UTR for Admin Approval
 app.post('/api/payments/submit-utr', (req, res) => {
@@ -2357,6 +2540,294 @@ app.all('/api/phonepe/callback', async (req, res) => {
         console.error('PhonePe Callback Error:', err);
         return res.redirect('/portal.html?payment=failed&reason=server_error');
     }
+});
+
+// ============================================
+// JEWELLERY BILLING & INVOICING APIS (GST & NORMAL)
+// ============================================
+
+function parseBillItems(bill) {
+    if (!bill) return null;
+    let items = [];
+    try {
+        items = typeof bill.items === 'string' ? JSON.parse(bill.items) : (bill.items || []);
+    } catch(e) {
+        items = [];
+    }
+    return {
+        ...bill,
+        items
+    };
+}
+
+// 1. GET /api/bills - Fetch all bills with optional filtering
+app.get('/api/bills', (req, res) => {
+    const { type, phone, customer_id, search } = req.query;
+    db.all('SELECT * FROM bills ORDER BY id DESC', [], (err, rows) => {
+        if (err) {
+            console.error('Error fetching bills:', err);
+            return res.status(500).json({ success: false, error: 'Database error fetching bills.' });
+        }
+        let list = (rows || []).map(parseBillItems);
+        
+        if (type && (type === 'gst' || type === 'normal')) {
+            list = list.filter(b => (b.bill_type || '').toLowerCase() === type.toLowerCase());
+        }
+        if (phone) {
+            const pClean = phone.replace(/[^0-9]/g, '');
+            list = list.filter(b => (b.customer_phone || '').replace(/[^0-9]/g, '').includes(pClean));
+        }
+        if (customer_id) {
+            list = list.filter(b => String(b.customer_id) === String(customer_id));
+        }
+        if (search) {
+            const s = search.toLowerCase().trim();
+            list = list.filter(b => 
+                (b.bill_no || '').toLowerCase().includes(s) ||
+                (b.customer_name || '').toLowerCase().includes(s) ||
+                (b.customer_phone || '').includes(s)
+            );
+        }
+        res.json({ success: true, bills: list });
+    });
+});
+
+// 2. GET /api/bills/:id - Fetch single bill
+app.get('/api/bills/:id', (req, res) => {
+    const id = req.params.id;
+    db.all('SELECT * FROM bills WHERE id = ?', [id], (err, rows) => {
+        if (err || !rows || rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Bill not found.' });
+        }
+        res.json({ success: true, bill: parseBillItems(rows[0]) });
+    });
+});
+
+// 3. POST /api/bills - Create new GST or Normal Bill
+app.post('/api/bills', (req, res) => {
+    try {
+        const {
+            bill_type = 'normal', // 'gst' or 'normal'
+            customer_name,
+            customer_phone,
+            customer_address = '',
+            customer_gstin = '',
+            customer_pan = '',
+            bill_date,
+            items = [],
+            discount = 0,
+            payment_mode = 'Cash',
+            payment_status = 'Paid',
+            paid_amount,
+            notes = ''
+        } = req.body;
+
+        if (!customer_name || !customer_name.trim()) {
+            return res.status(400).json({ success: false, error: 'Customer name is required.' });
+        }
+        if (!customer_phone || !customer_phone.trim()) {
+            return res.status(400).json({ success: false, error: 'Customer phone is required.' });
+        }
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ success: false, error: 'At least one item must be added to the bill.' });
+        }
+
+        const isGst = String(bill_type).toLowerCase() === 'gst';
+        const dateStr = bill_date || new Date().toISOString().split('T')[0];
+        const year = new Date(dateStr).getFullYear();
+
+        // Calculate items and totals
+        let subtotal = 0;
+        let makingTotal = 0;
+        const processedItems = items.map((it, idx) => {
+            const grossWt = parseFloat(it.gross_weight || it.net_weight || 0);
+            const netWt = parseFloat(it.net_weight || grossWt || 0);
+            const rate = parseFloat(it.rate_per_gram || it.rate || 0);
+            let making = parseFloat(it.making_charges || 0);
+            if (it.making_charge_type === 'per_gram') {
+                making = making * netWt;
+            }
+            const metalVal = Math.round(netWt * rate * 100) / 100;
+            const itemTotal = Math.round((metalVal + making) * 100) / 100;
+
+            subtotal += metalVal;
+            makingTotal += making;
+
+            return {
+                s_no: idx + 1,
+                item_name: it.item_name || it.description || 'Jewellery Item',
+                metal_type: it.metal_type || 'Gold',
+                purity: it.purity || '22K 916',
+                hsn_code: it.hsn_code || '7113',
+                gross_weight: grossWt,
+                net_weight: netWt,
+                rate_per_gram: rate,
+                making_charge_type: it.making_charge_type || 'fixed',
+                making_charges: Math.round(making * 100) / 100,
+                item_total: itemTotal
+            };
+        });
+
+        subtotal = Math.round(subtotal * 100) / 100;
+        makingTotal = Math.round(makingTotal * 100) / 100;
+        const discountVal = Math.max(0, parseFloat(discount || 0));
+        const taxableAmount = Math.max(0, Math.round((subtotal + makingTotal - discountVal) * 100) / 100);
+
+        let gstRate = 0;
+        let cgstAmount = 0;
+        let sgstAmount = 0;
+        let totalGst = 0;
+
+        if (isGst) {
+            gstRate = 3.0; // 3% Jewellery GST
+            cgstAmount = Math.round((taxableAmount * 0.015) * 100) / 100; // 1.5% CGST
+            sgstAmount = Math.round((taxableAmount * 0.015) * 100) / 100; // 1.5% SGST
+            totalGst = Math.round((cgstAmount + sgstAmount) * 100) / 100;
+        }
+
+        const unroundedGrand = taxableAmount + totalGst;
+        const grandTotal = Math.round(unroundedGrand);
+        const roundOff = Math.round((grandTotal - unroundedGrand) * 100) / 100;
+
+        const paid = paid_amount !== undefined ? parseFloat(paid_amount) : grandTotal;
+        const balance = Math.max(0, grandTotal - paid);
+
+        // Fetch last bill to assign serial bill_no
+        db.all('SELECT bill_no FROM bills ORDER BY id DESC LIMIT 100', [], (err, existingBills) => {
+            const prefix = isGst ? `LJS-GST-${year}-` : `LJS-RET-${year}-`;
+            let maxSerial = 0;
+            (existingBills || []).forEach(b => {
+                if (b.bill_no && b.bill_no.startsWith(prefix)) {
+                    const num = parseInt(b.bill_no.replace(prefix, ''), 10);
+                    if (!isNaN(num) && num > maxSerial) maxSerial = num;
+                }
+            });
+            const nextSerial = String(maxSerial + 1).padStart(4, '0');
+            const billNo = `${prefix}${nextSerial}`;
+
+            // Check if customer exists in customers table to link customer_id
+            const pClean = customer_phone.trim().replace(/[^0-9]/g, '');
+            db.all('SELECT id FROM customers WHERE phone = ? OR REPLACE(phone, " ", "") = ? OR REPLACE(phone, "-", "") = ? LIMIT 1',
+                [customer_phone.trim(), pClean, pClean],
+                (cErr, custRows) => {
+                    const customerId = (custRows && custRows.length > 0) ? custRows[0].id : null;
+
+                    const insertSql = `
+                        INSERT INTO bills (
+                            bill_no, bill_type, customer_id, customer_name, customer_phone,
+                            customer_address, customer_gstin, customer_pan, bill_date, items,
+                            subtotal, making_total, discount, taxable_amount, gst_rate,
+                            cgst_amount, sgst_amount, total_gst, grand_total, round_off,
+                            payment_mode, payment_status, paid_amount, balance_amount, notes, created_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `;
+
+                    const params = [
+                        billNo,
+                        isGst ? 'gst' : 'normal',
+                        customerId,
+                        customer_name.trim(),
+                        customer_phone.trim(),
+                        customer_address.trim(),
+                        customer_gstin.trim(),
+                        customer_pan.trim(),
+                        dateStr,
+                        JSON.stringify(processedItems),
+                        subtotal,
+                        makingTotal,
+                        discountVal,
+                        taxableAmount,
+                        gstRate,
+                        cgstAmount,
+                        sgstAmount,
+                        totalGst,
+                        grandTotal,
+                        roundOff,
+                        payment_mode,
+                        payment_status,
+                        paid,
+                        balance,
+                        notes.trim(),
+                        new Date().toISOString()
+                    ];
+
+                    db.run(insertSql, params, function(insertErr) {
+                        if (insertErr) {
+                            console.error('Error inserting bill:', insertErr);
+                            return res.status(500).json({ success: false, error: 'Failed to save bill in database.' });
+                        }
+                        const billId = this.lastID || 0;
+                        res.json({
+                            success: true,
+                            message: `${isGst ? 'GST Tax Invoice' : 'Retail Bill'} generated successfully!`,
+                            bill: {
+                                id: billId,
+                                bill_no: billNo,
+                                bill_type: isGst ? 'gst' : 'normal',
+                                customer_id: customerId,
+                                customer_name: customer_name.trim(),
+                                customer_phone: customer_phone.trim(),
+                                customer_address: customer_address.trim(),
+                                customer_gstin: customer_gstin.trim(),
+                                customer_pan: customer_pan.trim(),
+                                bill_date: dateStr,
+                                items: processedItems,
+                                subtotal,
+                                making_total: makingTotal,
+                                discount: discountVal,
+                                taxable_amount: taxableAmount,
+                                gst_rate: gstRate,
+                                cgst_amount: cgstAmount,
+                                sgst_amount: sgstAmount,
+                                total_gst: totalGst,
+                                grand_total: grandTotal,
+                                round_off: roundOff,
+                                payment_mode,
+                                payment_status,
+                                paid_amount: paid,
+                                balance_amount: balance,
+                                notes: notes.trim()
+                            }
+                        });
+                    });
+                }
+            );
+        });
+    } catch (e) {
+        console.error('Error in POST /api/bills:', e);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+// 4. DELETE /api/bills/:id - Delete bill
+app.delete('/api/bills/:id', (req, res) => {
+    const id = req.params.id;
+    db.run('DELETE FROM bills WHERE id = ?', [id], (err) => {
+        if (err) {
+            console.error('Error deleting bill:', err);
+            return res.status(500).json({ success: false, error: 'Database error deleting bill.' });
+        }
+        res.json({ success: true, message: 'Bill deleted successfully.' });
+    });
+});
+
+// 5. GET /api/portal/bills - Fetch customer bills for Portal
+app.get('/api/portal/bills', (req, res) => {
+    const { phone, customer_id } = req.query;
+    if (!phone && !customer_id) {
+        return res.status(400).json({ success: false, error: 'Phone number or Customer ID required.' });
+    }
+    const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+    db.all('SELECT * FROM bills ORDER BY id DESC', [], (err, rows) => {
+        if (err) return res.status(500).json({ success: false, error: err.message });
+        const list = (rows || []).map(parseBillItems).filter(b => {
+            const bPhone = (b.customer_phone || '').replace(/[^0-9]/g, '');
+            const matchPhone = cleanPhone && bPhone && (bPhone === cleanPhone || bPhone.endsWith(cleanPhone) || cleanPhone.endsWith(bPhone));
+            const matchId = customer_id && String(b.customer_id) === String(customer_id);
+            return matchPhone || matchId;
+        });
+        res.json({ success: true, bills: list });
+    });
 });
 
 // ============================================

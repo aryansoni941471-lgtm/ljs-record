@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
@@ -1026,6 +1026,274 @@
             font-weight: 700;
             animation: fadeIn 0.3s ease;
         }
+
+        /* ========================================================
+           JEWELLERY BILLING & INVOICING STYLES (PORTAL)
+           ======================================================== */
+        .badge-gst {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+            padding: 0.25rem 0.65rem;
+            border-radius: var(--radius-pill);
+            font-weight: 800;
+            font-size: 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .badge-normal {
+            background: #eff6ff;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+            padding: 0.25rem 0.65rem;
+            border-radius: var(--radius-pill);
+            font-weight: 800;
+            font-size: 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .portal-bill-type-filter {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            padding: 0.35rem 0.75rem;
+            border-radius: var(--radius-pill);
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .portal-bill-type-filter.active {
+            background: #0f172a;
+            color: #ffffff;
+            border-color: #0f172a;
+        }
+
+        .portal-bill-card {
+            background: #ffffff;
+            border-radius: var(--radius-md);
+            border: 1.5px solid var(--card-border);
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow-md);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .portal-bill-card:hover {
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+            border-color: var(--gold-primary);
+        }
+
+        .portal-bill-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 0.75rem;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .portal-bill-items-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .portal-bill-items-table th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 700;
+            text-align: left;
+            padding: 0.45rem 0.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.74rem;
+            text-transform: uppercase;
+        }
+
+        .portal-bill-items-table td {
+            padding: 0.5rem;
+            border-bottom: 1px solid #f1f5f9;
+            color: #1e293b;
+        }
+
+        .portal-bill-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1.5px dashed #cbd5e1;
+            padding-top: 0.75rem;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        /* Royal Printable Invoice Paper */
+        .invoice-paper {
+            background: #ffffff;
+            color: #0f172a;
+            padding: 2.25rem 2.5rem;
+            border-radius: var(--radius-md);
+            border: 1.5px solid #cbd5e1;
+            box-shadow: 0 10px 40px rgba(15, 23, 42, 0.12);
+            font-family: var(--font-body);
+            line-height: 1.5;
+            max-width: 820px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .invoice-header-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #b45309;
+            padding-bottom: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .invoice-brand-title {
+            font-family: var(--font-heading);
+            font-size: 1.85rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: #0f172a;
+            line-height: 1.1;
+        }
+
+        .invoice-brand-subtitle {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #b45309;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-top: 0.2rem;
+        }
+
+        .invoice-store-address {
+            font-size: 0.82rem;
+            color: #475569;
+            margin-top: 0.35rem;
+            line-height: 1.4;
+            max-width: 420px;
+        }
+
+        .invoice-badge-title {
+            font-family: var(--font-heading);
+            font-size: 1.3rem;
+            font-weight: 900;
+            text-align: right;
+            color: #0f172a;
+            text-transform: uppercase;
+        }
+
+        .invoice-meta-list {
+            text-align: right;
+            font-size: 0.85rem;
+            color: #475569;
+            margin-top: 0.4rem;
+        }
+
+        .invoice-meta-list strong {
+            color: #0f172a;
+        }
+
+        .invoice-billed-grid {
+            display: grid;
+            grid-template-columns: 1.3fr 1fr;
+            gap: 1.5rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: var(--radius-sm);
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.88rem;
+        }
+
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+        }
+
+        .invoice-table th {
+            background: #f1f5f9;
+            color: #0f172a;
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            padding: 0.7rem 0.6rem;
+            border: 1px solid #cbd5e1;
+            text-align: left;
+        }
+
+        .invoice-table td {
+            padding: 0.65rem 0.6rem;
+            border: 1px solid #e2e8f0;
+            color: #334155;
+            vertical-align: middle;
+        }
+
+        .invoice-table tbody tr:nth-child(even) {
+            background: #fafafa;
+        }
+
+        .invoice-terms-signatures {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e2e8f0;
+            font-size: 0.8rem;
+        }
+
+        .signature-box {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            height: 100px;
+        }
+
+        .signature-line {
+            width: 160px;
+            border-top: 1.5px dashed #64748b;
+            margin-top: 40px;
+            padding-top: 0.4rem;
+        }
+
+        @media print {
+            body * {
+                visibility: hidden !important;
+            }
+            #customerPrintInvoicePaper, #customerPrintInvoicePaper * {
+                visibility: visible !important;
+            }
+            #customerPrintInvoicePaper {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                display: block !important;
+                margin: 0 !important;
+                padding: 15px 20px !important;
+                box-shadow: none !important;
+                border: none !important;
+                background: white !important;
+                color: black !important;
+            }
+        }
     </style>
 </head>
 
@@ -1048,6 +1316,9 @@
                 </button>
                 <button id="navTabTxn" class="nav-tab-btn" onclick="switchPortalTab('transactions')">
                     📋 Transactions <span id="navTxnCountBadge" class="nav-badge">0</span>
+                </button>
+                <button id="navTabBills" class="nav-tab-btn" onclick="switchPortalTab('bills')">
+                    🧾 Purchase Bills <span id="navBillsCountBadge" class="nav-badge">0</span>
                 </button>
             </div>
         </div>
@@ -1075,7 +1346,7 @@
         <div id="loginView" class="login-card">
             <div class="login-header">
                 <h2>🔐 Customer Login</h2>
-                <p class="login-subtitle">Apna Mobile Number aur Secret Password daal kar login karein</p>
+                <p class="login-subtitle">Sign in with your registered mobile number and password</p>
             </div>
 
             <div id="loginAlert" class="alert-box alert-error"></div>
@@ -1105,8 +1376,8 @@
             </form>
 
             <div class="login-help-note">
-                💡 <strong>Password nahi pata?</strong><br>
-                Dukaan par counter par shopkeeper se apna secret PIN / Password praapt karein.
+                💡 <strong>Need your PIN or Password?</strong><br>
+                Contact the counter staff at LJS Jewellers to receive or reset your account PIN.
             </div>
         </div>
 
@@ -1161,22 +1432,22 @@
                     </div>
 
                     <div style="font-size: 0.78rem; color: #cbd5e1; display: flex; align-items: center; gap: 0.4rem;">
-                        💡 <span>Time par byaj jama karein aur apna score 900 tak badhayein!</span>
+                        💡 <span>Pay interest on time to boost your LJS Trust Rating up to 900!</span>
                     </div>
                 </div>
 
                 <!-- Dashboard Summary Grid -->
                 <div class="summary-grid">
                     <div class="summary-box">
-                        <div class="summary-label">Kitna Liya</div>
+                        <div class="summary-label">Principal Amount</div>
                         <div id="sumPrincipal" class="summary-val" style="color: var(--navy-header);">₹0</div>
                     </div>
                     <div class="summary-box">
-                        <div class="summary-label">Total Byaaj</div>
+                        <div class="summary-label">Total Interest</div>
                         <div id="sumInterest" class="summary-val" style="color: var(--warning);">₹0</div>
                     </div>
                     <div class="summary-box highlight-box">
-                        <div class="summary-label">Net Baki</div>
+                        <div class="summary-label">Net Balance</div>
                         <div id="sumNet" class="summary-val" style="color: #ffffff;">₹0</div>
                     </div>
                 </div>
@@ -1184,18 +1455,18 @@
                 <!-- Amount Search Filter -->
                 <div class="filter-card">
                     <div class="filter-card-title">
-                        🔍 Rakam ya Gehne se Khojein
+                        🔍 Search by Amount or Item Description
                     </div>
                     <div class="search-row">
                         <input type="text" id="portalAmountSearchInput" class="search-input"
-                            placeholder="Rakam (e.g. 25000) ya description">
+                            placeholder="Search amount (e.g. 25000) or item description">
                         <button id="portalSearchAmountBtn" class="btn-filter">Search</button>
                     </div>
                 </div>
 
                 <!-- Records List Header -->
                 <div class="section-header">
-                    <span>💎 Gehna & Loan Records</span>
+                    <span>💎 Pledged Jewellery & Loan Records</span>
                 </div>
 
                 <div id="pawnsListContainer"></div>
@@ -1205,18 +1476,90 @@
             <div id="portalTxnView" style="display: none;">
                 <div class="section-header">
                     <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                        <span>📋 Transaction History (लेन-देन)</span>
+                        <span>📋 Payment & Transaction History</span>
                         <span id="txnTotalBadge" class="txn-header-badge">0 Transactions</span>
                     </div>
                 </div>
 
                 <div id="txnHistoryContainer"></div>
             </div>
+
+            <!-- View 3: Dedicated Jewellery Purchase Bills & Invoices View -->
+            <div id="portalBillsView" style="display: none;">
+                <!-- Bills KPI / Summary Card -->
+                <div style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; border: 1.5px solid var(--card-border); box-shadow: var(--shadow-md);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem;">
+                        <div>
+                            <h3 style="margin: 0; font-family: var(--font-heading); color: var(--navy-header); font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <span>🧾 Jewellery Purchase Bills</span>
+                                <span id="portalBillsCountBadge" class="badge-gst" style="font-size: 0.75rem; padding: 0.2rem 0.6rem;">0 Invoices</span>
+                            </h3>
+                            <p style="margin: 0.25rem 0 0 0; font-size: 0.8rem; color: var(--text-secondary);">
+                                Official GST Tax Invoices and Retail Purchase Memos issued by LJS Jewellers.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- 3 Financial Stat Boxes: Total Purchases, Amount Paid, Balance Due -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem;">
+                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: var(--radius-md); padding: 0.85rem 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem;">
+                                <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); letter-spacing: 0.5px;">Total Purchases</span>
+                                <span style="font-size: 1.1rem;">💎</span>
+                            </div>
+                            <div id="portalTotalPurchaseAmount" style="font-size: 1.35rem; font-weight: 800; color: #b45309; font-family: var(--font-heading);">₹0</div>
+                            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">Gross Billed Amount</div>
+                        </div>
+
+                        <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: var(--radius-md); padding: 0.85rem 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem;">
+                                <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #166534; letter-spacing: 0.5px;">Amount Paid (जमा)</span>
+                                <span style="font-size: 1.1rem;">✅</span>
+                            </div>
+                            <div id="portalTotalPaidAmount" style="font-size: 1.35rem; font-weight: 800; color: #15803d; font-family: var(--font-heading);">₹0</div>
+                            <div style="font-size: 0.72rem; color: #166534; margin-top: 2px;">Successfully Paid</div>
+                        </div>
+
+                        <div style="background: #fff7ed; border: 1.5px solid #fed7aa; border-radius: var(--radius-md); padding: 0.85rem 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem;">
+                                <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #9a3412; letter-spacing: 0.5px;">Balance Due (बाकी)</span>
+                                <span style="font-size: 1.1rem;">⏳</span>
+                            </div>
+                            <div id="portalTotalBalanceAmount" style="font-size: 1.35rem; font-weight: 800; color: #c2410c; font-family: var(--font-heading);">₹0</div>
+                            <div id="portalBalanceSubtext" style="font-size: 0.72rem; color: #9a3412; margin-top: 2px;">Remaining Outstanding</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bills Search & Filter Bar -->
+                <div class="filter-card" style="margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <div class="filter-card-title" style="margin: 0;">
+                            🔍 Filter Bills by Type & Search Items
+                        </div>
+                        <!-- Type Tabs -->
+                        <div style="display: flex; gap: 0.35rem;">
+                            <button type="button" class="portal-bill-type-filter active" onclick="filterCustomerBills('all', this)">All Bills</button>
+                            <button type="button" class="portal-bill-type-filter" onclick="filterCustomerBills('gst', this)">🏛️ GST (3%)</button>
+                            <button type="button" class="portal-bill-type-filter" onclick="filterCustomerBills('normal', this)">📄 Retail Memo</button>
+                        </div>
+                    </div>
+                    <div class="search-row">
+                        <input type="text" id="portalBillsSearchInput" class="search-input" placeholder="Search bill no (e.g. LJS-GST) or item name (Ring, Chain, Gold)">
+                        <button id="portalSearchBillsBtn" class="btn-filter" onclick="searchCustomerBills()">Search</button>
+                    </div>
+                </div>
+
+                <!-- Bills Container -->
+                <div id="portalBillsListContainer">
+                    <!-- Rendered via JS -->
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Floating WhatsApp Support Button -->
-    <a href="https://wa.me/919876543210?text=Namaste%20LJS%20Jewellers,%20mujhe%20apne%20khata%20ke%20baare%20mein%20poochhna%20hai."
+    <a href="https://wa.me/919876543210?text=Hello%20LJS%20Jewellers,%20I%20have%20an%20inquiry%20regarding%20my%20account."
         target="_blank" class="whatsapp-float" id="whatsappSupportBtn">
         <span>💬 Shopkeeper WhatsApp</span>
     </a>
@@ -1235,8 +1578,8 @@
                     💳</div>
                 <div>
                     <h3 style="margin:0; font-size:1.15rem; color:#1e293b; font-family:var(--font-heading);">Online
-                        Byaaj / Part Payment</h3>
-                    <p style="margin:0; font-size:0.78rem; color:#64748b;" id="modalPawnDesc">Girvi Item Payment</p>
+                        Interest & Part Payment</h3>
+                    <p style="margin:0; font-size:0.78rem; color:#64748b;" id="modalPawnDesc">Pledged Jewellery Payment</p>
                 </div>
             </div>
 
@@ -1252,11 +1595,11 @@
                     style="background:#f8fafc; padding:1rem; border-radius:1rem; border:1px solid #e2e8f0; margin-bottom:1.25rem;">
                     <div
                         style="display:flex; justify-content:space-between; margin-bottom:0.4rem; font-size:0.85rem; color:#475569;">
-                        <span>Kitna Byaaj Baki Hai:</span>
+                        <span>Interest Due:</span>
                         <strong id="modalInterestDue" style="color:#d97706;">₹0</strong>
                     </div>
                     <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#475569;">
-                        <span>Total Balance Baki:</span>
+                        <span>Total Outstanding Balance:</span>
                         <strong id="modalNetBaki" style="color:#dc2626;">₹0</strong>
                     </div>
                 </div>
@@ -1324,7 +1667,7 @@
                     </div>
                     <p style="margin:0; font-size:0.78rem; color:#0284c7; line-height:1.4;">
                         Click karte hi aap PhonePe Payment Gateway par redirect ho jayenge. Payment successful hote hi
-                        aapka byaaj instantly update ho jayega.
+                        your payment will be verified and credited promptly.
                     </p>
                 </div>
 
@@ -1345,28 +1688,199 @@
             <button onclick="document.getElementById('iosInstallModal').style.display='none'"
                 style="position:absolute; top:1rem; right:1rem; background:#f1f5f9; border:none; width:32px; height:32px; border-radius:50%; font-weight:bold; color:#64748b; cursor:pointer;">✕</button>
             <div style="font-size:2.5rem; margin-bottom:0.5rem;">📲</div>
-            <h3 style="margin:0 0 0.5rem 0; font-size:1.15rem; color:#0f172a;">iPhone mein App Install Karein</h3>
+            <h3 style="margin:0 0 0.5rem 0; font-size:1.15rem; color:#0f172a;">Install App on iPhone</h3>
             <p style="font-size:0.85rem; color:#64748b; line-height:1.5; margin-bottom:1rem;">
-                Apne iPhone Safari browser se LJS Jewellers ko home screen par add karne ke liye:
+                To add LJS Jewellers to your iPhone home screen via Safari:
             </p>
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:1rem; padding:0.85rem; text-align:left; font-size:0.82rem; color:#334155; display:flex; flex-direction:column; gap:0.6rem;">
-                <div>1️⃣ Niche Safari bar par <strong>Share icon (⎋)</strong> dabayein.</div>
-                <div>2️⃣ Menu mein scroll karke <strong>"Add to Home Screen" (+ )</strong> chunein.</div>
-                <div>3️⃣ Top right par <strong>"Add"</strong> dabayein.</div>
+                <div>1️⃣ Tap the <strong>Share icon (⎋)</strong> on the Safari bottom bar.</div>
+                <div>2️⃣ Scroll down and choose <strong>"Add to Home Screen" (+)</strong>.</div>
+                <div>3️⃣ Tap <strong>"Add"</strong> in the top right corner.</div>
             </div>
             <button onclick="document.getElementById('iosInstallModal').style.display='none'"
                 style="width:100%; margin-top:1rem; background:var(--navy-header); color:white; font-weight:700; padding:0.7rem; border-radius:var(--radius-pill); border:none; cursor:pointer;">
-                Theek Hai, Samajh Gaya 👍
+                Got It 👍
             </button>
         </div>
     </div>
 
     <!-- PWA Auto-Update Toast Notification -->
     <div id="pwaUpdateToast" class="pwa-update-toast" style="display: none;">
-        <span>✨ Naya update aaya hai!</span>
+        <span>✨ New update available!</span>
         <button onclick="applyPwaUpdate()" style="background: var(--gold-gradient); color:#0f172a; border:none; font-weight:800; padding:0.35rem 0.75rem; border-radius:var(--radius-pill); font-size:0.75rem; cursor:pointer;">
-            Update Karein 🚀
+            Update Now 🚀
         </button>
+    </div>
+
+    <!-- Customer Purchase Invoice Modal -->
+    <div id="customerBillModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); z-index: 99999; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto;">
+        <div style="background: #f8fafc; border-radius: 1.25rem; max-width: 890px; width: 100%; max-height: 94vh; overflow-y: auto; padding: 1.5rem; position: relative; border: 1px solid #cbd5e1; box-shadow: 0 25px 50px rgba(0,0,0,0.3); animation: modalSlideUp 0.3s ease;">
+            <!-- Controls bar (hidden in print) -->
+            <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; background: #ffffff; padding: 0.85rem 1.25rem; border-radius: var(--radius-md); border: 1px solid #cbd5e1; box-shadow: 0 2px 10px rgba(0,0,0,0.05); flex-wrap: wrap; gap: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <span style="font-weight: 800; font-size: 1.05rem; color: #0f172a;">📄 Jewellery Purchase Invoice</span>
+                    <span id="custPreviewBillTypeBadge" class="badge-gst">GST Invoice</span>
+                </div>
+                <div style="display: flex; gap: 0.75rem; align-items: center;">
+                    <button onclick="printCustomerInvoice()" style="background: var(--gold-gradient); color: #0f172a; font-weight: 800; font-size: 0.88rem; padding: 0.55rem 1.3rem; border-radius: var(--radius-pill); border: none; display: flex; align-items: center; gap: 0.4rem; cursor: pointer; box-shadow: 0 4px 12px rgba(212,175,55,0.35);">
+                        <span>🖨️</span> Print / Save PDF
+                    </button>
+                    <button id="custInvoiceWhatsAppBtn" style="background: #25D366; color: white; font-weight: 800; font-size: 0.88rem; padding: 0.55rem 1.2rem; border-radius: var(--radius-pill); border: none; display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                        <span>📲</span> WhatsApp Bill
+                    </button>
+                    <button onclick="closeCustomerBillModal()" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 0.55rem 0.9rem; border-radius: var(--radius-pill); cursor: pointer; font-weight: 800; color: #64748b;">
+                        ✖ Close
+                    </button>
+                </div>
+            </div>
+
+            <!-- Printable Invoice Paper -->
+            <div id="customerPrintInvoicePaper" class="invoice-paper">
+                <!-- Header Box -->
+                <div class="invoice-header-box">
+                    <div>
+                        <div class="invoice-brand-title">LJS JEWELLERS</div>
+                        <div class="invoice-brand-subtitle">Pawn Brokers & Certified Jewellers</div>
+                        <div class="invoice-store-address">
+                            📍 Near PNB (Main Market), Kumher, Deeg (Rajasthan) - 321201<br>
+                            📞 Helpline: +91 94149 02181 | 🌐 24x7 Digital Portal: ljsrecord.com<br>
+                            <span id="custInvoiceStoreGstin"><strong>GSTIN:</strong> 08AABCL1234F1Z5</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div id="custInvoiceHeaderDocTitle" class="invoice-badge-title">TAX INVOICE</div>
+                        <div class="invoice-meta-list">
+                            <div>Invoice No: <strong id="custInvNoDisplay">LJS-GST-2026-0001</strong></div>
+                            <div>Date: <strong id="custInvDateDisplay">01-Nov-2026</strong></div>
+                            <div>Time: <span id="custInvTimeDisplay">12:30 PM</span></div>
+                            <div id="custInvOriginalDuplicateBadge" style="font-size: 0.72rem; color: #b45309; font-weight: 800; text-transform: uppercase; margin-top: 0.2rem;">Original for Recipient</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Billed To Box -->
+                <div class="invoice-billed-grid">
+                    <div>
+                        <span style="font-size: 0.72rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Billed To (Customer Details):</span>
+                        <div id="custInvCustomerName" style="font-size: 1.1rem; font-weight: 800; color: #0f172a; margin-top: 0.2rem;">-</div>
+                        <div id="custInvCustomerPhone" style="font-weight: 600; color: #334155;">-</div>
+                        <div id="custInvCustomerAddress" style="color: #64748b;">-</div>
+                    </div>
+                    <div style="border-left: 1px dashed #cbd5e1; padding-left: 1.25rem;">
+                        <span style="font-size: 0.72rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Tax & Identification:</span>
+                        <div style="margin-top: 0.25rem;">
+                            <span>Customer GSTIN:</span> <strong id="custInvCustomerGstin">-</strong>
+                        </div>
+                        <div>
+                            <span>Customer PAN:</span> <strong id="custInvCustomerPan">-</strong>
+                        </div>
+                        <div>
+                            <span>Place of Supply:</span> <strong>Rajasthan (08)</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <table class="invoice-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 35px; text-align: center;">#</th>
+                            <th>Description of Goods</th>
+                            <th style="width: 70px;">HSN</th>
+                            <th>Purity</th>
+                            <th style="text-align: right;">Gross Wt</th>
+                            <th style="text-align: right;">Net Wt</th>
+                            <th style="text-align: right;">Rate / g</th>
+                            <th style="text-align: right;">Making</th>
+                            <th style="text-align: right;">Total Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="custInvoiceTableBody">
+                        <!-- Populated via JS -->
+                    </tbody>
+                </table>
+
+                <!-- Bottom Calculations Grid -->
+                <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.5rem; margin-top: 1rem;">
+                    <div>
+                        <!-- Amount in Words -->
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-sm); padding: 0.85rem 1rem; margin-bottom: 0.85rem;">
+                            <span style="font-size: 0.72rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Amount in Words:</span>
+                            <div id="custInvAmountInWords" style="font-weight: 800; color: #0f172a; font-size: 0.95rem; margin-top: 0.2rem; line-height: 1.3;">-</div>
+                        </div>
+                        <!-- Payment & Mode -->
+                        <div style="font-size: 0.85rem; color: #334155; line-height: 1.6;">
+                            <div>Payment Mode: <strong id="custInvPaymentModeDisplay">Cash</strong></div>
+                            <div>Payment Status: <strong id="custInvPaymentStatusDisplay">Fully Paid</strong></div>
+                            <div>Amount Paid: <strong id="custInvPaidDisplay">₹0</strong> | Balance: <strong id="custInvBalanceDisplay">₹0</strong></div>
+                            <div id="custInvNotesDisplay" style="font-size: 0.78rem; color: #64748b; margin-top: 0.2rem; font-style: italic;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Financial Summary -->
+                    <div style="font-size: 0.88rem;">
+                        <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px dashed #cbd5e1;">
+                            <span>Subtotal (Metal Value):</span>
+                            <strong id="custInvSubtotalDisplay">₹0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px dashed #cbd5e1;">
+                            <span>Total Making Charges:</span>
+                            <strong id="custInvMakingDisplay">₹0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px dashed #cbd5e1;">
+                            <span>Discount:</span>
+                            <strong id="custInvDiscountDisplay">₹0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 0.35rem 0; border-bottom: 1.5px solid #0f172a; font-weight: 700;">
+                            <span>Taxable Amount:</span>
+                            <span id="custInvTaxableDisplay">₹0</span>
+                        </div>
+
+                        <div id="custInvGstRowsWrap">
+                            <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px dashed #cbd5e1; color: #065f46;">
+                                <span>CGST @ 1.5%:</span>
+                                <strong id="custInvCgstDisplay">₹0</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px dashed #cbd5e1; color: #065f46;">
+                                <span>SGST @ 1.5%:</span>
+                                <strong id="custInvSgstDisplay">₹0</strong>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px dashed #cbd5e1; font-size: 0.8rem; color: #64748b;">
+                            <span>Round Off:</span>
+                            <strong id="custInvRoundOffDisplay">₹0</strong>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; padding: 0.6rem 0; border-top: 2px solid #0f172a; font-size: 1.25rem; font-weight: 900; color: #b45309;">
+                            <span>Grand Total:</span>
+                            <span id="custInvGrandTotalDisplay" style="font-family: var(--font-heading); font-size: 1.45rem;">₹0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Terms & Signatures -->
+                <div class="invoice-terms-signatures">
+                    <div>
+                        <strong style="color: #0f172a; display: block; margin-bottom: 0.3rem;">Terms & Conditions:</strong>
+                        <ol style="padding-left: 1.1rem; margin: 0; color: #64748b; line-height: 1.4; font-size: 0.74rem;">
+                            <li>Goods once sold will be accepted or exchanged as per store policy with original invoice.</li>
+                            <li>Purity of Hallmark 916/22K Gold and 92.5 Fine Silver is fully guaranteed by LJS Jewellers.</li>
+                            <li>Disputes, if any, subject to Kumher / Deeg jurisdiction only.</li>
+                            <li>Customer can access & verify digital invoices 24/7 on our online Customer Passbook Portal.</li>
+                        </ol>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <div class="signature-box">
+                            <div class="signature-line">Customer Signature</div>
+                        </div>
+                        <div class="signature-box">
+                            <div class="signature-line" style="color: #b45309;">For LJS JEWELLERS<br><span style="font-size: 0.7rem; font-weight: normal; color: #64748b;">Auth. Signatory</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -1465,28 +1979,34 @@
         window.switchPortalTab = function (tabName) {
             const tabDash = document.getElementById('navTabDashboard');
             const tabTxn = document.getElementById('navTabTxn');
+            const tabBills = document.getElementById('navTabBills');
             const viewDash = document.getElementById('portalDashboardView');
             const viewTxn = document.getElementById('portalTxnView');
+            const viewBills = document.getElementById('portalBillsView');
+
+            [tabDash, tabTxn, tabBills].forEach(t => t && t.classList.remove('active'));
+            [viewDash, viewTxn, viewBills].forEach(v => v && (v.style.display = 'none'));
 
             if (tabName === 'transactions') {
-                if (tabDash) tabDash.classList.remove('active');
                 if (tabTxn) tabTxn.classList.add('active');
-                if (viewDash) viewDash.style.display = 'none';
                 if (viewTxn) {
                     viewTxn.style.display = 'block';
                     viewTxn.style.animation = 'fadeIn 0.25s ease';
                 }
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else if (tabName === 'bills') {
+                if (tabBills) tabBills.classList.add('active');
+                if (viewBills) {
+                    viewBills.style.display = 'block';
+                    viewBills.style.animation = 'fadeIn 0.25s ease';
+                }
             } else {
-                if (tabTxn) tabTxn.classList.remove('active');
                 if (tabDash) tabDash.classList.add('active');
-                if (viewTxn) viewTxn.style.display = 'none';
                 if (viewDash) {
                     viewDash.style.display = 'block';
                     viewDash.style.animation = 'fadeIn 0.25s ease';
                 }
-                window.scrollTo({ top: 0, behavior: 'smooth' });
             }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
         window.toggleTimeline = function (pawnId) {
@@ -1497,6 +2017,421 @@
         };
 
         // Payment modal state & global modal handlers
+
+        // ==========================================
+        // CUSTOMER PORTAL BILLING ENGINE
+        // ==========================================
+        let portalBillsData = [];
+        let portalBillsFilterType = 'all';
+
+        function numberToWordsINR(num) {
+            if (!num || isNaN(num)) return 'Zero Rupees Only';
+            num = Math.round(Number(num));
+            if (num === 0) return 'Zero Rupees Only';
+
+            const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+                'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+            const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+            function convertLessThanOneThousand(n) {
+                let s = '';
+                if (n >= 100) {
+                    s += a[Math.floor(n / 100)] + ' Hundred ';
+                    n %= 100;
+                }
+                if (n >= 20) {
+                    s += b[Math.floor(n / 10)] + ' ';
+                    n %= 10;
+                }
+                if (n > 0) {
+                    s += a[n] + ' ';
+                }
+                return s.trim();
+            }
+
+            let result = '';
+            const crore = Math.floor(num / 10000000);
+            num %= 10000000;
+            const lakh = Math.floor(num / 100000);
+            num %= 100000;
+            const thousand = Math.floor(num / 1000);
+            num %= 1000;
+            const remaining = num;
+
+            if (crore > 0) result += convertLessThanOneThousand(crore) + ' Crore ';
+            if (lakh > 0) result += convertLessThanOneThousand(lakh) + ' Lakh ';
+            if (thousand > 0) result += convertLessThanOneThousand(thousand) + ' Thousand ';
+            if (remaining > 0) result += convertLessThanOneThousand(remaining) + ' ';
+
+            return 'Rupees ' + result.trim() + ' Only';
+        }
+
+        window.renderPortalBills = function (billsList) {
+            const container = document.getElementById('portalBillsListContainer');
+            const countBadge = document.getElementById('portalBillsCountBadge');
+            const navBadge = document.getElementById('navBillsCountBadge');
+            const totalAmtEl = document.getElementById('portalTotalPurchaseAmount');
+            const totalPaidEl = document.getElementById('portalTotalPaidAmount');
+            const totalBalEl = document.getElementById('portalTotalBalanceAmount');
+            if (!container) return;
+
+            portalBillsData = Array.isArray(billsList) ? billsList : [];
+
+            // Update badge counts & financial totals across all customer bills
+            const totalCount = portalBillsData.length;
+            if (countBadge) countBadge.textContent = `${totalCount} ${totalCount === 1 ? 'Invoice' : 'Invoices'}`;
+            if (navBadge) navBadge.textContent = totalCount;
+
+            const totalPurchased = portalBillsData.reduce((acc, b) => acc + (parseFloat(b.grand_total) || 0), 0);
+            const totalPaid = portalBillsData.reduce((acc, b) => {
+                const gTotal = parseFloat(b.grand_total) || 0;
+                const paidVal = (b.paid_amount !== undefined && b.paid_amount !== null && b.paid_amount !== '') ? parseFloat(b.paid_amount) : gTotal;
+                return acc + (isNaN(paidVal) ? 0 : paidVal);
+            }, 0);
+            const totalBalance = portalBillsData.reduce((acc, b) => {
+                const gTotal = parseFloat(b.grand_total) || 0;
+                const paidVal = (b.paid_amount !== undefined && b.paid_amount !== null && b.paid_amount !== '') ? parseFloat(b.paid_amount) : gTotal;
+                const balVal = (b.balance_amount !== undefined && b.balance_amount !== null && b.balance_amount !== '') ? parseFloat(b.balance_amount) : Math.max(0, gTotal - paidVal);
+                return acc + (isNaN(balVal) ? 0 : balVal);
+            }, 0);
+
+            if (totalAmtEl) totalAmtEl.textContent = '₹' + Math.round(totalPurchased).toLocaleString('en-IN');
+            if (totalPaidEl) totalPaidEl.textContent = '₹' + Math.round(totalPaid).toLocaleString('en-IN');
+            if (totalBalEl) totalBalEl.textContent = '₹' + Math.round(totalBalance).toLocaleString('en-IN');
+
+            // Apply active filter
+            let filtered = portalBillsData;
+            if (portalBillsFilterType !== 'all') {
+                filtered = filtered.filter(b => (b.bill_type || '').toLowerCase() === portalBillsFilterType.toLowerCase());
+            }
+
+            // Search query filter
+            const searchInput = document.getElementById('portalBillsSearchInput');
+            const q = searchInput ? searchInput.value.trim().toLowerCase() : '';
+            if (q) {
+                filtered = filtered.filter(b => {
+                    const noMatch = (b.bill_no || '').toLowerCase().includes(q);
+                    const notesMatch = (b.notes || '').toLowerCase().includes(q);
+                    const itemsStr = Array.isArray(b.items) ? JSON.stringify(b.items).toLowerCase() : (b.items || '').toLowerCase();
+                    return noMatch || notesMatch || itemsStr.includes(q);
+                });
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 3rem 1.5rem; background: var(--surface-card); border-radius: var(--radius-lg); border: 1.5px solid var(--card-border); color: var(--text-secondary);">
+                        <div style="font-size: 3rem; margin-bottom: 0.6rem;">🧾</div>
+                        <h4 style="margin: 0; font-size: 1.15rem; color: var(--navy-header); font-family: var(--font-heading);">No Purchase Bills Found</h4>
+                        <p style="margin: 0.4rem 0 0 0; font-size: 0.85rem; color: var(--text-muted); max-width: 420px; margin-inline: auto;">
+                            ${q ? 'No invoices match your search query. Try clearing the filter.' : 'Your jewellery purchase invoices (GST & Retail memos) generated by LJS Jewellers will appear here.'}
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(bill => {
+                const isGst = (bill.bill_type || '').toUpperCase() === 'GST';
+                const typeBadge = isGst
+                    ? '<span class="badge-gst">🏛️ GST Tax Invoice (3%)</span>'
+                    : '<span class="badge-normal">📄 Retail Cash Memo</span>';
+
+                let items = [];
+                if (Array.isArray(bill.items)) {
+                    items = bill.items;
+                } else if (typeof bill.items === 'string') {
+                    try { items = JSON.parse(bill.items); } catch (e) { items = []; }
+                }
+
+                const itemsRowsHtml = items.map((it, idx) => {
+                    const gross = parseFloat(it.gross_weight || it.net_weight || 0);
+                    const net = parseFloat(it.net_weight || gross || 0);
+                    const rate = parseFloat(it.rate_per_gram || 0);
+                    const making = parseFloat(it.making_charges || 0);
+                    const itemTotal = Math.round(parseFloat(it.item_total !== undefined && it.item_total !== null ? it.item_total : (it.total_amount || ((net * rate) + making))));
+
+                    return `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td><strong>${escapeHtml(it.item_name || it.description || 'Jewellery Item')}</strong></td>
+                        <td>${escapeHtml(it.purity || '22K')}</td>
+                        <td style="text-align: right;">${net.toFixed(3)}g</td>
+                        <td style="text-align: right;">₹${Math.round(rate).toLocaleString('en-IN')}</td>
+                        <td style="text-align: right;">+ ₹${Math.round(making).toLocaleString('en-IN')}</td>
+                        <td style="text-align: right; font-weight: 700; color: #0f172a;">₹${itemTotal.toLocaleString('en-IN')}</td>
+                    </tr>
+                    `;
+                }).join('');
+
+                const formattedDate = formatDate(bill.bill_date || bill.created_at);
+                const grandTotal = Math.round(parseFloat(bill.grand_total || 0));
+                const paid = Math.round(parseFloat((bill.paid_amount !== undefined && bill.paid_amount !== null && bill.paid_amount !== '') ? bill.paid_amount : grandTotal));
+                const balance = Math.max(0, Math.round(parseFloat((bill.balance_amount !== undefined && bill.balance_amount !== null && bill.balance_amount !== '') ? bill.balance_amount : (grandTotal - paid))));
+                const isPaidFull = balance <= 0;
+
+                return `
+                    <div class="portal-bill-card">
+                        <div class="portal-bill-header">
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                    <strong style="font-family: var(--font-heading); font-size: 1.05rem; color: var(--navy-header);">${escapeHtml(bill.bill_no || '')}</strong>
+                                    ${typeBadge}
+                                    ${isPaidFull ? 
+                                        '<span style="font-size: 0.72rem; padding: 0.2rem 0.55rem; border-radius: 999px; background: #dcfce7; color: #15803d; font-weight: 800; border: 1px solid #bbf7d0;">✅ Fully Paid</span>' : 
+                                        '<span style="font-size: 0.72rem; padding: 0.2rem 0.55rem; border-radius: 999px; background: #fff7ed; color: #c2410c; font-weight: 800; border: 1px solid #fed7aa;">⏳ Balance: ₹' + balance.toLocaleString('en-IN') + '</span>'
+                                    }
+                                </div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                                    📅 Invoice Date: ${formattedDate} | Mode: <strong>${escapeHtml(bill.payment_mode || 'Cash')}</strong>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.85rem; align-items: center; text-align: right; flex-wrap: wrap; justify-content: flex-end;">
+                                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.3rem 0.65rem;">
+                                    <div style="font-size: 0.68rem; text-transform: uppercase; font-weight: 800; color: #166534;">Paid (जमा)</div>
+                                    <div style="font-size: 0.95rem; font-weight: 800; color: #15803d;">
+                                        ₹${paid.toLocaleString('en-IN')}
+                                    </div>
+                                </div>
+                                <div style="background: ${balance > 0 ? '#fff7ed' : '#f8fafc'}; border: 1px solid ${balance > 0 ? '#fed7aa' : '#e2e8f0'}; border-radius: 8px; padding: 0.3rem 0.65rem;">
+                                    <div style="font-size: 0.68rem; text-transform: uppercase; font-weight: 800; color: ${balance > 0 ? '#9a3412' : '#64748b'};">Balance (बाकी)</div>
+                                    <div style="font-size: 0.95rem; font-weight: 800; color: ${balance > 0 ? '#c2410c' : '#64748b'};">
+                                        ₹${balance.toLocaleString('en-IN')}
+                                    </div>
+                                </div>
+                                <div style="padding-left: 0.35rem;">
+                                    <div style="font-size: 0.68rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted);">Grand Total</div>
+                                    <div style="font-family: var(--font-heading); font-size: 1.35rem; font-weight: 900; color: #b45309;">
+                                        ₹${grandTotal.toLocaleString('en-IN')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Items Preview Table -->
+                        <div style="overflow-x: auto;">
+                            <table class="portal-bill-items-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 25px;">#</th>
+                                        <th>Item Description</th>
+                                        <th>Purity</th>
+                                        <th style="text-align: right;">Net Wt</th>
+                                        <th style="text-align: right;">Rate/g</th>
+                                        <th style="text-align: right;">Making</th>
+                                        <th style="text-align: right;">Item Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${itemsRowsHtml || '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">No items listed</td></tr>'}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="portal-bill-footer">
+                            <div style="font-size: 0.82rem; color: var(--text-secondary); display: flex; gap: 0.85rem; flex-wrap: wrap; align-items: center;">
+                                <span>Metal Subtotal: <strong>₹${Math.round(parseFloat(bill.subtotal || 0)).toLocaleString('en-IN')}</strong></span>
+                                ${isGst ? `<span style="color: #065f46;">GST (3%): <strong>₹${Math.round(parseFloat(bill.total_gst || 0)).toLocaleString('en-IN')}</strong></span>` : ''}
+                                <span>Paid: <strong style="color: #15803d;">₹${paid.toLocaleString('en-IN')}</strong></span>
+                                <span>Balance (बाकी): <strong style="color: ${balance > 0 ? '#c2410c' : '#15803d'};">₹${balance.toLocaleString('en-IN')}</strong></span>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <button onclick="openCustomerBillModal(${JSON.stringify(bill).replace(/"/g, '&quot;')})" style="background: var(--gold-gradient); color: #0f172a; font-weight: 800; border: none; border-radius: var(--radius-pill); padding: 0.45rem 1rem; font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; gap: 0.35rem; box-shadow: 0 3px 10px rgba(212,175,55,0.25);">
+                                    <span>👁️</span> View & Print Invoice
+                                </button>
+                                <button onclick="shareCustomerBillWhatsApp(${JSON.stringify(bill).replace(/"/g, '&quot;')})" style="background: #25D366; color: white; font-weight: 800; border: none; border-radius: var(--radius-pill); padding: 0.45rem 0.9rem; font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; gap: 0.35rem;">
+                                    <span>📲</span> WhatsApp
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        window.filterCustomerBills = function (type, btnEl) {
+            portalBillsFilterType = type || 'all';
+            document.querySelectorAll('.portal-bill-type-filter').forEach(b => b.classList.remove('active'));
+            if (btnEl) btnEl.classList.add('active');
+            renderPortalBills(portalBillsData);
+        };
+
+        window.searchCustomerBills = function () {
+            renderPortalBills(portalBillsData);
+        };
+
+        window.openCustomerBillModal = function (bill) {
+            if (!bill) return;
+            const isGst = (bill.bill_type || '').toUpperCase() === 'GST';
+
+            // Top Header & Document Title
+            const titleEl = document.getElementById('custInvoiceHeaderDocTitle');
+            const badgeEl = document.getElementById('custPreviewBillTypeBadge');
+            const origBadge = document.getElementById('custInvOriginalDuplicateBadge');
+            const gstinRow = document.getElementById('custInvoiceStoreGstin');
+            const gstRowsWrap = document.getElementById('custInvGstRowsWrap');
+
+            if (isGst) {
+                if (titleEl) titleEl.textContent = 'TAX INVOICE';
+                if (badgeEl) {
+                    badgeEl.className = 'badge-gst';
+                    badgeEl.textContent = 'GST Tax Invoice (3%)';
+                }
+                if (origBadge) origBadge.style.display = 'block';
+                if (gstinRow) gstinRow.style.display = 'inline';
+                if (gstRowsWrap) gstRowsWrap.style.display = 'block';
+            } else {
+                if (titleEl) titleEl.textContent = 'RETAIL CASH MEMO';
+                if (badgeEl) {
+                    badgeEl.className = 'badge-normal';
+                    badgeEl.textContent = 'Retail Cash Memo';
+                }
+                if (origBadge) origBadge.style.display = 'none';
+                if (gstinRow) gstinRow.style.display = 'none';
+                if (gstRowsWrap) gstRowsWrap.style.display = 'none';
+            }
+
+            // Meta Info
+            document.getElementById('custInvNoDisplay').textContent = bill.bill_no || '-';
+            const bDate = bill.bill_date ? new Date(bill.bill_date) : new Date();
+            document.getElementById('custInvDateDisplay').textContent = bDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            document.getElementById('custInvTimeDisplay').textContent = bDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+            // Billed To
+            document.getElementById('custInvCustomerName').textContent = bill.customer_name || 'Valued Customer';
+            document.getElementById('custInvCustomerPhone').textContent = '📞 ' + (bill.customer_phone || '-');
+            document.getElementById('custInvCustomerAddress').textContent = bill.customer_address || 'Customer Address on Record';
+            document.getElementById('custInvCustomerGstin').textContent = bill.customer_gstin || '-';
+            document.getElementById('custInvCustomerPan').textContent = bill.customer_pan || '-';
+
+            // Items Table
+            let items = [];
+            if (Array.isArray(bill.items)) {
+                items = bill.items;
+            } else if (typeof bill.items === 'string') {
+                try { items = JSON.parse(bill.items); } catch (e) { items = []; }
+            }
+
+            const tbody = document.getElementById('custInvoiceTableBody');
+            if (tbody) {
+                tbody.innerHTML = items.map((it, idx) => {
+                    const gross = parseFloat(it.gross_weight || it.net_weight || 0);
+                    const net = parseFloat(it.net_weight || gross);
+                    const rate = parseFloat(it.rate_per_gram || 0);
+                    const making = parseFloat(it.making_charges || 0);
+                    const total = parseFloat((it.item_total !== undefined && it.item_total !== null) ? it.item_total : (it.total_amount || ((net * rate) + making)));
+
+                    return `
+                        <tr>
+                            <td style="text-align: center;">${idx + 1}</td>
+                            <td>
+                                <strong style="color: #0f172a;">${escapeHtml(it.item_name || it.description || 'Jewellery Item')}</strong>
+                                ${it.notes ? `<div style="font-size: 0.72rem; color: #64748b;">${escapeHtml(it.notes)}</div>` : ''}
+                            </td>
+                            <td style="font-family: monospace;">${escapeHtml(it.hsn_code || '7113')}</td>
+                            <td><span style="font-weight: 700;">${escapeHtml(it.purity || '22K')}</span> ${escapeHtml(it.metal_type || 'Gold')}</td>
+                            <td style="text-align: right;">${gross.toFixed(3)}g</td>
+                            <td style="text-align: right; font-weight: 700;">${net.toFixed(3)}g</td>
+                            <td style="text-align: right;">₹${Math.round(rate).toLocaleString('en-IN')}</td>
+                            <td style="text-align: right;">₹${Math.round(making).toLocaleString('en-IN')}</td>
+                            <td style="text-align: right; font-weight: 800; color: #0f172a;">₹${Math.round(total).toLocaleString('en-IN')}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            // Financial Summary
+            const subtotal = Math.round(parseFloat(bill.subtotal || 0));
+            const making = Math.round(parseFloat(bill.making_total || 0));
+            const discount = Math.round(parseFloat(bill.discount || 0));
+            const taxable = Math.round(parseFloat(bill.taxable_amount || (subtotal + making - discount)));
+            const cgst = Math.round(parseFloat(bill.cgst_amount || 0));
+            const sgst = Math.round(parseFloat(bill.sgst_amount || 0));
+            const roundOff = parseFloat(bill.round_off || 0);
+            const grandTotal = Math.round(parseFloat(bill.grand_total || 0));
+
+            document.getElementById('custInvSubtotalDisplay').textContent = '₹' + subtotal.toLocaleString('en-IN');
+            document.getElementById('custInvMakingDisplay').textContent = '₹' + making.toLocaleString('en-IN');
+            document.getElementById('custInvDiscountDisplay').textContent = '₹' + discount.toLocaleString('en-IN');
+            document.getElementById('custInvTaxableDisplay').textContent = '₹' + taxable.toLocaleString('en-IN');
+            document.getElementById('custInvCgstDisplay').textContent = '₹' + cgst.toLocaleString('en-IN');
+            document.getElementById('custInvSgstDisplay').textContent = '₹' + sgst.toLocaleString('en-IN');
+            document.getElementById('custInvRoundOffDisplay').textContent = (roundOff >= 0 ? '+' : '') + roundOff.toFixed(2);
+            document.getElementById('custInvGrandTotalDisplay').textContent = '₹' + grandTotal.toLocaleString('en-IN');
+
+            // Words
+            document.getElementById('custInvAmountInWords').textContent = numberToWordsINR(grandTotal);
+
+            // Payment Mode & Status
+            document.getElementById('custInvPaymentModeDisplay').textContent = bill.payment_mode || 'Cash';
+            document.getElementById('custInvPaymentStatusDisplay').textContent = bill.payment_status || 'Paid';
+            document.getElementById('custInvPaidDisplay').textContent = '₹' + Math.round(parseFloat(bill.paid_amount || grandTotal)).toLocaleString('en-IN');
+            document.getElementById('custInvBalanceDisplay').textContent = '₹' + Math.round(parseFloat(bill.balance_amount || 0)).toLocaleString('en-IN');
+            const notesEl = document.getElementById('custInvNotesDisplay');
+            if (notesEl) {
+                notesEl.textContent = bill.notes ? ('Note: ' + bill.notes) : '';
+            }
+
+            // WhatsApp Share Button in modal
+            const waModalBtn = document.getElementById('custInvoiceWhatsAppBtn');
+            if (waModalBtn) {
+                waModalBtn.onclick = () => shareCustomerBillWhatsApp(bill);
+            }
+
+            const modal = document.getElementById('customerBillModal');
+            if (modal) modal.style.display = 'flex';
+        };
+
+        window.closeCustomerBillModal = function () {
+            const modal = document.getElementById('customerBillModal');
+            if (modal) modal.style.display = 'none';
+        };
+
+        window.printCustomerInvoice = function () {
+            window.print();
+        };
+
+        window.shareCustomerBillWhatsApp = function (bill) {
+            if (!bill) return;
+            const isGst = (bill.bill_type || '').toUpperCase() === 'GST';
+            const docType = isGst ? 'Tax Invoice' : 'Purchase Memo';
+
+            let items = [];
+            if (Array.isArray(bill.items)) items = bill.items;
+            else {
+                try { items = JSON.parse(bill.items); } catch (e) { items = []; }
+            }
+
+            const itemsSummary = items.map(it => `• ${it.description || 'Jewellery'} (${it.purity || '22K'}, ${it.net_weight || it.gross_weight}g) = ₹${Math.round(it.total_amount || 0).toLocaleString('en-IN')}`).join('\n');
+
+            const text = 
+`💎 *LJS JEWELLERS - Official ${docType}*
+━━━━━━━━━━━━━━━━━━
+📜 *Bill No:* ${bill.bill_no}
+📅 *Date:* ${bill.bill_date ? bill.bill_date.slice(0, 10) : ''}
+👤 *Customer:* ${bill.customer_name || 'Valued Customer'}
+
+📦 *Items Purchased:*
+${itemsSummary}
+
+💰 *Subtotal:* ₹${Math.round(bill.subtotal || 0).toLocaleString('en-IN')}
+${isGst ? `🏛️ *GST (3%):* ₹${Math.round(bill.total_gst || 0).toLocaleString('en-IN')}\n` : ''}━━━━━━━━━━━━━━━━━━
+👑 *Grand Total: ₹${Math.round(bill.grand_total || 0).toLocaleString('en-IN')}*
+Payment Mode: ${bill.payment_mode || 'Cash'}
+━━━━━━━━━━━━━━━━━━
+📍 *LJS Jewellers, Kumher (Rajasthan)*
+📞 Helpline: +91 94149 02181
+🌐 *View & Download Invoice 24/7 on your Passbook Portal:*
+https://ljsrecord.com/portal.html`;
+
+            const cleanPhone = (bill.customer_phone || '').replace(/[^0-9]/g, '');
+            const phoneParam = (cleanPhone.length >= 10) ? ('91' + cleanPhone.slice(-10)) : '';
+            const waUrl = phoneParam 
+                ? `https://wa.me/${phoneParam}?text=${encodeURIComponent(text)}`
+                : `https://wa.me/?text=${encodeURIComponent(text)}`;
+
+            window.open(waUrl, '_blank');
+        };
+
         let currentPaymentData = {
             pawnId: null,
             description: '',
@@ -1636,7 +2571,7 @@
                             customer_phone: currentPaymentData.customerPhone,
                             amount: amount,
                             utr_number: utr,
-                            notes: `Byaaj Payment for ${currentPaymentData.description}`
+                            notes: `Interest Payment for ${currentPaymentData.description}`
                         })
                     });
                     const data = await res.json();
@@ -1749,7 +2684,7 @@
                     const data = await res.json();
 
                     if (!res.ok) {
-                        loginAlert.innerText = data.error || 'Login failed. Sahi Username/Password daalein.';
+                        loginAlert.innerText = data.error || 'Login failed. Please enter the correct Username and Password.';
                         loginAlert.style.display = 'block';
                         return;
                     }
@@ -1766,7 +2701,7 @@
                     renderLedger(data);
                 } catch (err) {
                     console.error(err);
-                    loginAlert.innerText = 'Server se connect nahi ho pa raha hai. Kripya punah prayas karein.';
+                    loginAlert.innerText = 'Unable to connect to server. Please try again later.';
                     loginAlert.style.display = 'block';
                 }
             });
@@ -1832,7 +2767,7 @@
                 // Update WhatsApp link with customer info if phone exists
                 const waBtn = document.getElementById('whatsappSupportBtn');
                 if (waBtn && c.name) {
-                    const msg = encodeURIComponent(`Namaste LJS Jewellers, Main ${c.name} (${c.phone}). Mujhe apne khata ke baare mein jaankari chahiye.`);
+                    const msg = encodeURIComponent(`Hello LJS Jewellers, I am ${c.name} (${c.phone}). I have an inquiry regarding my customer khata account.`);
                     waBtn.href = `https://wa.me/?text=${msg}`;
                 }
 
@@ -1873,9 +2808,9 @@
                         container.innerHTML = `
                             <div style="text-align:center; padding: 3rem 1rem; background: var(--surface-card); border-radius: var(--radius-lg); border: 1px solid var(--card-border); color: var(--text-secondary);">
                                 <div style="font-size: 2.8rem; margin-bottom: 0.5rem;">🔍</div>
-                                <p style="font-weight: 700; color: var(--navy-header); font-size: 1.1rem;">Koi Record Nahi Mila</p>
+                                <p style="font-weight: 700; color: var(--navy-header); font-size: 1.1rem;">No Records Found</p>
                                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.35rem;">
-                                    Aapke search query ke anusaar koi loan/gehna record nahi mila.
+                                    No loan or jewellery records match your search criteria.
                                 </p>
                             </div>
                         `;
@@ -1901,7 +2836,7 @@
                                 </div>
                             `).join('');
                         } else {
-                            paymentsHtml = `<div style="text-align:center; font-size:0.78rem; color:var(--text-muted); padding:0.5rem;">Abhi tak koi partial payment record nahi hai.</div>`;
+                            paymentsHtml = `<div style="text-align:center; font-size:0.78rem; color:var(--text-muted); padding:0.5rem;">No partial payment records found yet.</div>`;
                         }
 
                         return `
@@ -1909,7 +2844,7 @@
                                 <div class="item-card-header">
                                     <div>
                                         <div class="item-title">${escapeHtml(p.description)} ${udhariBadge}</div>
-                                        <div class="item-date">Tarik (Date): ${formatDate(p.date_added)}</div>
+                                        <div class="item-date">Date: ${formatDate(p.date_added)}</div>
                                     </div>
                                     <span class="badge-status ${statusClass}">${p.status}</span>
                                 </div>
@@ -1917,34 +2852,34 @@
                                 <div class="item-details-row">
                                     ${photoImg}
                                     <div>
-                                        <div><strong>Dhaatu (Metal):</strong> ${p.item_metal_type || 'Gold'}</div>
-                                        <div><strong>Vazan (Weight):</strong> ${p.item_weight_grams ? p.item_weight_grams + 'g' : 'N/A'}</div>
-                                        <div><strong>Byaaj Der (Interest):</strong> ${p.interest_rate}% / Mahina</div>
+                                        <div><strong>Metal:</strong> ${p.item_metal_type || 'Gold'}</div>
+                                        <div><strong>Gross Weight:</strong> ${p.item_weight_grams ? p.item_weight_grams + 'g' : 'N/A'}</div>
+                                        <div><strong>Interest Rate:</strong> ${p.interest_rate}% / Month</div>
                                     </div>
                                 </div>
 
                                 <div class="financial-breakdown">
                                     <div class="fin-row">
-                                        <span>Kitna Liya (Principal):</span>
+                                        <span>Principal Borrowed:</span>
                                         <strong>₹${p.amount.toLocaleString('en-IN')}</strong>
                                     </div>
                                     <div class="fin-row">
-                                        <span>Total Byaaj (Interest):</span>
+                                        <span>Accrued Interest:</span>
                                         <span style="color:var(--warning); font-weight:700;">+ ₹${p.calculated_interest.toLocaleString('en-IN')}</span>
                                     </div>
                                     <div class="fin-row">
-                                        <span>Kool Jama (Total Paid):</span>
+                                        <span>Total Repaid:</span>
                                         <span style="color:var(--success); font-weight:700;">- ₹${p.paid.toLocaleString('en-IN')}</span>
                                     </div>
                                     <div class="fin-row total-row">
-                                        <span>Net Baki (Balance):</span>
+                                        <span>Net Outstanding:</span>
                                         <span style="color:var(--error);">₹${p.baki.toLocaleString('en-IN')}</span>
                                     </div>
                                 </div>
 
                                 ${p.status === 'Active' ? `
                                     <button class="pay-online-btn" onclick="openPaymentModal(${p.id}, '${escapeHtml(p.description)}', ${p.amount}, ${p.calculated_interest}, ${p.baki})" style="width:100%; margin-top:0.75rem; background: linear-gradient(135deg, #2563eb, #1d4ed8); color:white; font-weight:800; padding:0.65rem 1rem; border-radius: var(--radius-pill); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; font-size:0.9rem; box-shadow: 0 4px 12px rgba(37,99,235,0.3); transition: transform 0.15s ease;">
-                                        💳 Online Byaaj / Part Payment Karein
+                                        💳 Make Online Payment
                                     </button>
                                 ` : ''}
 
@@ -1953,7 +2888,7 @@
                                 </button>
                                 <div class="history-timeline" id="timeline-${p.id}">
                                     <div style="font-size: 0.8rem; font-weight: 700; color: var(--navy-header); margin-bottom: 0.4rem;">
-                                        Jama Kiye Gaye Paise:
+                                        Payments Credited:
                                     </div>
                                     ${paymentsHtml}
                                 </div>
@@ -1999,9 +2934,9 @@
                             <div class="txn-card">
                                 <div class="txn-empty">
                                     <div class="txn-empty-icon">💸</div>
-                                    <p style="font-weight: 700; color: var(--navy-header); font-size: 1.05rem;">Koi Transaction History Nahi Hai</p>
+                                    <p style="font-weight: 700; color: var(--navy-header); font-size: 1.05rem;">No Transaction History Found</p>
                                     <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem;">
-                                        Aapke khate mein abhi tak koi online ya counter payment jama nahi hua hai.
+                                        No payments have been recorded for this account yet.
                                     </p>
                                 </div>
                             </div>
@@ -2029,14 +2964,14 @@
 
                     allTxns.forEach(t => {
                         let groupKey = '9999-99-99';
-                        let groupLabel = 'Purane Transactions';
+                        let groupLabel = 'Past Transactions';
                         if (t.payment_date) {
                             const datePart = t.payment_date.slice(0, 10);
                             groupKey = datePart;
                             if (datePart === todayStr) {
-                                groupLabel = 'Aaj (Today)';
+                                groupLabel = 'Today';
                             } else if (datePart === yestStr) {
-                                groupLabel = 'Kal (Yesterday)';
+                                groupLabel = 'Yesterday';
                             } else {
                                 try {
                                     const d = new Date(t.payment_date);
@@ -2059,15 +2994,15 @@
                         if (t.includes('upi') || t.includes('phonepe') || t.includes('gpay') || t.includes('paytm')) {
                             return { icon: '📱', label: 'UPI / PhonePe', bg: '#eff6ff', color: '#1d4ed8' };
                         } else if (t.includes('cash') || t.includes('rokad')) {
-                            return { icon: '💵', label: 'Cash / Rokad', bg: '#f0fdf4', color: '#15803d' };
+                            return { icon: '💵', label: 'Cash Payment', bg: '#f0fdf4', color: '#15803d' };
                         } else if (t.includes('bank') || t.includes('neft') || t.includes('rtgs') || t.includes('netbanking')) {
                             return { icon: '🏦', label: 'Bank Transfer', bg: '#faf5ff', color: '#7e22ce' };
                         } else if (t.includes('online') || t.includes('card')) {
                             return { icon: '💳', label: 'Online Payment', bg: '#ecfeff', color: '#0e7490' };
                         } else if (t.includes('interest') || t.includes('byaaj')) {
-                            return { icon: '🪙', label: 'Byaaj Jama', bg: '#fffbeb', color: '#b45309' };
+                            return { icon: '🪙', label: 'Interest Payment', bg: '#fffbeb', color: '#b45309' };
                         } else if (t.includes('principal') || t.includes('mool')) {
-                            return { icon: '💰', label: 'Mool Jama', bg: '#fdf2f8', color: '#be185d' };
+                            return { icon: '💰', label: 'Principal Repayment', bg: '#fdf2f8', color: '#be185d' };
                         }
                         return { icon: '✨', label: escapeHtml(type || 'Jama'), bg: '#f1f5f9', color: '#334155' };
                     }
@@ -2101,7 +3036,7 @@
                                         <div class="txn-amount">+ ₹${item.amount.toLocaleString('en-IN')}</div>
                                         <div class="txn-status">
                                             <span class="txn-status-dot"></span>
-                                            <span>Safal (Paid)</span>
+                                            <span>Successful</span>
                                         </div>
                                     </div>
                                 </div>
@@ -2122,8 +3057,8 @@
                         <div class="txn-card">
                             <div class="txn-summary-bar">
                                 <div>
-                                    <div class="txn-summary-label">Total Jama Rakam (Total Paid)</div>
-                                    <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">Kul ${allTxns.length} payment transactions</div>
+                                    <div class="txn-summary-label">Total Amount Paid</div>
+                                    <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">Total ${allTxns.length} payment transactions</div>
                                 </div>
                                 <div class="txn-summary-val">₹${totalTxnSum.toLocaleString('en-IN')}</div>
                             </div>
@@ -2150,6 +3085,22 @@
 
                 updatePortalView('');
                 renderTransactionHistory(pawns);
+
+                // Render Customer Purchase Bills
+                const customerBills = Array.isArray(data.bills) ? data.bills : [];
+                renderPortalBills(customerBills);
+
+                // Asynchronously fetch latest bills from server
+                if (c.phone || c.id) {
+                    fetch(`/api/portal/bills?phone=${encodeURIComponent(c.phone || '')}&customer_id=${encodeURIComponent(c.id || '')}`)
+                        .then(r => r.json())
+                        .then(res => {
+                            if (res.success && Array.isArray(res.bills)) {
+                                renderPortalBills(res.bills);
+                            }
+                        })
+                        .catch(err => console.log('[Portal] Background bills refresh:', err));
+                }
 
                 const navTabs = document.getElementById('navTabsContainer');
                 if (navTabs) navTabs.style.display = 'flex';

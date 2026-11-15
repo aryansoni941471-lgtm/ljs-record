@@ -20,6 +20,64 @@
 </head>
 
 <body>
+    <!-- ============================================ -->
+    <!-- ADMIN & STAFF SECURITY GATE (LOGIN OVERLAY)   -->
+    <!-- ============================================ -->
+    <div id="adminSecurityGate" class="security-gate-overlay">
+        <div class="security-gate-card">
+            <div class="gate-logo-icon">💎</div>
+            <h2 class="gate-title">LJS JEWELLERS</h2>
+            <p class="gate-subtitle">Secure Management Portal (Staff & Admin Access)</p>
+
+            <!-- Role Selector Tabs -->
+            <div class="gate-role-tabs">
+                <button type="button" class="gate-role-tab active" id="tabAdminRole" onclick="window.setSecurityRole('admin')">
+                    <span>👑</span> Admin Owner
+                </button>
+                <button type="button" class="gate-role-tab" id="tabStaffRole" onclick="window.setSecurityRole('staff')">
+                    <span>👨‍💼</span> Staff Counter
+                </button>
+            </div>
+
+            <!-- PIN Form -->
+            <form id="securityLoginForm" onsubmit="window.handleSecurityLogin(event)" autocomplete="off">
+                <div class="gate-pin-wrap">
+                    <label id="gatePinLabel" for="gatePinInput" class="gate-pin-label">Enter Admin Master Security PIN:</label>
+                    <div class="pin-input-container">
+                        <input type="password" id="gatePinInput" class="gate-pin-field" maxlength="8" placeholder="••••••" inputmode="numeric" autofocus required>
+                        <button type="button" class="btn-toggle-pin-visibility" onclick="window.toggleGatePinVisibility()" title="Show / Hide PIN">👁️</button>
+                    </div>
+                </div>
+
+                <!-- Touch / POS Keypad -->
+                <div class="gate-keypad">
+                    <button type="button" class="keypad-btn" onclick="window.pressGateKey('1')">1</button>
+                    <button type="button" class="keypad-btn" onclick="window.pressGateKey('2')">2</button>
+                    <button type="button" class="keypad-btn" onclick="window.pressGateKey('3')">3</button>
+                    <button type="button" class="keypad-btn" onclick="window.pressGateKey('4')">4</button>
+                    <button type="button" class="keypad-btn" onclick="window.pressGateKey('5')">5</button>
+                    <button type="button" class="keypad-btn" onclick="window.pressGateKey('6')">6</button>
+                    <button type="button" class="keypad-btn" onclick="window.pressGateKey('7')">7</button>
+                    <button type="button" class="keypad-btn" onclick="window.pressGateKey('8')">8</button>
+                    <button type="button" class="keypad-btn" onclick="window.pressGateKey('9')">9</button>
+                    <button type="button" class="keypad-btn keypad-clear" onclick="window.clearGatePin()">C</button>
+                    <button type="button" class="keypad-btn" onclick="window.pressGateKey('0')">0</button>
+                    <button type="button" class="keypad-btn keypad-back" onclick="window.backspaceGatePin()">⌫</button>
+                </div>
+
+                <div id="gateErrorMsg" class="gate-error" style="display: none;"></div>
+
+                <button type="submit" id="gateSubmitBtn" class="gate-submit-btn">
+                    <span>🔓</span> Unlock Dashboard
+                </button>
+            </form>
+
+            <div class="gate-footer">
+                <a href="/" class="gate-back-link">← Return to Main Website</a>
+            </div>
+        </div>
+    </div>
+
     <!-- Top Luxury Header -->
     <header class="brand-header">
         <div class="brand-header-inner">
@@ -67,7 +125,7 @@
                     🏠 Website
                 </a>
 
-                <button id="adminLogoutBtn" onclick="localStorage.removeItem('ljs_session_role'); window.location.href='/index.html';" style="padding: 0.5rem 1rem; background: rgba(244, 63, 94, 0.2); color: #fecdd3; border: 1px solid rgba(244, 63, 94, 0.4); font-family: var(--font-body); font-weight: 800; font-size: 0.8rem; border-radius: var(--radius-pill); cursor: pointer; display: flex; align-items: center; gap: 0.4rem;">
+                <button id="adminLogoutBtn" onclick="window.handleAdminLogout()" style="padding: 0.5rem 1rem; background: rgba(244, 63, 94, 0.2); color: #fecdd3; border: 1px solid rgba(244, 63, 94, 0.4); font-family: var(--font-body); font-weight: 800; font-size: 0.8rem; border-radius: var(--radius-pill); cursor: pointer; display: flex; align-items: center; gap: 0.4rem;">
                     🚪 Logout
                 </button>
             </div>
@@ -100,6 +158,10 @@
             <button id="navRecoveryBtn" class="nav-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 ⏳ Recovery Time Hub
+            </button>
+            <button id="navBillingBtn" class="nav-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                🧾 Jewellery Billing
             </button>
         </nav>
 
@@ -596,6 +658,131 @@
                 </div>
             </div>
         </div>
+
+        <!-- 6. BILLING & INVOICING VIEW (GST & NORMAL RETAIL) -->
+        <div id="billingView" style="display: none;">
+            <!-- Top Banner Card -->
+            <div class="card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; border: 1.5px solid rgba(212, 175, 55, 0.4); box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.4);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem;">
+                    <div>
+                        <div style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.75rem; border-radius: var(--radius-pill); background: rgba(212, 175, 55, 0.2); border: 1px solid rgba(212, 175, 55, 0.4); color: #fef08a; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem;">
+                            ✨ Retail & Tax Invoicing
+                        </div>
+                        <h2 style="color: #ffffff; font-family: var(--font-heading); margin: 0; font-size: 1.6rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>🧾</span> Jewellery Billing Desk
+                        </h2>
+                        <p style="color: #cbd5e1; font-size: 0.88rem; margin-top: 0.35rem; max-width: 650px;">
+                            Generate professional <strong>GST Tax Invoices</strong> (3% Jewellery GST) and <strong>Normal Retail Bills</strong> for customers. Bills sync automatically to the Customer Passbook Portal!
+                        </p>
+                    </div>
+
+                    <!-- Quick Action: Create Bill -->
+                    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                        <button id="openCreateBillModalBtn" style="padding: 0.8rem 1.6rem; background: var(--gold-gradient); color: #0f172a; font-family: var(--font-body); font-weight: 800; font-size: 0.95rem; border: none; border-radius: var(--radius-pill); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 20px rgba(212, 175, 55, 0.35); transition: all 0.25s ease;">
+                            <span>➕</span> Create New Bill
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Billing KPI Dashboard Cards -->
+            <div class="dashboard-cards" style="margin-bottom: 1.5rem;">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">Total Invoices</span>
+                        <div class="stat-icon-wrap" style="background: rgba(59, 130, 246, 0.12); color: #2563eb;">📑</div>
+                    </div>
+                    <p id="billCountDisplay" class="stat-value" style="color: #0f172a;">0</p>
+                    <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Lifetime sales records</span>
+                </div>
+                <div class="stat-card stat-success">
+                    <div class="stat-header">
+                        <span class="stat-title">Total Billing Turnover</span>
+                        <div class="stat-icon-wrap" style="background: rgba(16, 185, 129, 0.12); color: #059669;">💰</div>
+                    </div>
+                    <p id="billTurnoverDisplay" class="stat-value" style="color: #059669;">₹0</p>
+                    <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Gross billed value</span>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">GST Tax Invoices</span>
+                        <div class="stat-icon-wrap" style="background: rgba(16, 185, 129, 0.12); color: #065f46;">🏛️</div>
+                    </div>
+                    <p id="billGstDisplay" class="stat-value" style="color: #0f172a; font-size: 1.4rem;">₹0</p>
+                    <span id="billGstTaxDisplay" style="font-size: 0.75rem; color: #059669; font-weight: 700;">GST Collected: ₹0</span>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">Normal Retail Memos</span>
+                        <div class="stat-icon-wrap" style="background: rgba(245, 158, 11, 0.12); color: #b45309;">📄</div>
+                    </div>
+                    <p id="billNormalDisplay" class="stat-value" style="color: #b45309; font-size: 1.4rem;">₹0</p>
+                    <span id="billNormalCountDisplay" style="font-size: 0.75rem; color: #64748b; font-weight: 600;">0 Retail Bills</span>
+                </div>
+            </div>
+
+            <!-- Bills Ledger Table Card -->
+            <div class="card">
+                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <h2>📋 Invoices & Sales Register</h2>
+                        <span id="billsBadgeCount" class="badge badge-primary">0 Records</span>
+                    </div>
+
+                    <!-- Search & Filter Controls -->
+                    <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                        <!-- Filter Tabs -->
+                        <div style="display: flex; background: #f1f5f9; padding: 3px; border-radius: var(--radius-pill); border: 1px solid #e2e8f0;">
+                            <button id="filterAllBillsBtn" class="btn-filter-pill active" onclick="window.filterBillsType('all')" style="padding: 0.35rem 0.85rem; font-size: 0.78rem; font-weight: 800; border: none; border-radius: var(--radius-pill); cursor: pointer; background: white; color: #0f172a; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">All Bills</button>
+                            <button id="filterGstBillsBtn" class="btn-filter-pill" onclick="window.filterBillsType('gst')" style="padding: 0.35rem 0.85rem; font-size: 0.78rem; font-weight: 800; border: none; border-radius: var(--radius-pill); cursor: pointer; background: transparent; color: #64748b;">🏛️ GST (3%)</button>
+                            <button id="filterNormalBillsBtn" class="btn-filter-pill" onclick="window.filterBillsType('normal')" style="padding: 0.35rem 0.85rem; font-size: 0.78rem; font-weight: 800; border: none; border-radius: var(--radius-pill); cursor: pointer; background: transparent; color: #64748b;">📄 Normal Memos</button>
+                        </div>
+
+                        <!-- Search Input -->
+                        <div style="position: relative;">
+                            <input type="text" id="billingSearchInput" placeholder="Search Bill No, Name, Phone..." style="padding: 0.45rem 1rem 0.45rem 2rem; font-size: 0.85rem; border: 1px solid #cbd5e1; border-radius: var(--radius-pill); width: 220px; outline: none;">
+                            <span style="position: absolute; left: 0.7rem; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.85rem;">🔍</span>
+                        </div>
+
+                        <button onclick="window.fetchBills()" title="Refresh Bills" style="padding: 0.45rem 0.75rem; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: var(--radius-pill); cursor: pointer; font-size: 0.85rem;">
+                            🔄
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table id="billingTable">
+                        <thead>
+                            <tr>
+                                <th>Bill No & Type</th>
+                                <th>Date</th>
+                                <th>Customer Details</th>
+                                <th>Items & Weights</th>
+                                <th>Taxable Amt</th>
+                                <th>GST (3%)</th>
+                                <th>Grand Total</th>
+                                <th>Payment</th>
+                                <th style="text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="billingTableBody">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="billingEmptyState" class="empty-state" style="display: none; padding: 3rem 1rem;">
+                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">🧾</div>
+                    <h3 style="font-size: 1.2rem; font-weight: 800; color: #0f172a; margin-bottom: 0.35rem;">No Invoices Generated Yet</h3>
+                    <p style="color: #64748b; font-size: 0.9rem; max-width: 460px; margin: 0 auto 1.25rem;">
+                        Click <strong>Create New Bill</strong> above to generate your first GST Tax Invoice or Normal Retail Cash Memo for a customer!
+                    </p>
+                    <button onclick="window.openCreateBillModal()" class="btn-primary" style="background: var(--gold-gradient); color: #0f172a; font-weight: 800; border-radius: var(--radius-pill); padding: 0.65rem 1.4rem;">
+                        ➕ Create First Bill
+                    </button>
+                </div>
+            </div>
+        </div>
     </div> <!-- End Container -->
 
     <!-- MODAL 1: Add Pawn Receipt -->
@@ -1057,7 +1244,428 @@
         </div>
     </div>
 
-    <!-- Floating Admin AI Assistant Button -->
+    <!-- ============================================ -->
+    <!-- MODAL 8: Create Jewellery Bill (GST / Normal) -->
+    <!-- ============================================ -->
+    <div id="createBillModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 980px; padding: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                <div>
+                    <h2 style="margin: 0; font-family: var(--font-heading); color: #0f172a; font-size: 1.45rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>🧾</span> Create Jewellery Purchase Bill
+                    </h2>
+                    <p style="color: #64748b; font-size: 0.85rem; margin-top: 0.2rem;">Generate an official GST Tax Invoice or Normal Retail Cash Memo for customer purchases</p>
+                </div>
+                <span class="close-modal" id="closeCreateBillModal" style="cursor: pointer; font-size: 1.8rem; color: #94a3b8;">&times;</span>
+            </div>
+
+            <form id="createBillForm" novalidate onsubmit="event.preventDefault(); window.submitCreateBill();">
+                <!-- 1. Bill Type Selector (GST vs Normal) -->
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="font-size: 0.9rem; font-weight: 800; color: #0f172a; display: block; margin-bottom: 0.6rem;">
+                        Select Bill / Invoice Category:
+                    </label>
+                    <div class="bill-type-grid">
+                        <label class="bill-type-option selected" id="optBillTypeGst" onclick="window.selectBillTypeOption('gst')">
+                            <input type="radio" name="billTypeRadio" value="gst" checked>
+                            <div>
+                                <span class="bill-type-title">
+                                    <span>🏛️</span> GST Tax Invoice (Official)
+                                </span>
+                                <p class="bill-type-desc">
+                                    Includes <strong>3% Jewellery GST</strong> (1.5% CGST + 1.5% SGST), HSN Code (7113), Store GSTIN, and full tax breakdown for official accounts.
+                                </p>
+                            </div>
+                        </label>
+
+                        <label class="bill-type-option" id="optBillTypeNormal" onclick="window.selectBillTypeOption('normal')">
+                            <input type="radio" name="billTypeRadio" value="normal">
+                            <div>
+                                <span class="bill-type-title">
+                                    <span>📄</span> Normal Retail Bill / Cash Memo
+                                </span>
+                                <p class="bill-type-desc">
+                                    Simple customer purchase slip / estimate memo <strong>without separate GST breakdown</strong>. Ideal for regular retail purchases.
+                                </p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 2. Customer Information Grid -->
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.5rem;">
+                    <h3 style="font-size: 0.95rem; font-weight: 800; color: #0f172a; margin-bottom: 0.9rem; display: flex; align-items: center; gap: 0.4rem;">
+                        <span>👤</span> Customer & Billing Details
+                    </h3>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem;">
+                        <div>
+                            <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.3rem;">
+                                Customer Name *
+                            </label>
+                            <input type="text" id="billCustName" list="existingCustomerNamesDatalist" required placeholder="e.g. Rahul Sharma" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 600; font-size: 0.9rem;">
+                            <datalist id="existingCustomerNamesDatalist"></datalist>
+                        </div>
+
+                        <div>
+                            <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.3rem;">
+                                Phone Number *
+                            </label>
+                            <input type="tel" id="billCustPhone" required placeholder="e.g. 9876543210" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 600; font-size: 0.9rem;">
+                        </div>
+
+                        <div>
+                            <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.3rem;">
+                                Bill Date
+                            </label>
+                            <input type="date" id="billDate" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 600; font-size: 0.9rem;">
+                        </div>
+
+                        <div>
+                            <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.3rem;">
+                                Address / Town
+                            </label>
+                            <input type="text" id="billCustAddress" placeholder="e.g. Kumher, Deeg" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 600; font-size: 0.9rem;">
+                        </div>
+
+                        <div id="billGstinFieldWrap">
+                            <label style="font-size: 0.82rem; font-weight: 700; color: #065f46; display: block; margin-bottom: 0.3rem;">
+                                Customer GSTIN (Optional)
+                            </label>
+                            <input type="text" id="billCustGstin" placeholder="e.g. 08AAAAA0000A1Z5" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid #a7f3d0; border-radius: 8px; font-weight: 600; font-size: 0.9rem; text-transform: uppercase;">
+                        </div>
+
+                        <div>
+                            <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; margin-bottom: 0.3rem;">
+                                Customer PAN (Optional)
+                            </label>
+                            <input type="text" id="billCustPan" placeholder="e.g. ABCDE1234F" style="width: 100%; padding: 0.65rem 0.85rem; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 600; font-size: 0.9rem; text-transform: uppercase;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Items Entries -->
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                        <h3 style="font-size: 0.95rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+                            <span>💎</span> Purchased Jewellery Items
+                        </h3>
+                        <button type="button" onclick="window.addBillItemRow()" style="padding: 0.45rem 0.9rem; background: #f8fafc; border: 1.5px solid var(--gold-primary); color: #b45309; font-weight: 800; font-size: 0.82rem; border-radius: var(--radius-pill); cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
+                            <span>➕</span> Add Item
+                        </button>
+                    </div>
+
+                    <!-- Items Header Labels -->
+                    <div style="display: grid; grid-template-columns: 2fr 1.1fr 1.1fr 0.9fr 0.9fr 1fr 1fr 1.1fr auto; gap: 0.6rem; padding: 0.4rem 0.9rem; font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase;">
+                        <span>Item Name</span>
+                        <span>Metal</span>
+                        <span>Purity</span>
+                        <span>Gross Wt(g)</span>
+                        <span>Net Wt(g)</span>
+                        <span>Rate / g (₹)</span>
+                        <span>Making (₹)</span>
+                        <span>Total (₹)</span>
+                        <span></span>
+                    </div>
+
+                    <!-- Container for rows -->
+                    <div id="billItemsContainer">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- 4. Summary & Payment Grid -->
+                <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <!-- Left: Payment Details & Notes -->
+                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: var(--radius-md); padding: 1.25rem;">
+                        <h4 style="font-size: 0.9rem; font-weight: 800; color: #0f172a; margin-bottom: 0.85rem;">
+                            💳 Payment & Status
+                        </h4>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 0.85rem;">
+                            <div>
+                                <label style="font-size: 0.8rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.25rem;">Payment Mode</label>
+                                <select id="billPaymentMode" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 600; font-size: 0.88rem;">
+                                    <option value="Cash" selected>💵 Cash</option>
+                                    <option value="UPI">📱 UPI / PhonePe / GPay</option>
+                                    <option value="Card">💳 Debit / Credit Card</option>
+                                    <option value="Bank Transfer">🏦 Bank Transfer (NEFT/IMPS)</option>
+                                    <option value="Split">🔀 Split (Cash + Online)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label style="font-size: 0.8rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.25rem;">Payment Status</label>
+                                <select id="billPaymentStatus" onchange="window.recalculateBillSummary()" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 600; font-size: 0.88rem;">
+                                    <option value="Paid" selected>✅ Fully Paid</option>
+                                    <option value="Partial">⏳ Partial Payment</option>
+                                    <option value="Credit">⚠️ Unpaid / Credit</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 0.85rem;">
+                            <div>
+                                <label style="font-size: 0.8rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.25rem;">Amount Received (₹)</label>
+                                <input type="number" id="billPaidAmount" step="1" placeholder="0" oninput="window.recalculateBillSummary()" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 700; font-size: 0.95rem;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.8rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.25rem;">Balance Due (₹)</label>
+                                <input type="number" id="billBalanceAmount" readonly value="0" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 800; font-size: 0.95rem; background: #f1f5f9; color: #b45309;">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="font-size: 0.8rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.25rem;">Bill Notes / Remarks</label>
+                            <input type="text" id="billNotes" placeholder="e.g. 916 Hallmark certified, gift velvet box included" style="width: 100%; padding: 0.55rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem;">
+                        </div>
+                    </div>
+
+                    <!-- Right: Calculations Breakdown -->
+                    <div class="bill-summary-card">
+                        <h4 style="font-size: 0.9rem; font-weight: 800; color: #0f172a; margin-bottom: 0.65rem;">
+                            📊 Financial Summary
+                        </h4>
+
+                        <div class="summary-calc-row">
+                            <span>Metal Value (Subtotal):</span>
+                            <strong id="billSubtotalDisplay">₹0</strong>
+                        </div>
+
+                        <div class="summary-calc-row">
+                            <span>Total Making Charges:</span>
+                            <strong id="billMakingDisplay">₹0</strong>
+                        </div>
+
+                        <div class="summary-calc-row" style="align-items: center;">
+                            <span>Discount (₹):</span>
+                            <input type="number" id="billDiscountInput" min="0" value="0" step="1" oninput="window.recalculateBillSummary()" style="width: 110px; padding: 0.25rem 0.5rem; text-align: right; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 700;">
+                        </div>
+
+                        <div class="summary-calc-row">
+                            <span>Taxable Value:</span>
+                            <strong id="billTaxableDisplay">₹0</strong>
+                        </div>
+
+                        <!-- GST Rows (shown only for GST bill) -->
+                        <div id="billGstBreakdownWrap">
+                            <div class="summary-calc-row" style="color: #065f46;">
+                                <span>CGST @ 1.5%:</span>
+                                <strong id="billCgstDisplay">₹0</strong>
+                            </div>
+                            <div class="summary-calc-row" style="color: #065f46;">
+                                <span>SGST @ 1.5%:</span>
+                                <strong id="billSgstDisplay">₹0</strong>
+                            </div>
+                        </div>
+
+                        <div class="summary-calc-row" id="billRoundOffRow" style="font-size: 0.8rem; color: #64748b;">
+                            <span>Round Off:</span>
+                            <strong id="billRoundOffDisplay">₹0</strong>
+                        </div>
+
+                        <div class="summary-calc-row grand-total-row">
+                            <span>Grand Total:</span>
+                            <strong id="billGrandTotalDisplay">₹0</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Actions -->
+                <div style="display: flex; justify-content: flex-end; gap: 1rem; border-top: 1.5px solid #e2e8f0; padding-top: 1.25rem;">
+                    <button type="button" onclick="window.closeCreateBillModal()" class="btn-secondary" style="padding: 0.75rem 1.4rem; border-radius: var(--radius-pill); font-weight: 700;">
+                        Cancel
+                    </button>
+                    <button type="submit" id="saveBillBtn" class="btn-primary" style="background: #0f172a; color: white; padding: 0.75rem 1.6rem; border-radius: var(--radius-pill); font-weight: 800;">
+                        💾 Save Bill
+                    </button>
+                    <button type="button" onclick="window.submitCreateBillAndPrint()" id="saveAndPrintBillBtn" class="btn-primary" style="background: var(--gold-gradient); color: #0f172a; padding: 0.75rem 1.8rem; border-radius: var(--radius-pill); font-weight: 900; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.35);">
+                        🖨️ Save & Print Invoice
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL 9: Royal Printable Invoice Modal -->
+    <!-- ============================================ -->
+    <div id="printInvoiceModal" class="modal" style="display: none; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px);">
+        <div class="modal-content" style="max-width: 890px; padding: 1.5rem; background: #f8fafc;">
+            <!-- Top Controls (hidden on print) -->
+            <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; background: #ffffff; padding: 0.85rem 1.25rem; border-radius: var(--radius-md); border: 1px solid #cbd5e1; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="font-weight: 800; font-size: 1.05rem; color: #0f172a;">📄 Official Customer Invoice</span>
+                    <span id="previewBillTypeBadge" class="badge-gst">GST Invoice</span>
+                </div>
+
+                <div style="display: flex; gap: 0.75rem; align-items: center;">
+                    <button onclick="window.printInvoicePaper()" class="btn-primary" style="background: var(--gold-gradient); color: #0f172a; font-weight: 800; font-size: 0.88rem; padding: 0.55rem 1.3rem; border-radius: var(--radius-pill); display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                        <span>🖨️</span> Print / Save PDF
+                    </button>
+                    <button id="invoiceWhatsAppBtn" class="btn-primary" style="background: #25D366; color: white; font-weight: 800; font-size: 0.88rem; padding: 0.55rem 1.2rem; border-radius: var(--radius-pill); display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                        <span>📲</span> WhatsApp Bill
+                    </button>
+                    <button onclick="window.closePrintInvoiceModal()" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 0.55rem 0.9rem; border-radius: var(--radius-pill); cursor: pointer; font-weight: 800; color: #64748b;">
+                        ✖ Close
+                    </button>
+                </div>
+            </div>
+
+            <!-- Print Paper Area -->
+            <div id="printInvoicePaper" class="invoice-paper">
+                <!-- Header Box -->
+                <div class="invoice-header-box">
+                    <div>
+                        <div class="invoice-brand-title">LJS JEWELLERS</div>
+                        <div class="invoice-brand-subtitle">Pawn Brokers & Certified Jewellers</div>
+                        <div class="invoice-store-address">
+                            📍 Near PNB (Main Market), Kumher, Deeg (Rajasthan) - 321201<br>
+                            📞 Helpline: +91 94149 02181 | 🌐 24x7 Digital Portal: ljsrecord.com<br>
+                            <span id="invoiceStoreGstin"><strong>GSTIN:</strong> 08AABCL1234F1Z5</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div id="invoiceHeaderDocTitle" class="invoice-badge-title">TAX INVOICE</div>
+                        <div class="invoice-meta-list">
+                            <div>Invoice No: <strong id="invNoDisplay">LJS-GST-2026-0001</strong></div>
+                            <div>Date: <strong id="invDateDisplay">01-Nov-2026</strong></div>
+                            <div>Time: <span id="invTimeDisplay">12:30 PM</span></div>
+                            <div id="invOriginalDuplicateBadge" style="font-size: 0.72rem; color: #b45309; font-weight: 800; text-transform: uppercase; margin-top: 0.2rem;">Original for Recipient</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Billed To Details Box -->
+                <div class="invoice-billed-grid">
+                    <div>
+                        <span style="font-size: 0.72rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Billed To (Customer Details):</span>
+                        <div id="invCustomerName" style="font-size: 1.1rem; font-weight: 800; color: #0f172a; margin-top: 0.2rem;">Rahul Sharma</div>
+                        <div id="invCustomerPhone" style="font-weight: 600; color: #334155;">📞 +91 9876543210</div>
+                        <div id="invCustomerAddress" style="color: #64748b;">Kumher, Deeg (Rajasthan)</div>
+                    </div>
+
+                    <div style="border-left: 1px dashed #cbd5e1; padding-left: 1.25rem;">
+                        <span style="font-size: 0.72rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Tax & Identification:</span>
+                        <div style="margin-top: 0.25rem;">
+                            <span>Customer GSTIN:</span> <strong id="invCustomerGstin">-</strong>
+                        </div>
+                        <div>
+                            <span>Customer PAN:</span> <strong id="invCustomerPan">-</strong>
+                        </div>
+                        <div>
+                            <span>Place of Supply:</span> <strong>Rajasthan (08)</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Items Table -->
+                <table class="invoice-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 35px; text-align: center;">#</th>
+                            <th>Description of Goods</th>
+                            <th style="width: 70px;">HSN</th>
+                            <th>Purity</th>
+                            <th style="text-align: right;">Gross Wt</th>
+                            <th style="text-align: right;">Net Wt</th>
+                            <th style="text-align: right;">Rate / g</th>
+                            <th style="text-align: right;">Making</th>
+                            <th style="text-align: right;">Total Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoiceTableBody">
+                        <!-- Populated via JS -->
+                    </tbody>
+                </table>
+
+                <!-- Bottom Calculations Grid -->
+                <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.5rem; margin-top: 1rem;">
+                    <div>
+                        <!-- Amount in Words -->
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-sm); padding: 0.85rem 1rem; margin-bottom: 0.85rem;">
+                            <span style="font-size: 0.72rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Amount in Words:</span>
+                            <div id="invAmountInWords" style="font-weight: 800; color: #0f172a; font-size: 0.95rem; margin-top: 0.2rem; line-height: 1.3;">
+                                Rupees Forty-Nine Thousand Five Hundred Only
+                            </div>
+                        </div>
+
+                        <!-- Payment & Mode -->
+                        <div style="font-size: 0.85rem; color: #334155; line-height: 1.6;">
+                            <div>Payment Mode: <strong id="invPaymentModeDisplay">Cash</strong></div>
+                            <div>Payment Status: <strong id="invPaymentStatusDisplay">Fully Paid</strong></div>
+                            <div>Amount Paid: <strong id="invPaidDisplay">₹0</strong> | Balance: <strong id="invBalanceDisplay">₹0</strong></div>
+                            <div id="invNotesDisplay" style="font-size: 0.78rem; color: #64748b; margin-top: 0.2rem; font-style: italic;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Financial Summary Breakdown Table -->
+                    <div style="font-size: 0.88rem;">
+                        <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px dashed #cbd5e1;">
+                            <span>Subtotal (Metal Value):</span>
+                            <strong id="invSubtotalDisplay">₹0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px dashed #cbd5e1;">
+                            <span>Total Making Charges:</span>
+                            <strong id="invMakingDisplay">₹0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px dashed #cbd5e1;">
+                            <span>Discount:</span>
+                            <strong id="invDiscountDisplay">₹0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 0.35rem 0; border-bottom: 1.5px solid #0f172a; font-weight: 700;">
+                            <span>Taxable Amount:</span>
+                            <span id="invTaxableDisplay">₹0</span>
+                        </div>
+
+                        <div id="invGstRowsWrap">
+                            <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px dashed #cbd5e1; color: #065f46;">
+                                <span>CGST @ 1.5%:</span>
+                                <strong id="invCgstDisplay">₹0</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px dashed #cbd5e1; color: #065f46;">
+                                <span>SGST @ 1.5%:</span>
+                                <strong id="invSgstDisplay">₹0</strong>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px dashed #cbd5e1; font-size: 0.8rem; color: #64748b;">
+                            <span>Round Off:</span>
+                            <strong id="invRoundOffDisplay">₹0</strong>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; padding: 0.6rem 0; border-top: 2px solid #0f172a; font-size: 1.25rem; font-weight: 900; color: #b45309;">
+                            <span>Grand Total:</span>
+                            <span id="invGrandTotalDisplay" style="font-family: var(--font-serif); font-size: 1.45rem;">₹0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Terms and Signatures -->
+                <div class="invoice-terms-signatures">
+                    <div>
+                        <strong style="color: #0f172a; display: block; margin-bottom: 0.3rem;">Terms & Conditions:</strong>
+                        <ol style="padding-left: 1.1rem; margin: 0; color: #64748b; line-height: 1.4; font-size: 0.74rem;">
+                            <li>Goods once sold will be accepted or exchanged as per store policy with original invoice.</li>
+                            <li>Purity of Hallmark 916/22K Gold and 92.5 Fine Silver is fully guaranteed by LJS Jewellers.</li>
+                            <li>Disputes, if any, subject to Kumher / Deeg jurisdiction only.</li>
+                            <li>Customer can access & verify digital invoices 24/7 on our online Customer Passbook Portal.</li>
+                        </ol>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between;">
+                        <div class="signature-box">
+                            <div class="signature-line">Customer Signature</div>
+                        </div>
+                        <div class="signature-box">
+                            <div class="signature-line" style="color: #b45309;">For LJS JEWELLERS<br><span style="font-size: 0.7rem; font-weight: normal; color: #64748b;">Auth. Signatory</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <button id="aiAssistantTriggerBtn" class="ai-assistant-fab" title="AI Munimji Copilot">
         <span class="fab-pulse"></span>
         <div class="fab-icon-wrap">

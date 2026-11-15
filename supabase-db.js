@@ -1,5 +1,41 @@
 const { createClient } = require('@supabase/supabase-js');
+const path = require('path');
+const sqlite3 = require('sqlite3').verbose();
 require('dotenv').config();
+
+const localSqliteDb = new sqlite3.Database(path.join(__dirname, 'database.sqlite'));
+
+// Ensure bills table exists in local SQLite
+localSqliteDb.run(`
+CREATE TABLE IF NOT EXISTS bills (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    bill_no TEXT UNIQUE NOT NULL,
+    bill_type TEXT NOT NULL,
+    customer_id INTEGER,
+    customer_name TEXT NOT NULL,
+    customer_phone TEXT NOT NULL,
+    customer_address TEXT,
+    customer_gstin TEXT,
+    customer_pan TEXT,
+    bill_date TEXT,
+    items TEXT,
+    subtotal REAL DEFAULT 0,
+    making_total REAL DEFAULT 0,
+    discount REAL DEFAULT 0,
+    taxable_amount REAL DEFAULT 0,
+    gst_rate REAL DEFAULT 0,
+    cgst_amount REAL DEFAULT 0,
+    sgst_amount REAL DEFAULT 0,
+    total_gst REAL DEFAULT 0,
+    grand_total REAL DEFAULT 0,
+    round_off REAL DEFAULT 0,
+    payment_mode TEXT DEFAULT 'Cash',
+    payment_status TEXT DEFAULT 'Paid',
+    paid_amount REAL DEFAULT 0,
+    balance_amount REAL DEFAULT 0,
+    notes TEXT,
+    created_at TEXT
+)`);
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_KEY || '';
@@ -66,11 +102,51 @@ const db = {
 };
 
 async function handleQuery(sql, params) {
+    const cleanSql = sql.trim().replace(/\s+/g, ' ');
+
+    // 0. Bills Queries (Resilient Dual Supabase + SQLite)
+    if (/FROM bills/i.test(cleanSql)) {
+        if (supabase) {
+            try {
+                let q = supabase.from('bills').select('*');
+                if (/WHERE id = \?/i.test(cleanSql)) {
+                    q = q.eq('id', params[0]);
+                } else if (/WHERE bill_no = \?/i.test(cleanSql)) {
+                    q = q.eq('bill_no', params[0]);
+                } else if (/WHERE \(?customer_phone = \? OR customer_id = \?/i.test(cleanSql)) {
+                    q = q.or(`customer_phone.eq.${params[0]},customer_id.eq.${params[1]}`);
+                } else if (/WHERE customer_phone = \?/i.test(cleanSql)) {
+                    q = q.eq('customer_phone', params[0]);
+                } else if (/WHERE customer_id = \?/i.test(cleanSql)) {
+                    q = q.eq('customer_id', params[0]);
+                }
+                if (/ORDER BY/i.test(cleanSql)) {
+                    q = q.order('id', { ascending: false });
+                }
+                const { data, error } = await q;
+                if (!error && Array.isArray(data) && data.length > 0) {
+                    return data;
+                }
+            } catch (err) {
+                // fall through to local SQLite
+            }
+        }
+        return new Promise((resolve) => {
+            localSqliteDb.all(sql, params, (err, rows) => {
+                if (err) {
+                    console.error('Local SQLite bills query error:', err);
+                    resolve([]);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
     if (!supabase) {
         console.error('Supabase client is not initialized. Please set SUPABASE_URL and SUPABASE_KEY.');
         return [];
     }
-    const cleanSql = sql.trim().replace(/\s+/g, ' ');
 
     // 1. SELECT * FROM customers ORDER BY id DESC
     if (/SELECT \* FROM customers ORDER BY id DESC/i.test(cleanSql)) {
@@ -346,18 +422,23 @@ async function handleQuery(sql, params) {
 
     // 19. Daily Rokad - Released Pawns
     if (/WHERE p\.status = 'Released' AND p\.release_date LIKE \?/i.test(cleanSql)) {
-        const rawDateParam = params[1] !== undefined ? params[1] : (params[0] || '');
+        const rawDateParam = params[params.length - 1] !== undefined ? params[params.length - 1] : (params[0] || '');
         const datePrefix = String(rawDateParam).replace(/%/g, '');
         const { data: pawns, error } = await supabase.from('pawn_records').select('*, customers(name)').eq('status', 'Released').like('release_date', `${datePrefix}%`);
         if (error) throw error;
 
         const pawnIds = (pawns || []).map(p => p.id);
         let paymentsBeforeMap = {};
+        let paymentsTodayMap = {};
+        let todayPaymentTypeMap = {};
         if (pawnIds.length > 0) {
-            const { data: pmts } = await supabase.from('pawn_payments').select('pawn_id, amount, payment_date').in('pawn_id', pawnIds);
+            const { data: pmts } = await supabase.from('pawn_payments').select('pawn_id, amount, payment_date, payment_type').in('pawn_id', pawnIds);
             (pmts || []).forEach(pm => {
                 if (!pm.payment_date.startsWith(datePrefix)) {
                     paymentsBeforeMap[pm.pawn_id] = (paymentsBeforeMap[pm.pawn_id] || 0) + parseFloat(pm.amount || 0);
+                } else {
+                    paymentsTodayMap[pm.pawn_id] = (paymentsTodayMap[pm.pawn_id] || 0) + parseFloat(pm.amount || 0);
+                    if (pm.payment_type) todayPaymentTypeMap[pm.pawn_id] = pm.payment_type;
                 }
             });
         }
@@ -365,18 +446,23 @@ async function handleQuery(sql, params) {
         return (pawns || []).map(p => ({
             ...p,
             customer_name: p.customers?.name || '',
-            total_jama_before: paymentsBeforeMap[p.id] || 0
+            total_jama_before: paymentsBeforeMap[p.id] || 0,
+            total_jama_today: paymentsTodayMap[p.id] || 0,
+            today_payment_type: todayPaymentTypeMap[p.id] || null
         }));
     }
 
     // 20. Daily Rokad - Partial Payments today (WHERE pp.payment_date LIKE ?)
     if (/WHERE pp\.payment_date LIKE \?/i.test(cleanSql)) {
         const datePrefix = params[0].replace('%', '');
-        const { data: pmts, error } = await supabase.from('pawn_payments').select('*, pawn_records(description, customers(name))').like('payment_date', `${datePrefix}%`);
+        const { data: pmts, error } = await supabase.from('pawn_payments').select('*, pawn_records(description, status, release_date, customers(name))').like('payment_date', `${datePrefix}%`);
         if (error) throw error;
         return (pmts || []).map(pm => ({
             ...pm,
+            pawn_id: pm.pawn_id,
             description: pm.pawn_records?.description || '',
+            pawn_status: pm.pawn_records?.status || '',
+            release_date: pm.pawn_records?.release_date || '',
             customer_name: pm.pawn_records?.customers?.name || ''
         }));
     }
@@ -619,11 +705,56 @@ async function fixAllSequences() {
 }
 
 async function handleRun(sql, params) {
+    const cleanSql = sql.trim().replace(/\s+/g, ' ');
+
+    // 0a. Bills Run (Resilient Dual Supabase + SQLite)
+    if (/INSERT INTO bills/i.test(cleanSql)) {
+        const localResult = await new Promise((resolve, reject) => {
+            localSqliteDb.run(sql, params, function(err) {
+                if (err) reject(err);
+                else resolve({ lastID: this.lastID || 0, changes: this.changes || 1 });
+            });
+        });
+
+        if (supabase) {
+            try {
+                const colsMatch = cleanSql.match(/\(([^)]+)\)\s+VALUES\s*\(([^)]+)\)/i);
+                if (colsMatch) {
+                    const cols = colsMatch[1].split(',').map(c => c.trim());
+                    const record = {};
+                    cols.forEach((col, idx) => {
+                        record[col] = params[idx];
+                    });
+                    await supabase.from('bills').insert(record);
+                }
+            } catch (supErr) {
+                console.warn('Note: Could not sync bill to Supabase (local saved):', supErr.message);
+            }
+        }
+        return localResult;
+    }
+
+    if (/DELETE FROM bills/i.test(cleanSql)) {
+        if (supabase) {
+            try {
+                if (/WHERE id = \?/i.test(cleanSql)) {
+                    await supabase.from('bills').delete().eq('id', params[0]);
+                } else if (/WHERE bill_no = \?/i.test(cleanSql)) {
+                    await supabase.from('bills').delete().eq('bill_no', params[0]);
+                }
+            } catch(e){}
+        }
+        return new Promise((resolve) => {
+            localSqliteDb.run(sql, params, function(err) {
+                resolve({ lastID: 0, changes: this ? (this.changes || 1) : 1 });
+            });
+        });
+    }
+
     if (!supabase) {
         console.error('Supabase client is not initialized. Please set SUPABASE_URL and SUPABASE_KEY.');
         return { lastID: 0, changes: 0 };
     }
-    const cleanSql = sql.trim().replace(/\s+/g, ' ');
 
     // 0. CREATE TABLE
     if (/CREATE TABLE/i.test(cleanSql)) {

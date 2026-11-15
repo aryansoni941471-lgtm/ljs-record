@@ -225,7 +225,8 @@ async function processAdminAssistantQuery({ prompt, db, calculateInterest }) {
 
             const todayNewPawns = pawns.filter(p => (p.date_added || '').startsWith(targetDate));
             const todayReleasedPawns = pawns.filter(p => p.status === 'Released' && (p.release_date || '').startsWith(targetDate));
-            const todayPayments = payments.filter(pay => (pay.payment_date || '').startsWith(targetDate));
+            const releasedPawnIds = new Set(todayReleasedPawns.map(p => p.id));
+            const todayPayments = payments.filter(pay => (pay.payment_date || '').startsWith(targetDate) && !releasedPawnIds.has(pay.pawn_id));
 
             let totalNaame = todayNewPawns.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
             let totalJamaFromPayments = todayPayments.reduce((sum, pay) => sum + parseFloat(pay.amount || 0), 0);
@@ -234,10 +235,13 @@ async function processAdminAssistantQuery({ prompt, db, calculateInterest }) {
             const releasedDetails = todayReleasedPawns.map(p => {
                 const interest = calculateInterest(p.amount, p.monthly_interest_rate || p.interest_rate, p.date_added, 'Released', p.release_date);
                 const principal = parseFloat(p.amount || 0);
+                const todayPaid = (paymentsByPawn[p.id] || [])
+                    .filter(pay => (pay.payment_date || '').startsWith(targetDate))
+                    .reduce((s, pay) => s + parseFloat(pay.amount || 0), 0);
                 const prevPayments = (paymentsByPawn[p.id] || [])
                     .filter(pay => !(pay.payment_date || '').startsWith(targetDate))
                     .reduce((s, pay) => s + parseFloat(pay.amount || 0), 0);
-                const finalAmt = Math.max(0, (principal + interest) - prevPayments);
+                const finalAmt = todayPaid > 0 ? todayPaid : Math.max(0, (principal + interest) - prevPayments);
                 totalJamaFromReleases += finalAmt;
                 const cust = customers.find(c => c.id === p.customer_id);
                 return {
