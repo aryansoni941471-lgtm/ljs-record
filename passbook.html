@@ -417,7 +417,7 @@
 
             function renderPassbook(data) {
                 const c = data.customer;
-                const pawns = data.pawns || [];
+                const pawns = (data.pawns || []).filter(p => p.is_portal_visible !== 0 && p.is_portal_visible !== false && p.is_portal_visible !== '0');
 
                 // Extract unique amounts sorted descending
                 const uniqueAmounts = Array.from(new Set(pawns.map(p => p.amount))).sort((a, b) => b - a);

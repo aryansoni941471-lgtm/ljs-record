@@ -1344,40 +1344,108 @@
 
         <!-- LOGIN VIEW -->
         <div id="loginView" class="login-card">
-            <div class="login-header">
-                <h2>🔐 Customer Login</h2>
-                <p class="login-subtitle">Sign in with your registered mobile number and password</p>
+            <!-- STEP 1: Credentials & Security CAPTCHA -->
+            <div id="loginStep1">
+                <div class="login-header">
+                    <h2>🔐 Customer Login</h2>
+                    <p class="login-subtitle">Sign in with your registered mobile number and password</p>
+                </div>
+
+                <div id="loginAlert" class="alert-box alert-error"></div>
+
+                <form id="portalLoginForm">
+                    <div class="form-group">
+                        <label for="loginUsername">Mobile Number / Username</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">📱</span>
+                            <input type="text" id="loginUsername" class="form-input" required placeholder="e.g. 9876543210"
+                                autocomplete="username">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="loginPassword">Password / Secret PIN</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">🔑</span>
+                            <input type="password" id="loginPassword" class="form-input" required
+                                placeholder="Enter password / PIN" autocomplete="current-password">
+                        </div>
+                    </div>
+
+                    <!-- Security Verification CAPTCHA -->
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <label for="loginCaptcha" style="margin-bottom: 0;">Security Verification (CAPTCHA) *</label>
+                            <span style="font-size: 0.75rem; color: #16a34a; font-weight: 700;">Anti-Bot Protection</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem;">
+                            <div id="captchaSvgContainer" style="flex: 1; display: flex; align-items: center; justify-content: center; background: #0f172a; border-radius: 8px; padding: 4px; min-height: 52px; border: 1px solid #d4af37; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);">
+                                <span style="color: #94a3b8; font-size: 0.85rem;">Loading Security Code...</span>
+                            </div>
+                            <button type="button" id="btnRefreshCaptcha" title="Refresh CAPTCHA code" style="height: 52px; width: 52px; border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; transition: all 0.2s ease;">
+                                🔄
+                            </button>
+                        </div>
+                        <div class="input-wrapper">
+                            <span class="input-icon">🛡️</span>
+                            <input type="text" id="loginCaptcha" class="form-input" required placeholder="Enter the 5 characters shown above" autocomplete="off" maxlength="6" style="letter-spacing: 2px; text-transform: uppercase;">
+                        </div>
+                        <input type="hidden" id="captchaToken">
+                    </div>
+
+                    <button type="submit" id="btnSubmitLogin" class="btn-login">
+                        🔑 Verify Credentials & Get OTP
+                    </button>
+                </form>
+
+                <div class="login-help-note">
+                    💡 <strong>Need your PIN or Password?</strong><br>
+                    Contact the counter staff at LJS Jewellers to receive or reset your account PIN.
+                </div>
             </div>
 
-            <div id="loginAlert" class="alert-box alert-error"></div>
-
-            <form id="portalLoginForm">
-                <div class="form-group">
-                    <label for="loginUsername">Mobile Number / Username</label>
-                    <div class="input-wrapper">
-                        <span class="input-icon">📱</span>
-                        <input type="text" id="loginUsername" class="form-input" required placeholder="e.g. 9876543210"
-                            autocomplete="username">
+            <!-- STEP 2: MFA 6-Digit OTP Verification -->
+            <div id="loginStep2" style="display: none; animation: fadeIn 0.3s ease-out;">
+                <div class="login-header" style="margin-bottom: 1.5rem;">
+                    <div style="font-size: 2.8rem; margin-bottom: 0.5rem;">🛡️</div>
+                    <h2>Two-Factor Authentication (MFA)</h2>
+                    <p class="login-subtitle">Enter the 6-digit security code (OTP) sent to your registered contact:</p>
+                    <div id="mfaMaskedContact" style="display: inline-block; margin-top: 0.65rem; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.88rem; letter-spacing: 0.5px;">
+                        📧 Loading...
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="loginPassword">Password / Secret PIN</label>
-                    <div class="input-wrapper">
-                        <span class="input-icon">🔑</span>
-                        <input type="password" id="loginPassword" class="form-input" required
-                            placeholder="Enter password / PIN" autocomplete="current-password">
+                <div id="mfaAlert" class="alert-box alert-error" style="display: none;"></div>
+
+                <form id="portalMfaForm">
+                    <input type="hidden" id="mfaToken">
+                    <div class="form-group" style="text-align: center;">
+                        <label for="mfaOtpInput" style="font-size: 0.9rem; margin-bottom: 0.75rem; text-align: center; display: block; font-weight: 700; color: var(--navy-header);">
+                            Enter 6-Digit Verification Code
+                        </label>
+                        <div style="display: flex; justify-content: center; margin-bottom: 0.75rem;">
+                            <input type="text" id="mfaOtpInput" inputmode="numeric" pattern="[0-9]*" maxlength="6" required
+                                placeholder="• • • • • •" autocomplete="one-time-code"
+                                style="width: 100%; max-width: 280px; text-align: center; font-size: 1.8rem; font-weight: 800; letter-spacing: 10px; padding: 0.75rem 1rem; border: 2px solid #d4af37; border-radius: 12px; background: #fffbeb; color: #0f172a; font-family: monospace;">
+                        </div>
+                        <div id="mfaTimerText" style="font-size: 0.82rem; color: #64748b; font-weight: 600; margin-top: 0.5rem;">
+                            Code expires in: <span id="mfaCountdown" style="color: #dc2626; font-weight: 800;">10:00</span>
+                        </div>
                     </div>
-                </div>
 
-                <button type="submit" class="btn-login">
-                    🔑 Login to Portal
-                </button>
-            </form>
+                    <button type="submit" id="btnVerifyMfa" class="btn-login" style="background: linear-gradient(135deg, #16a34a, #15803d); color: #ffffff; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35);">
+                        ✅ Verify & Enter Portal
+                    </button>
 
-            <div class="login-help-note">
-                💡 <strong>Need your PIN or Password?</strong><br>
-                Contact the counter staff at LJS Jewellers to receive or reset your account PIN.
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1.25rem; font-size: 0.85rem;">
+                        <button type="button" id="btnResendOtp" style="background: none; border: none; color: #2563eb; cursor: pointer; font-weight: 700; padding: 0; text-decoration: underline;" disabled>
+                            🔄 Resend OTP (<span id="resendTimer">45s</span>)
+                        </button>
+                        <button type="button" id="btnBackToLogin" style="background: none; border: none; color: #64748b; cursor: pointer; font-weight: 600; padding: 0;">
+                            ← Back to Login
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
 
@@ -2668,24 +2736,70 @@ https://ljsrecord.com/portal.html`;
                 }
             }
 
+            // Captcha Loading Function
+            async function loadCaptcha() {
+                const container = document.getElementById('captchaSvgContainer');
+                const tokenInput = document.getElementById('captchaToken');
+                const captchaInput = document.getElementById('loginCaptcha');
+                if (!container) return;
+
+                container.innerHTML = '<span style="color:#94a3b8; font-size:0.85rem;">Loading Security Code...</span>';
+                if (captchaInput) captchaInput.value = '';
+
+                try {
+                    const res = await fetch('/api/portal/captcha');
+                    const data = await res.json();
+                    if (data.svg && data.token) {
+                        container.innerHTML = data.svg;
+                        if (tokenInput) tokenInput.value = data.token;
+                    }
+                } catch (e) {
+                    console.error('Failed to load captcha:', e);
+                    container.innerHTML = '<span style="color:#f87171; font-size:0.8rem;">Click 🔄 to retry</span>';
+                }
+            }
+
+            const btnRefresh = document.getElementById('btnRefreshCaptcha');
+            if (btnRefresh) {
+                btnRefresh.addEventListener('click', loadCaptcha);
+            }
+
+            // Load captcha initially if customer is not already logged in
+            if (!savedData || currentRole !== 'customer') {
+                loadCaptcha();
+            }
+
+            let mfaCountdownInterval = null;
+            let resendTimerInterval = null;
+
             loginForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 loginAlert.style.display = 'none';
 
                 const username = document.getElementById('loginUsername').value;
                 const password = document.getElementById('loginPassword').value;
+                const captchaAnswer = document.getElementById('loginCaptcha').value;
+                const captchaToken = document.getElementById('captchaToken').value;
+
+                const submitBtn = document.getElementById('btnSubmitLogin');
+                const origBtnHtml = submitBtn.innerHTML;
+                submitBtn.innerHTML = '⏳ Verifying...';
+                submitBtn.disabled = true;
 
                 try {
                     const res = await fetch('/api/portal/login', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username, password })
+                        body: JSON.stringify({ username, password, captchaToken, captchaAnswer })
                     });
                     const data = await res.json();
 
                     if (!res.ok) {
                         loginAlert.innerText = data.error || 'Login failed. Please enter the correct Username and Password.';
                         loginAlert.style.display = 'block';
+                        if (data.reloadCaptcha) {
+                            loadCaptcha();
+                        }
                         return;
                     }
 
@@ -2695,7 +2809,22 @@ https://ljsrecord.com/portal.html`;
                         return;
                     }
 
-                    // Save customer session & render ledger
+                    if (data.mfaRequired) {
+                        // Switch to Step 2: MFA 6-Digit OTP Verification View
+                        document.getElementById('mfaToken').value = data.mfaToken;
+                        document.getElementById('mfaMaskedContact').textContent = data.maskedContact || 'Registered Contact';
+                        document.getElementById('mfaOtpInput').value = '';
+                        document.getElementById('mfaAlert').style.display = 'none';
+
+                        document.getElementById('loginStep1').style.display = 'none';
+                        document.getElementById('loginStep2').style.display = 'block';
+                        document.getElementById('mfaOtpInput').focus();
+
+                        startMfaCountdowns();
+                        return;
+                    }
+
+                    // Direct login fallback
                     localStorage.setItem('ljs_session_role', 'customer');
                     localStorage.setItem('ljs_customer_session', JSON.stringify(data));
                     renderLedger(data);
@@ -2703,22 +2832,176 @@ https://ljsrecord.com/portal.html`;
                     console.error(err);
                     loginAlert.innerText = 'Unable to connect to server. Please try again later.';
                     loginAlert.style.display = 'block';
+                    loadCaptcha();
+                } finally {
+                    submitBtn.innerHTML = origBtnHtml;
+                    submitBtn.disabled = false;
                 }
             });
 
+            // MFA OTP Form Submission (Step 2)
+            const mfaForm = document.getElementById('portalMfaForm');
+            if (mfaForm) {
+                mfaForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const mfaAlert = document.getElementById('mfaAlert');
+                    mfaAlert.style.display = 'none';
+
+                    const mfaToken = document.getElementById('mfaToken').value;
+                    const otp = document.getElementById('mfaOtpInput').value;
+                    const btnVerify = document.getElementById('btnVerifyMfa');
+                    const origVerifyHtml = btnVerify.innerHTML;
+                    btnVerify.innerHTML = '⏳ Verifying Code...';
+                    btnVerify.disabled = true;
+
+                    try {
+                        const res = await fetch('/api/portal/verify-otp', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ mfaToken, otp })
+                        });
+                        const data = await res.json();
+
+                        if (!res.ok) {
+                            mfaAlert.innerText = data.error || 'Verification failed. Please check the OTP code.';
+                            mfaAlert.style.display = 'block';
+                            return;
+                        }
+
+                        // MFA Success! Save customer session & render ledger
+                        clearInterval(mfaCountdownInterval);
+                        clearInterval(resendTimerInterval);
+
+                        localStorage.setItem('ljs_session_role', 'customer');
+                        localStorage.setItem('ljs_customer_session', JSON.stringify(data));
+                        renderLedger(data);
+                    } catch (err) {
+                        console.error(err);
+                        mfaAlert.innerText = 'Unable to connect to server. Please try again later.';
+                        mfaAlert.style.display = 'block';
+                    } finally {
+                        btnVerify.innerHTML = origVerifyHtml;
+                        btnVerify.disabled = false;
+                    }
+                });
+            }
+
+            // Resend OTP Button Handler
+            const btnResend = document.getElementById('btnResendOtp');
+            if (btnResend) {
+                btnResend.addEventListener('click', async () => {
+                    const mfaAlert = document.getElementById('mfaAlert');
+                    mfaAlert.style.display = 'none';
+                    const mfaToken = document.getElementById('mfaToken').value;
+
+                    btnResend.disabled = true;
+                    btnResend.textContent = 'Sending...';
+
+                    try {
+                        const res = await fetch('/api/portal/resend-otp', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ mfaToken })
+                        });
+                        const data = await res.json();
+                        if (!res.ok) {
+                            mfaAlert.innerText = data.error || 'Failed to resend OTP.';
+                            mfaAlert.style.display = 'block';
+                            return;
+                        }
+
+                        document.getElementById('mfaToken').value = data.mfaToken;
+                        if (data.maskedContact) {
+                            document.getElementById('mfaMaskedContact').textContent = data.maskedContact;
+                        }
+                        alert('✅ ' + (data.message || 'New OTP sent successfully!'));
+                        startMfaCountdowns();
+                    } catch (e) {
+                        console.error(e);
+                        mfaAlert.innerText = 'Connection error. Could not resend OTP.';
+                        mfaAlert.style.display = 'block';
+                    }
+                });
+            }
+
+            // Back to Login Button Handler
+            const btnBack = document.getElementById('btnBackToLogin');
+            if (btnBack) {
+                btnBack.addEventListener('click', () => {
+                    clearInterval(mfaCountdownInterval);
+                    clearInterval(resendTimerInterval);
+                    document.getElementById('loginStep2').style.display = 'none';
+                    document.getElementById('loginStep1').style.display = 'block';
+                    loadCaptcha();
+                });
+            }
+
+            function startMfaCountdowns() {
+                clearInterval(mfaCountdownInterval);
+                clearInterval(resendTimerInterval);
+
+                // 10 minutes total expiry
+                let totalSecs = 600;
+                const countdownEl = document.getElementById('mfaCountdown');
+                mfaCountdownInterval = setInterval(() => {
+                    totalSecs--;
+                    if (totalSecs <= 0) {
+                        clearInterval(mfaCountdownInterval);
+                        if (countdownEl) countdownEl.textContent = 'EXPIRED';
+                        const mfaAlert = document.getElementById('mfaAlert');
+                        if (mfaAlert) {
+                            mfaAlert.innerText = 'Your OTP code has expired. Please click Resend OTP or go back to login.';
+                            mfaAlert.style.display = 'block';
+                        }
+                        return;
+                    }
+                    const m = Math.floor(totalSecs / 60);
+                    const s = totalSecs % 60;
+                    if (countdownEl) countdownEl.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+                }, 1000);
+
+                // 45 seconds resend timer
+                let resendSecs = 45;
+                const resendBtn = document.getElementById('btnResendOtp');
+                if (resendBtn) {
+                    resendBtn.disabled = true;
+                    resendBtn.innerHTML = `🔄 Resend OTP (<span id="resendTimer">${resendSecs}s</span>)`;
+                }
+
+                resendTimerInterval = setInterval(() => {
+                    resendSecs--;
+                    const resendTimerEl = document.getElementById('resendTimer');
+                    if (resendSecs <= 0) {
+                        clearInterval(resendTimerInterval);
+                        if (resendBtn) {
+                            resendBtn.disabled = false;
+                            resendBtn.innerHTML = '🔄 Resend OTP';
+                        }
+                        return;
+                    }
+                    if (resendTimerEl) resendTimerEl.textContent = `${resendSecs}s`;
+                    else if (resendBtn) resendBtn.innerHTML = `🔄 Resend OTP (<span id="resendTimer">${resendSecs}s</span>)`;
+                }, 1000);
+            }
+
             logoutBtn.addEventListener('click', () => {
+                clearInterval(mfaCountdownInterval);
+                clearInterval(resendTimerInterval);
                 localStorage.removeItem('ljs_customer_session');
                 localStorage.removeItem('ljs_session_role');
                 const navTabs = document.getElementById('navTabsContainer');
                 if (navTabs) navTabs.style.display = 'none';
                 ledgerView.style.display = 'none';
                 loginView.style.display = 'block';
+                document.getElementById('loginStep2').style.display = 'none';
+                document.getElementById('loginStep1').style.display = 'block';
                 loginForm.reset();
+                loadCaptcha();
             });
 
             function renderLedger(data) {
                 const c = data.customer || {};
-                const pawns = data.pawns || [];
+                const pawns = (data.pawns || []).filter(p => p.is_portal_visible !== 0 && p.is_portal_visible !== false && p.is_portal_visible !== '0');
 
                 document.getElementById('custName').textContent = c.name || 'Valued Customer';
                 document.getElementById('custPhone').textContent = `📞 ${c.phone || ''}`;

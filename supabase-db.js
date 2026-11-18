@@ -294,9 +294,32 @@ async function handleQuery(sql, params) {
         }));
     }
 
-    // 10b. Portal Login: SELECT * FROM pawn_records WHERE customer_id = ? ORDER BY id DESC
-    if (/SELECT \* FROM pawn_records WHERE customer_id = \? ORDER BY id DESC/i.test(cleanSql)) {
+    // 10b. Portal Login & Passbook: SELECT * FROM pawn_records WHERE customer_id = ? (with optional is_portal_visible filter)
+    if (/SELECT \* FROM pawn_records WHERE customer_id = \?/i.test(cleanSql)) {
         const custId = params[0];
+        const hasVisibilityFilter = /is_portal_visible/i.test(cleanSql);
+        if (hasVisibilityFilter) {
+            try {
+                const { data: pawns, error } = await supabase
+                    .from('pawn_records')
+                    .select('*')
+                    .eq('customer_id', custId)
+                    .or('is_portal_visible.eq.1,is_portal_visible.is.null')
+                    .order('id', { ascending: false });
+                if (!error && pawns) return pawns;
+            } catch (filterErr) {
+                console.warn('[Supabase] is_portal_visible filter warning, using memory fallback:', filterErr.message);
+            }
+            // Memory fallback in case column doesn't exist on Supabase
+            const { data: allPawns, error: allErr } = await supabase
+                .from('pawn_records')
+                .select('*')
+                .eq('customer_id', custId)
+                .order('id', { ascending: false });
+            if (allErr) throw allErr;
+            return (allPawns || []).filter(p => p.is_portal_visible !== 0 && p.is_portal_visible !== '0' && p.is_portal_visible !== false);
+        }
+
         const { data: pawns, error } = await supabase.from('pawn_records').select('*').eq('customer_id', custId).order('id', { ascending: false });
         if (error) throw error;
         return pawns || [];
@@ -605,12 +628,6 @@ async function handleQuery(sql, params) {
         return (pawns || []).map(p => ({ ...p, customer_name: p.customers?.name || '', total_jama_before: paymentsBeforeMap[p.id] || 0 }));
     }
 
-    // 27. Passbook - pawn_records WHERE customer_id = ? ORDER BY id DESC (simple, no JOIN)
-    if (/SELECT \* FROM pawn_records WHERE customer_id = \? ORDER BY id DESC/i.test(cleanSql)) {
-        const { data, error } = await supabase.from('pawn_records').select('*').eq('customer_id', params[0]).order('id', { ascending: false });
-        if (error) throw error;
-        return data || [];
-    }
 
     // 28. Passbook - pawn_payments WHERE pawn_id IN (id1,id2,...)
     if (/SELECT \* FROM pawn_payments WHERE pawn_id IN \(/i.test(cleanSql)) {
@@ -677,6 +694,14 @@ async function safeInsert(tableName, record) {
     let { data, error } = await supabase.from(tableName).insert(record).select('id').single();
 
     if (!error) return data; // Success on first try
+
+    // Handle missing column fallback (e.g. before user runs ALTER TABLE on Supabase)
+    if (error && record && record.is_portal_visible !== undefined && (error.code === '42703' || (error.message && error.message.includes('is_portal_visible')))) {
+        console.warn(`[safeInsert] Column 'is_portal_visible' not yet on '${tableName}', retrying insert without it...`);
+        const cleanRecord = { ...record };
+        delete cleanRecord.is_portal_visible;
+        return safeInsert(tableName, cleanRecord);
+    }
 
     const isSequenceCollision = error.code === '23505' ||
         (error.message && (
@@ -963,7 +988,13 @@ async function handleRun(sql, params) {
 
             const id = params[params.length - 1];
             const { error } = await supabase.from('pawn_records').update(updates).eq('id', id);
-            if (error) throw error;
+            if (error) {
+                if (updates.is_portal_visible !== undefined && (error.code === '42703' || (error.message && error.message.includes('is_portal_visible')))) {
+                    console.warn('[Supabase] is_portal_visible column not yet present in Supabase, update skipped gracefully');
+                    return { lastID: 0, changes: 0 };
+                }
+                throw error;
+            }
             return { lastID: 0, changes: 1 };
         }
     }

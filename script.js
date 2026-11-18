@@ -1085,6 +1085,8 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('item_weight_grams', document.getElementById('itemWeight').value);
         formData.append('item_metal_type', document.getElementById('itemMetalType').value);
         formData.append('interest_rate', document.getElementById('pawnInterestRate').value);
+        const showOnPortalCheck = document.getElementById('pawnShowOnPortal');
+        formData.append('is_portal_visible', (showOnPortalCheck && !showOnPortalCheck.checked) ? 0 : 1);
         const pawnLockerInput = document.getElementById('pawnLockerLocation');
         if (pawnLockerInput && pawnLockerInput.value) {
             formData.append('locker_location', pawnLockerInput.value.trim());
@@ -1104,6 +1106,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error('Failed to save pawn receipt');
             
             addPawnForm.reset();
+            const showOnPortalEl = document.getElementById('pawnShowOnPortal');
+            if (showOnPortalEl) showOnPortalEl.checked = true;
             document.getElementById('pawnInterestRate').value = "2"; // reset default
             document.getElementById('itemWeight').value = "";
             addPawnModal.style.display = 'none';
@@ -1426,6 +1430,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const statusColor = p.status === 'Active' ? 'var(--gold-primary)' : (p.status === 'Melted' ? '#ef4444' : (p.status === 'Renewed' ? '#3b82f6' : '#4CAF50'));
                 
+                const isPortalVisible = !(p.is_portal_visible === 0 || p.is_portal_visible === false || p.is_portal_visible === '0');
+
                 let actionMenuItems = '';
                 if (p.status === 'Active') {
                     actionMenuItems += `
@@ -1446,6 +1452,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 actionMenuItems += `
+                    <button class="dropdown-item" onclick="togglePawnPortalVisibility(${p.id}, ${isPortalVisible ? 0 : 1}, ${customerId})">
+                        <span>${isPortalVisible ? '🙈' : '👁️'}</span> ${isPortalVisible ? 'Hide from Portal (Confidential)' : 'Show on Customer Portal'}
+                    </button>
                     <button class="dropdown-item whatsapp-pawn-btn" data-amount="${p.amount}" data-desc="${escapeHtml(p.description)}" data-date="${p.date_added}" data-jama="${totalJama.toFixed(0)}" data-interest="${interest.toFixed(0)}" data-baki="${baki.toFixed(0)}">
                         <span>💬</span> WhatsApp Bill
                     </button>
@@ -1482,6 +1491,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const detailsStr = p.is_udhari == 1 ? `Rate: ${p.interest_rate || 0}% / month` : `Rate: ${p.interest_rate || 0}% / month<br>Weight: ${p.item_weight_grams || 0}g (${p.item_metal_type || 'Gold'})`;
                 const lockerStr = p.locker_location || 'Safe Vault';
 
+                const portalBtnHtml = `
+                    <button type="button" 
+                        onclick="togglePawnPortalVisibility(${p.id}, ${isPortalVisible ? 0 : 1}, ${customerId})"
+                        title="${isPortalVisible ? 'Currently VISIBLE to customer on portal. Click to hide (make confidential)' : 'Currently HIDDEN from customer on portal. Click to make visible'}"
+                        style="cursor: pointer; border: 1px solid ${isPortalVisible ? '#86efac' : '#cbd5e1'}; background: ${isPortalVisible ? '#ecfdf5' : '#f8fafc'}; color: ${isPortalVisible ? '#166534' : '#64748b'}; font-weight: 700; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; transition: all 0.2s ease; white-space: nowrap;">
+                        ${isPortalVisible ? '👁️ Visible' : '🙈 Hidden'}
+                    </button>
+                `;
+
                 return `
                 <tr style="background: rgba(0,0,0,0.02);">
                     <td style="vertical-align: top;">${formatDate(p.date_added)}<br><small style="color: var(--gold-primary); font-weight: bold;">${diffDays} Din</small></td>
@@ -1491,6 +1509,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td style="vertical-align: top; color: #ff9800; font-weight: bold;">₹${interest.toFixed(0)}</td>
                     <td style="vertical-align: top; color: #4CAF50; font-weight: bold;">₹${totalJama}</td>
                     <td style="vertical-align: top; color: #ff4a4a; font-weight: bold; font-size: 1.2rem;">₹${baki.toFixed(0)}${riskHtml}</td>
+                    <td style="vertical-align: top;">${portalBtnHtml}</td>
                     <td style="vertical-align: top;"><span class="badge" style="background: ${statusColor}20; color: ${statusColor};">${p.status || 'Active'}</span></td>
                     <td style="vertical-align: top; text-align: center;">
                         ${actionDropdownHtml}
@@ -1504,6 +1523,35 @@ document.addEventListener('DOMContentLoaded', () => {
             if (fullTotalBaki) fullTotalBaki.textContent = `₹${Math.round(grandTotalBaki).toLocaleString('en-IN')}`;
         }
     }
+
+    // Toggle pawn portal visibility (Admin single-click privacy control)
+    window.togglePawnPortalVisibility = async function(pawnId, newVisibility, customerId) {
+        try {
+            const response = await fetch(`${API_URL}/pawns/${pawnId}/portal-visibility`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_portal_visible: newVisibility })
+            });
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error || 'Failed to update visibility');
+            }
+
+            // Update in-memory pawn array immediately
+            if (Array.isArray(currentKhaataPawns)) {
+                const item = currentKhaataPawns.find(p => p.id == pawnId);
+                if (item) {
+                    item.is_portal_visible = newVisibility;
+                }
+                renderPawnList(currentKhaataPawns, customerId);
+            } else if (customerId) {
+                fetchPawns(customerId);
+            }
+        } catch (err) {
+            console.error('Error toggling pawn portal visibility:', err);
+            alert('⚠️ Could not update portal visibility: ' + err.message);
+        }
+    };
 
     // Toggle 3-dots dropdown function
     window.toggleRowDropdown = function(event, btn) {

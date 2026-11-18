@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const cron = require('node-cron');
 const nodemailer = require('nodemailer');
@@ -10,6 +12,36 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 require('dotenv').config();
 const { db, supabase, fixAllSequences } = require('./supabase-db');
+
+// ============================================
+// SECURITY #1: BRUTE-FORCE PROTECTION (In-Memory, Vercel-safe)
+// ============================================
+const loginAttempts = new Map(); // key: ip -> { count, lockedUntil }
+
+function checkBruteForce(ip) {
+    const now = Date.now();
+    const rec = loginAttempts.get(ip) || { count: 0, lockedUntil: 0 };
+    if (rec.lockedUntil > now) {
+        const mins = Math.ceil((rec.lockedUntil - now) / 60000);
+        return { blocked: true, mins };
+    }
+    return { blocked: false };
+}
+
+function recordFailedLogin(ip) {
+    const rec = loginAttempts.get(ip) || { count: 0, lockedUntil: 0 };
+    rec.count += 1;
+    if (rec.count >= 5) {
+        rec.lockedUntil = Date.now() + 15 * 60 * 1000; // 15 min lockout
+        rec.count = 0;
+        console.warn(`[Security] IP ${ip} locked for 15 min after 5 failed login attempts.`);
+    }
+    loginAttempts.set(ip, rec);
+}
+
+function clearFailedLogin(ip) {
+    loginAttempts.delete(ip);
+}
 
 // Session & Auth Token Configuration
 const AUTH_SECRET = process.env.AUTH_SECRET || 'ljs_jewellers_secret_key_2026';
@@ -35,6 +67,109 @@ function verifyAuthToken(token) {
     } catch(e) {
         return null;
     }
+}
+
+// --- Security: Visual CAPTCHA Generator & Verifier ---
+function generateCaptchaSvg() {
+    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    let text = '';
+    for (let i = 0; i < 5; i++) {
+        text += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    const width = 160;
+    const height = 48;
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background:#0f172a; border-radius:8px; border:1px solid #d4af37; user-select:none;">`;
+    
+    // Background noise lines
+    for (let i = 0; i < 4; i++) {
+        const x1 = Math.floor(Math.random() * width);
+        const y1 = Math.floor(Math.random() * height);
+        const x2 = Math.floor(Math.random() * width);
+        const y2 = Math.floor(Math.random() * height);
+        svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(212,175,55,0.3)" stroke-width="1.5" />`;
+    }
+    
+    // Wavy rotated characters with contrasting colors
+    const colors = ['#f59e0b', '#fbbf24', '#d4af37', '#38bdf8', '#a78bfa'];
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const x = 20 + i * 26;
+        const y = 32 + (Math.random() * 6 - 3);
+        const rot = Math.floor(Math.random() * 24 - 12);
+        const col = colors[i % colors.length];
+        svg += `<text x="${x}" y="${y}" fill="${col}" font-size="24" font-family="'Courier New', monospace" font-weight="900" transform="rotate(${rot} ${x} ${y})">${char}</text>`;
+    }
+    svg += '</svg>';
+
+    const exp = Date.now() + 10 * 60 * 1000; // 10 minutes
+    const tokenData = `${exp}:${text.toUpperCase()}`;
+    const sig = crypto.createHmac('sha256', AUTH_SECRET).update(tokenData).digest('hex');
+    const token = `${exp}:${sig}`;
+
+    return { svg, token, text };
+}
+
+function verifyCaptcha(token, inputCode) {
+    if (!token || !inputCode) return false;
+    const parts = token.split(':');
+    if (parts.length !== 2) return false;
+    const [expStr, sig] = parts;
+    const exp = parseInt(expStr, 10);
+    if (isNaN(exp) || Date.now() > exp) return false;
+
+    const expectedSig = crypto.createHmac('sha256', AUTH_SECRET).update(`${exp}:${String(inputCode).trim().toUpperCase()}`).digest('hex');
+    return sig === expectedSig;
+}
+
+// --- Security: Stateless MFA (Multi-Factor Authentication) Challenge Tokens ---
+function signMfaChallenge({ customerId, otp, phone, email, name }) {
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+    const otpHash = crypto.createHmac('sha256', AUTH_SECRET).update(`${customerId}:${otp}:${expiresAt}`).digest('hex');
+    const payload = JSON.stringify({
+        cid: customerId,
+        exp: expiresAt,
+        h: otpHash,
+        p: phone ? phone.slice(-4) : '',
+        e: email ? email.replace(/(.{2})(.*)(@.*)/, '$1***$3') : '',
+        n: name
+    });
+    const b64 = Buffer.from(payload).toString('base64url');
+    const sig = crypto.createHmac('sha256', AUTH_SECRET).update(b64).digest('base64url');
+    return `${b64}.${sig}`;
+}
+
+function verifyMfaChallenge(mfaToken, inputOtp) {
+    if (!mfaToken || typeof mfaToken !== 'string') return { valid: false, error: 'Missing security token. Please log in again.' };
+    const parts = mfaToken.split('.');
+    if (parts.length !== 2) return { valid: false, error: 'Invalid security token format.' };
+
+    const [b64, sig] = parts;
+    const expectedSig = crypto.createHmac('sha256', AUTH_SECRET).update(b64).digest('base64url');
+    if (sig !== expectedSig) {
+        return { valid: false, error: 'Security token signature mismatch. Please log in again.' };
+    }
+
+    let payload;
+    try {
+        payload = JSON.parse(Buffer.from(b64, 'base64url').toString('utf8'));
+    } catch (e) {
+        return { valid: false, error: 'Malformed security token. Please log in again.' };
+    }
+
+    if (!payload.cid || !payload.exp || !payload.h) {
+        return { valid: false, error: 'Incomplete security token data.' };
+    }
+
+    if (Date.now() > payload.exp) {
+        return { valid: false, error: 'OTP has expired. Please click Resend OTP or log in again.' };
+    }
+
+    const expectedHash = crypto.createHmac('sha256', AUTH_SECRET).update(`${payload.cid}:${String(inputOtp).trim()}:${payload.exp}`).digest('hex');
+    if (payload.h !== expectedHash) {
+        return { valid: false, error: 'Incorrect OTP code. Please enter the correct 6-digit code.' };
+    }
+
+    return { valid: true, customerId: payload.cid, payload };
 }
 
 
@@ -89,6 +224,39 @@ function getLocalIpAddress() {
 const storage = multer.memoryStorage(); // Use memory storage, upload to Supabase Storage
 const upload = multer({ storage: storage });
 
+// ============================================
+// SECURITY #3: HELMET — HTTP Security Headers
+// ============================================
+app.use(helmet({
+    contentSecurityPolicy: false,       // Disabled: app uses inline scripts/styles
+    crossOriginEmbedderPolicy: false,   // Disabled: needed for external fonts/images
+}));
+
+// ============================================
+// SECURITY #2: RATE LIMITING
+// ============================================
+// General API: 150 requests per minute per IP
+app.use('/api/', rateLimit({
+    windowMs: 60 * 1000,
+    max: 150,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, error: 'Too many requests. Please slow down and try again in a minute.' }
+}));
+
+// Auth endpoints: max 10 attempts per 15 minutes per IP
+const authRateLimit = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, error: 'Too many login attempts. Please try again after 15 minutes.' }
+});
+app.use('/api/auth/login', authRateLimit);
+app.use('/api/portal/login', authRateLimit);
+app.use('/api/portal/verify-otp', authRateLimit);
+app.use('/api/portal/resend-otp', authRateLimit);
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -123,6 +291,17 @@ app.get('/ledger', (req, res) => {
 
 // POST /api/auth/login - Staff & Admin Authentication
 app.post('/api/auth/login', (req, res) => {
+    // SECURITY: Brute-force check
+    const ip = (req.headers['x-forwarded-for'] || req.ip || 'unknown').split(',')[0].trim();
+    const bf = checkBruteForce(ip);
+    if (bf.blocked) {
+        console.warn(`[Security] Blocked login attempt from ${ip} — locked for ${bf.mins} more min.`);
+        return res.status(429).json({
+            success: false,
+            error: `Too many failed attempts. Try again in ${bf.mins} minute${bf.mins > 1 ? 's' : ''}.`
+        });
+    }
+
     const { pin, username, password, role } = req.body;
     const adminPass = String(process.env.ADMIN_PASS || '121965').trim();
     const staffPin = String(process.env.STAFF_PIN || '1234').trim();
@@ -132,26 +311,24 @@ app.post('/api/auth/login', (req, res) => {
     if (pin !== undefined && pin !== null && String(pin).trim() !== '') {
         const cleanPin = String(pin).trim();
         if (cleanPin === adminPass) {
+            clearFailedLogin(ip);
             const token = generateAuthToken('admin');
-            return res.json({
-                success: true,
-                role: 'admin',
-                name: 'Admin Owner',
-                token
-            });
+            return res.json({ success: true, role: 'admin', name: 'Admin Owner', token });
         }
         if (cleanPin === staffPin) {
+            clearFailedLogin(ip);
             const token = generateAuthToken('staff');
-            return res.json({
-                success: true,
-                role: 'staff',
-                name: 'Staff Counter',
-                token
-            });
+            return res.json({ success: true, role: 'staff', name: 'Staff Counter', token });
         }
+        // Wrong PIN — record failure
+        recordFailedLogin(ip);
+        const rec = loginAttempts.get(ip) || { count: 0 };
+        const remaining = Math.max(0, 5 - (rec.count || 0));
         return res.status(401).json({
             success: false,
-            error: 'Incorrect Security PIN! Please enter a valid 4 or 6-digit PIN.'
+            error: remaining > 0
+                ? `Incorrect Security PIN! ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining before lockout.`
+                : 'Too many failed attempts. Account locked for 15 minutes.'
         });
     }
 
@@ -161,23 +338,25 @@ app.post('/api/auth/login', (req, res) => {
         const cleanPass = String(password).trim();
 
         if (['admin', 'jitendra', 'owner', configuredAdmin].includes(cleanUser) && cleanPass === adminPass) {
+            clearFailedLogin(ip);
             const token = generateAuthToken('admin');
-            return res.json({
-                success: true,
-                role: 'admin',
-                name: 'Admin Owner',
-                token
-            });
+            return res.json({ success: true, role: 'admin', name: 'Admin Owner', token });
         }
         if (cleanUser === 'staff' && cleanPass === staffPin) {
+            clearFailedLogin(ip);
             const token = generateAuthToken('staff');
-            return res.json({
-                success: true,
-                role: 'staff',
-                name: 'Staff Counter',
-                token
-            });
+            return res.json({ success: true, role: 'staff', name: 'Staff Counter', token });
         }
+        // Wrong credentials — record failure
+        recordFailedLogin(ip);
+        const rec2 = loginAttempts.get(ip) || { count: 0 };
+        const remaining2 = Math.max(0, 5 - (rec2.count || 0));
+        return res.status(401).json({
+            success: false,
+            error: remaining2 > 0
+                ? `Invalid credentials. ${remaining2} attempt${remaining2 !== 1 ? 's' : ''} remaining before lockout.`
+                : 'Too many failed attempts. Account locked for 15 minutes.'
+        });
     }
 
     return res.status(400).json({
@@ -256,6 +435,13 @@ db.run(`CREATE TABLE IF NOT EXISTS interest_ledger (
 
 // Auto-release any paid-off pawns (amount <= 0)
 db.run(`UPDATE pawn_records SET status = 'Released', release_date = '${new Date().toISOString()}' WHERE amount <= 0 AND status = 'Active'`);
+
+// Ensure pawn_records has is_portal_visible column in local SQLite
+if (!process.env.VERCEL) {
+    try {
+        db.run('ALTER TABLE pawn_records ADD COLUMN is_portal_visible INTEGER DEFAULT 1', () => {});
+    } catch (e) {}
+}
 
 // Standard Pawn Interest Calculation Function (Matches shop rules: minimum 1 full month, slab based)
 function calculateInterest(amount, rate, dateAdded, status, releaseDate) {
@@ -657,6 +843,69 @@ async function sendCustomerWelcomeEmail({
     });
 }
 
+// Send Customer MFA Login OTP Email
+async function sendCustomerOtpEmail({ customerEmail, customerName, otp, expiresInMinutes = 10 }) {
+    if (!customerEmail || !customerEmail.includes('@') || customerEmail === 'N/A') return false;
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+        console.log(`[MFA] Email credentials not configured, skipping OTP email. OTP was: ${otp}`);
+        return false;
+    }
+
+    const mailOptions = {
+        from: `"LJS Jewellers Security" <${process.env.EMAIL_USER}>`,
+        to: customerEmail,
+        subject: `🔐 Your Login OTP Code: ${otp} - LJS Jewellers Customer Portal`,
+        html: `
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="utf-8"></head>
+        <body style="margin: 0; padding: 20px; background-color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1e293b;">
+          <div style="max-width: 520px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
+            <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 26px 20px; text-align: center; border-bottom: 3px solid #d4af37;">
+              <h1 style="margin: 0; font-size: 22px; letter-spacing: 1.5px; font-weight: 800; color: #ffffff;">LJS JEWELLERS</h1>
+              <p style="margin: 4px 0 0 0; font-size: 11px; color: #d4af37; letter-spacing: 2px; text-transform: uppercase;">Customer Portal Security Verification</p>
+            </div>
+            <div style="padding: 26px 22px; text-align: center;">
+              <p style="font-size: 15px; line-height: 1.5; color: #334155; margin-bottom: 8px;">
+                Namaste <strong>${customerName}</strong> ji,
+              </p>
+              <p style="font-size: 14px; color: #64748b; margin-top: 0;">
+                Use the One-Time Password (OTP) below to securely login to your Customer Portal:
+              </p>
+              
+              <div style="margin: 24px auto; max-width: 280px; background: #fffbeb; border: 2px dashed #d4af37; border-radius: 12px; padding: 14px 20px;">
+                <div style="font-size: 11px; color: #b45309; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Your 6-Digit OTP</div>
+                <div style="font-size: 34px; font-weight: 900; letter-spacing: 8px; color: #0f172a; font-family: 'Courier New', monospace;">${otp}</div>
+              </div>
+
+              <p style="font-size: 12px; color: #dc2626; font-weight: 600; margin: 12px 0;">
+                ⏱️ This OTP code is valid for ${expiresInMinutes} minutes only.
+              </p>
+              <p style="font-size: 12px; color: #94a3b8; margin: 18px 0 0 0; line-height: 1.5;">
+                ⚠️ <em>Security Warning:</em> Do not share this OTP with anyone, including LJS Jewellers staff. If you did not attempt to login, please ignore this email or contact us immediately.
+              </p>
+            </div>
+            <div style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 14px 20px; text-align: center; font-size: 11px; color: #94a3b8;">
+              &copy; ${new Date().getFullYear()} LJS Jewellers. All rights reserved. Secure Digital Ledger Portal.
+            </div>
+          </div>
+        </body>
+        </html>
+        `
+    };
+
+    return new Promise((resolve) => {
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.error(`[MFA Email Error] Failed to send OTP to ${customerEmail}:`, error.message);
+                return resolve(false);
+            }
+            console.log(`[MFA Email Success] OTP sent to ${customerEmail}`);
+            resolve(true);
+        });
+    });
+}
+
 // API Routes
 
 // Staff Submission API (Queues entries for Admin Approval)
@@ -1019,13 +1268,14 @@ app.delete('/api/customers/:id', (req, res) => {
 // Add a pawn receipt for a customer
 app.post('/api/customers/:id/pawn', upload.single('item_photo'), async (req, res) => {
     const { id } = req.params;
-    const { amount, description, interest_rate, item_weight_grams, item_metal_type, is_udhari, locker_location } = req.body;
+    const { amount, description, interest_rate, item_weight_grams, item_metal_type, is_udhari, locker_location, is_portal_visible } = req.body;
     const dateAdded = new Date().toISOString();
     const rate = interest_rate || 0;
     const weight = item_weight_grams || 0;
     const metal = item_metal_type || 'Gold';
     const udhariFlag = is_udhari === 'true' ? 1 : 0;
     const locker = (locker_location && locker_location.trim()) ? locker_location.trim() : 'Safe Vault';
+    const portalVisible = (is_portal_visible === 0 || is_portal_visible === '0' || is_portal_visible === false || is_portal_visible === 'false') ? 0 : 1;
 
     // Upload item photo to Supabase Storage if provided
     let itemPhoto = null;
@@ -1044,8 +1294,8 @@ app.post('/api/customers/:id/pawn', upload.single('item_photo'), async (req, res
     }
 
     db.run(
-        `INSERT INTO pawn_records (customer_id, amount, description, date_added, interest_rate, status, item_photo, item_weight_grams, item_metal_type, is_udhari, locker_location) VALUES (?, ?, ?, ?, ?, 'Active', ?, ?, ?, ?, ?)`,
-        [id, amount, description, dateAdded, rate, itemPhoto, weight, metal, udhariFlag, locker],
+        `INSERT INTO pawn_records (customer_id, amount, description, date_added, interest_rate, status, item_photo, item_weight_grams, item_metal_type, is_udhari, locker_location, is_portal_visible) VALUES (?, ?, ?, ?, ?, 'Active', ?, ?, ?, ?, ?, ?)`,
+        [id, amount, description, dateAdded, rate, itemPhoto, weight, metal, udhariFlag, locker, portalVisible],
         function (err) {
             if (err) {
                 res.status(500).json({ error: err.message });
@@ -1100,6 +1350,22 @@ app.get('/api/customers/:id/pawn', (req, res) => {
             return;
         }
         res.json({ pawn_records: rows });
+    });
+});
+
+// Toggle/update pawn portal visibility
+app.put('/api/pawns/:pawnId/portal-visibility', (req, res) => {
+    const { pawnId } = req.params;
+    const { is_portal_visible } = req.body;
+    const visibleVal = (is_portal_visible === 0 || is_portal_visible === '0' || is_portal_visible === false || is_portal_visible === 'false') ? 0 : 1;
+
+    db.run('UPDATE pawn_records SET is_portal_visible = ? WHERE id = ?', [visibleVal, pawnId], function(err) {
+        if (err) {
+            console.error('[Pawn Visibility] Update error:', err);
+            return res.status(500).json({ error: err.message });
+        }
+        console.log(`[Pawn Visibility] Pawn id=${pawnId} portal visibility updated to ${visibleVal}`);
+        res.json({ message: 'Portal visibility updated successfully', is_portal_visible: visibleVal });
     });
 });
 
@@ -1250,9 +1516,10 @@ app.post('/api/customers/:id/pawn/:pawnId/renew', (req, res) => {
                     const newDescription = oldPawn.description.includes('(Renewed)') 
                         ? oldPawn.description 
                         : `${oldPawn.description} (Renewed)`;
+                    const renewVisibility = (oldPawn.is_portal_visible === 0 || oldPawn.is_portal_visible === '0' || oldPawn.is_portal_visible === false) ? 0 : 1;
 
                     db.run(
-                        `INSERT INTO pawn_records (customer_id, amount, description, date_added, interest_rate, status, item_photo, item_weight_grams, item_metal_type, is_udhari, locker_location) VALUES (?, ?, ?, ?, ?, 'Active', ?, ?, ?, ?, ?)`,
+                        `INSERT INTO pawn_records (customer_id, amount, description, date_added, interest_rate, status, item_photo, item_weight_grams, item_metal_type, is_udhari, locker_location, is_portal_visible) VALUES (?, ?, ?, ?, ?, 'Active', ?, ?, ?, ?, ?, ?)`,
                         [
                             customerId,
                             newPrincipal,
@@ -1263,7 +1530,8 @@ app.post('/api/customers/:id/pawn/:pawnId/renew', (req, res) => {
                             oldPawn.item_weight_grams || 0,
                             oldPawn.item_metal_type || 'Gold',
                             oldPawn.is_udhari || 0,
-                            locker
+                            locker,
+                            renewVisibility
                         ],
                         function (insErr) {
                             if (insErr) return res.status(500).json({ error: insErr.message });
@@ -1986,7 +2254,8 @@ app.post('/api/settings/rate', (req, res) => {
 // ============================================
 
 // Run every day at 8:00 AM ('0 8 * * *')
-// For testing purposes, you can change it to '* * * * *' (every minute)
+// Skipped on Vercel/serverless (no persistent background jobs)
+if (!process.env.VERCEL) {
 cron.schedule('0 8 * * *', () => {
     console.log('Running daily birthday check...');
     
@@ -2044,6 +2313,7 @@ cron.schedule('0 8 * * *', () => {
         });
     });
 });
+} // end if (!process.env.VERCEL) — cron not supported on serverless
 
 // Helper for interest calculation on server
 // calcServerPawnInterest is an alias for calculateInterest (defined at top of file)
@@ -2105,8 +2375,8 @@ app.get('/api/passbook/:token', (req, res) => {
                 message: 'This passbook has been deactivated by LJS Jewellers.'
             });
         }
-        // Fetch pawns for this customer
-        db.all('SELECT * FROM pawn_records WHERE customer_id = ? ORDER BY id DESC', [customer.id], (err, pawns) => {
+        // Fetch visible pawns for this customer
+        db.all('SELECT * FROM pawn_records WHERE customer_id = ? AND (is_portal_visible = 1 OR is_portal_visible IS NULL) ORDER BY id DESC', [customer.id], (err, pawns) => {
             if (err) {
                 return res.status(500).json({ error: err.message });
             }
@@ -2204,16 +2474,141 @@ app.get('/api/system/common-qr', (req, res) => {
     });
 });
 
-// POST Customer Portal Login
+// GET Generate Security Captcha
+app.get('/api/portal/captcha', (req, res) => {
+    const captcha = generateCaptchaSvg();
+    res.json({
+        token: captcha.token,
+        svg: captcha.svg
+    });
+});
+
+// Helper: Format and return customer portal data (pawns, bills, totals)
+function returnCustomerPortalData(customer, res) {
+    db.all('SELECT * FROM pawn_records WHERE customer_id = ? AND (is_portal_visible = 1 OR is_portal_visible IS NULL) ORDER BY id DESC', [customer.id], (err, pawns) => {
+        if (err) return res.status(500).json({ error: err.message });
+        const pawnIds = (pawns || []).map(p => p.id);
+        if (pawnIds.length === 0) {
+            db.all('SELECT * FROM bills WHERE customer_phone = ? OR customer_id = ? ORDER BY id DESC', [customer.phone, customer.id], (bErr, billRows) => {
+                const customerBills = (billRows || []).map(parseBillItems);
+                return res.json({
+                    role: 'customer',
+                    active: true,
+                    customer: { id: customer.id, name: customer.name, phone: customer.phone, username: customer.username },
+                    pawns: [],
+                    bills: customerBills,
+                    totalPrincipal: 0,
+                    totalInterest: 0,
+                    totalJama: 0,
+                    netBalance: 0
+                });
+            });
+            return;
+        }
+
+        db.all(`SELECT * FROM pawn_payments WHERE pawn_id IN (${pawnIds.join(',')})`, [], (err, payments) => {
+            const paymentsListByPawn = {};
+            (payments || []).forEach(pm => {
+                if (!paymentsListByPawn[pm.pawn_id]) paymentsListByPawn[pm.pawn_id] = [];
+                paymentsListByPawn[pm.pawn_id].push({
+                    id: pm.id,
+                    amount: pm.amount,
+                    payment_type: pm.payment_type || 'Jama',
+                    payment_date: pm.payment_date
+                });
+            });
+
+            let totalPrincipal = 0;
+            let totalInterest = 0;
+            let totalJama = 0;
+
+            const formattedPawns = pawns.map(p => {
+                const interest = calculateInterest(p.amount, p.interest_rate, p.date_added, p.status, p.release_date);
+                const pList = paymentsListByPawn[p.id] || [];
+                const pDate = new Date(p.date_added);
+
+                // Only count payments made in the current active cycle (since last reset)
+                let paidInCycle = 0;
+                pList.forEach(pm => {
+                    const payDate = new Date(pm.payment_date);
+                    if (p.status === 'Released' || payDate > pDate) {
+                        paidInCycle += parseFloat(pm.amount || 0);
+                    }
+                });
+
+                let baki = Math.max(0, Math.round((p.amount + interest) - paidInCycle));
+                if (p.status === 'Released' || p.amount <= 0) {
+                    baki = 0;
+                }
+
+                if (p.status === 'Active') {
+                    totalPrincipal += p.amount;
+                    totalInterest += interest;
+                    totalJama += paidInCycle;
+                }
+
+                return {
+                    id: p.id,
+                    description: p.description,
+                    amount: p.amount,
+                    interest_rate: p.interest_rate,
+                    calculated_interest: Math.round(interest),
+                    paid: Math.round(paidInCycle),
+                    baki: baki,
+                    status: p.status,
+                    date_added: p.date_added,
+                    item_metal_type: p.item_metal_type || 'Gold',
+                    item_weight_grams: p.item_weight_grams || 0,
+                    item_photo: p.item_photo,
+                    is_udhari: p.is_udhari,
+                    payments: pList
+                };
+            });
+
+            const netBalance = Math.round((totalPrincipal + totalInterest) - totalJama);
+
+            // Also fetch customer bills
+            db.all('SELECT * FROM bills WHERE customer_phone = ? OR customer_id = ? ORDER BY id DESC', [customer.phone, customer.id], (bErr, billRows) => {
+                const customerBills = (billRows || []).map(parseBillItems);
+                res.json({
+                    role: 'customer',
+                    active: true,
+                    customer: {
+                        id: customer.id,
+                        name: customer.name,
+                        phone: customer.phone,
+                        username: customer.username
+                    },
+                    pawns: formattedPawns,
+                    bills: customerBills,
+                    totalPrincipal: Math.round(totalPrincipal),
+                    totalInterest: Math.round(totalInterest),
+                    totalJama: Math.round(totalJama),
+                    netBalance: Math.max(0, netBalance)
+                });
+            });
+        });
+    });
+}
+
+// POST Customer Portal Login (Step 1: Credentials & CAPTCHA -> Issues MFA Challenge)
 app.post('/api/portal/login', (req, res) => {
-    const { username, password } = req.body;
+    // SECURITY: Brute-force check
+    const ip = (req.headers['x-forwarded-for'] || req.ip || 'unknown').split(',')[0].trim();
+    const bf = checkBruteForce(ip);
+    if (bf.blocked) {
+        return res.status(429).json({
+            error: `Too many failed attempts. Try again in ${bf.mins} minute${bf.mins > 1 ? 's' : ''}.`
+        });
+    }
+
+    const { username, password, captchaToken, captchaAnswer } = req.body;
     if (!username || !password) {
         return res.status(400).json({ error: 'Please enter Username/Phone and Password/PIN.' });
     }
 
     const cleanInput = username.trim();
     const cleanPwd = password.trim();
-    const phoneClean = cleanInput.replace(/[^0-9]/g, '');
 
     // Check Admin Login (Support 'admin', 'jitendra', env variables)
     const configuredAdmin = String(process.env.ADMIN_USER || 'jitendra').trim().toLowerCase();
@@ -2221,11 +2616,19 @@ app.post('/api/portal/login', (req, res) => {
     const adminPass = String(process.env.ADMIN_PASS || process.env.DELETE_PIN || '121965').trim();
 
     if (validAdminUsers.includes(cleanInput.toLowerCase()) && String(cleanPwd).trim() === adminPass) {
+        clearFailedLogin(ip);
         return res.json({
             role: 'admin',
             message: 'Admin login successful'
         });
     }
+
+    // Verify CAPTCHA for Customer Login
+    if (!captchaToken || !captchaAnswer || !verifyCaptcha(captchaToken, captchaAnswer)) {
+        return res.status(400).json({ error: 'Incorrect security CAPTCHA. Please enter the characters shown in the box.', reloadCaptcha: true });
+    }
+
+    const phoneClean = cleanInput.replace(/[^0-9]/g, '');
 
     db.all(
         'SELECT * FROM customers WHERE username = ? OR phone = ? OR REPLACE(phone, " ", "") = ? OR REPLACE(phone, "-", "") = ?',
@@ -2236,12 +2639,14 @@ app.post('/api/portal/login', (req, res) => {
                 return res.status(500).json({ error: 'Database query error.' });
             }
             if (!customers || customers.length === 0) {
-                return res.status(401).json({ error: 'Invalid Username/Phone or Password/PIN.' });
+                recordFailedLogin(ip);
+                return res.status(401).json({ error: 'Invalid Username/Phone or Password/PIN.', reloadCaptcha: true });
             }
 
             const customer = customers.find(c => verifyPassword(cleanPwd, c.password));
             if (!customer) {
-                return res.status(401).json({ error: 'Invalid Username/Phone or Password/PIN.' });
+                recordFailedLogin(ip);
+                return res.status(401).json({ error: 'Invalid Username/Phone or Password/PIN.', reloadCaptcha: true });
             }
 
             // Auto-upgrade legacy plain text password to bcrypt hash in DB
@@ -2257,112 +2662,145 @@ app.post('/api/portal/login', (req, res) => {
                 });
             }
 
-            // Fetch pawns & payments for customer
-            db.all('SELECT * FROM pawn_records WHERE customer_id = ? ORDER BY id DESC', [customer.id], (err, pawns) => {
-                if (err) return res.status(500).json({ error: err.message });
-                const pawnIds = (pawns || []).map(p => p.id);
-                if (pawnIds.length === 0) {
-                    db.all('SELECT * FROM bills WHERE customer_phone = ? OR customer_id = ? ORDER BY id DESC', [customer.phone, customer.id], (bErr, billRows) => {
-                        const customerBills = (billRows || []).map(parseBillItems);
-                        return res.json({
-                            active: true,
-                            customer: { id: customer.id, name: customer.name, phone: customer.phone, username: customer.username },
-                            pawns: [],
-                            bills: customerBills,
-                            totalPrincipal: 0,
-                            totalInterest: 0,
-                            totalJama: 0,
-                            netBalance: 0
-                        });
-                    });
-                    return;
-                }
+            // Step 1 Success: Generate 6-Digit MFA OTP
+            clearFailedLogin(ip); // Clear brute-force counter on successful credentials
+            const otp = Math.floor(100000 + Math.random() * 900000).toString();
+            console.log(`[Customer MFA OTP] Generated code for ${customer.name} (${customer.phone}): ${otp}`);
 
-                db.all(`SELECT * FROM pawn_payments WHERE pawn_id IN (${pawnIds.join(',')})`, [], (err, payments) => {
-                    const paymentsListByPawn = {};
-                    (payments || []).forEach(pm => {
-                        if (!paymentsListByPawn[pm.pawn_id]) paymentsListByPawn[pm.pawn_id] = [];
-                        paymentsListByPawn[pm.pawn_id].push({
-                            id: pm.id,
-                            amount: pm.amount,
-                            payment_type: pm.payment_type || 'Jama',
-                            payment_date: pm.payment_date
-                        });
-                    });
+            const mfaToken = signMfaChallenge({
+                customerId: customer.id,
+                otp: otp,
+                phone: customer.phone,
+                email: customer.email,
+                name: customer.name
+            });
 
-                    let totalPrincipal = 0;
-                    let totalInterest = 0;
-                    let totalJama = 0;
+            // Send OTP email if customer email is present
+            if (customer.email && customer.email.includes('@') && customer.email !== 'N/A') {
+                sendCustomerOtpEmail({
+                    customerEmail: customer.email,
+                    customerName: customer.name,
+                    otp: otp,
+                    expiresInMinutes: 10
+                }).catch(e => console.error('[MFA Email Send Error]:', e));
+            }
 
-                    const formattedPawns = pawns.map(p => {
-                        const interest = calculateInterest(p.amount, p.interest_rate, p.date_added, p.status, p.release_date);
-                        const pList = paymentsListByPawn[p.id] || [];
-                        const pDate = new Date(p.date_added);
+            let maskedContact = '';
+            if (customer.phone) {
+                const last4 = customer.phone.slice(-4);
+                maskedContact = `📱 ******${last4}`;
+            }
+            if (customer.email && customer.email.includes('@')) {
+                const maskedEmail = customer.email.replace(/(.{2})(.*)(@.*)/, '$1***$3');
+                maskedContact = maskedContact ? `📧 ${maskedEmail} | ${maskedContact}` : `📧 ${maskedEmail}`;
+            }
 
-                        // Only count payments made in the current active cycle (since last reset)
-                        let paidInCycle = 0;
-                        pList.forEach(pm => {
-                            const payDate = new Date(pm.payment_date);
-                            if (p.status === 'Released' || payDate > pDate) {
-                                paidInCycle += parseFloat(pm.amount || 0);
-                            }
-                        });
-
-                        let baki = Math.max(0, Math.round((p.amount + interest) - paidInCycle));
-                        if (p.status === 'Released' || p.amount <= 0) {
-                            baki = 0;
-                        }
-
-                        if (p.status === 'Active') {
-                            totalPrincipal += p.amount;
-                            totalInterest += interest;
-                            totalJama += paidInCycle;
-                        }
-
-                        return {
-                            id: p.id,
-                            description: p.description,
-                            amount: p.amount,
-                            interest_rate: p.interest_rate,
-                            calculated_interest: Math.round(interest),
-                            paid: Math.round(paidInCycle),
-                            baki: baki,
-                            status: p.status,
-                            date_added: p.date_added,
-                            item_metal_type: p.item_metal_type || 'Gold',
-                            item_weight_grams: p.item_weight_grams || 0,
-                            item_photo: p.item_photo,
-                            is_udhari: p.is_udhari,
-                            payments: pList
-                        };
-                    });
-
-                    const netBalance = Math.round((totalPrincipal + totalInterest) - totalJama);
-
-                    // Also fetch customer bills
-                    db.all('SELECT * FROM bills WHERE customer_phone = ? OR customer_id = ? ORDER BY id DESC', [customer.phone, customer.id], (bErr, billRows) => {
-                        const customerBills = (billRows || []).map(parseBillItems);
-                        res.json({
-                            role: 'customer',
-                            active: true,
-                            customer: {
-                                id: customer.id,
-                                name: customer.name,
-                                phone: customer.phone,
-                                username: customer.username
-                            },
-                            pawns: formattedPawns,
-                            bills: customerBills,
-                            totalPrincipal: Math.round(totalPrincipal),
-                            totalInterest: Math.round(totalInterest),
-                            totalJama: Math.round(totalJama),
-                            netBalance: Math.max(0, netBalance)
-                        });
-                    });
-                });
+            res.json({
+                mfaRequired: true,
+                mfaToken: mfaToken,
+                maskedContact: maskedContact || 'your registered contact (Phone/Email)',
+                message: 'A 6-digit OTP has been sent to your registered contact.'
             });
         }
     );
+});
+
+// POST Customer Portal MFA Verify (Step 2: 6-Digit OTP Verification)
+app.post('/api/portal/verify-otp', (req, res) => {
+    const { mfaToken, otp } = req.body;
+    if (!mfaToken || !otp) {
+        return res.status(400).json({ error: 'Please enter the 6-digit OTP code.' });
+    }
+
+    const verification = verifyMfaChallenge(mfaToken, otp);
+    if (!verification.valid) {
+        return res.status(400).json({ error: verification.error || 'Invalid OTP code. Please try again.' });
+    }
+
+    const customerId = verification.customerId;
+    db.get('SELECT * FROM customers WHERE id = ?', [customerId], (err, customer) => {
+        if (err || !customer) {
+            return res.status(404).json({ error: 'Customer record not found. Please log in again.' });
+        }
+
+        if (customer.portal_active === 0) {
+            return res.status(403).json({
+                active: false,
+                error: 'Your Portal Access has been deactivated by LJS Jewellers.'
+            });
+        }
+
+        console.log(`[MFA Success] Customer ${customer.name} (id=${customer.id}) verified successfully.`);
+        returnCustomerPortalData(customer, res);
+    });
+});
+
+// POST Resend Customer Portal MFA OTP
+app.post('/api/portal/resend-otp', (req, res) => {
+    const { mfaToken } = req.body;
+    if (!mfaToken) {
+        return res.status(400).json({ error: 'Missing security token. Please log in again.' });
+    }
+
+    let payload;
+    try {
+        const parts = mfaToken.split('.');
+        const b64 = parts[0];
+        const sig = parts[1];
+        const expectedSig = crypto.createHmac('sha256', AUTH_SECRET).update(b64).digest('base64url');
+        if (sig !== expectedSig) {
+            return res.status(400).json({ error: 'Invalid security token.' });
+        }
+        payload = JSON.parse(Buffer.from(b64, 'base64url').toString('utf8'));
+    } catch (e) {
+        return res.status(400).json({ error: 'Malformed security token.' });
+    }
+
+    if (!payload.cid) {
+        return res.status(400).json({ error: 'Invalid token data.' });
+    }
+
+    db.get('SELECT * FROM customers WHERE id = ?', [payload.cid], (err, customer) => {
+        if (err || !customer) {
+            return res.status(404).json({ error: 'Customer record not found.' });
+        }
+
+        const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+        console.log(`[Customer MFA] Resent OTP for ${customer.name} (${customer.phone}): ${newOtp}`);
+
+        const newMfaToken = signMfaChallenge({
+            customerId: customer.id,
+            otp: newOtp,
+            phone: customer.phone,
+            email: customer.email,
+            name: customer.name
+        });
+
+        if (customer.email && customer.email.includes('@') && customer.email !== 'N/A') {
+            sendCustomerOtpEmail({
+                customerEmail: customer.email,
+                customerName: customer.name,
+                otp: newOtp,
+                expiresInMinutes: 10
+            }).catch(e => console.error('[MFA Resend Email Error]:', e));
+        }
+
+        let maskedContact = '';
+        if (customer.phone) {
+            const last4 = customer.phone.slice(-4);
+            maskedContact = `📱 ******${last4}`;
+        }
+        if (customer.email && customer.email.includes('@')) {
+            const maskedEmail = customer.email.replace(/(.{2})(.*)(@.*)/, '$1***$3');
+            maskedContact = maskedContact ? `📧 ${maskedEmail} | ${maskedContact}` : `📧 ${maskedEmail}`;
+        }
+
+        res.json({
+            message: 'A new 6-digit OTP has been sent successfully.',
+            mfaToken: newMfaToken,
+            maskedContact: maskedContact || 'your registered contact'
+        });
+    });
 });
 
 // PUT Toggle Customer Portal Access (Activate/Deactivate)
