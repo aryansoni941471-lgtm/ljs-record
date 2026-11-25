@@ -196,6 +196,59 @@
                 </div>
             </div>
 
+            <!-- Daily Bullion Market Rates & Customer 10:00 AM Broadcast Card -->
+            <div id="dailyRatesCard" class="card" style="background: linear-gradient(to bottom, #ffffff, #fffdf8); border: 1.5px solid #e2e8f0; border-top: 4px solid #d4af37; border-radius: 14px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 16px rgba(212,175,55,0.08);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem;">
+                    <div>
+                        <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--navy-header); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>🪙</span> Daily Gold & Silver Rates (10:00 AM Broadcast)
+                        </h2>
+                        <p style="margin: 3px 0 0; font-size: 0.8rem; color: #64748b;">
+                            Set today's Sarafa rates for 24K, 22K, 20K, 18K & Silver. Auto-sent to registered customers daily at 10 AM.
+                        </p>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span id="ratesLastUpdatedBadge" style="font-size: 0.75rem; background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 12px; font-weight: 700; border: 1px solid #fde68a;">
+                            🕒 Loading rates...
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Rates Input Grid -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.85rem; margin-bottom: 1rem;">
+                    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 12px;">
+                        <label for="inputRate24k" style="font-size: 0.75rem; font-weight: 800; color: #92400e; display: block; margin-bottom: 4px;">🟡 24K Pure (10g)</label>
+                        <input type="number" id="inputRate24k" class="form-input" style="font-weight: 800; font-size: 1rem; padding: 6px 10px;" placeholder="₹ 78,500">
+                    </div>
+                    <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: 10px; padding: 10px 12px;">
+                        <label for="inputRate22k" style="font-size: 0.75rem; font-weight: 800; color: #854d0e; display: block; margin-bottom: 4px;">🟡 22K 916 (10g)</label>
+                        <input type="number" id="inputRate22k" class="form-input" style="font-weight: 800; font-size: 1rem; padding: 6px 10px;" placeholder="₹ 72,000">
+                    </div>
+                    <div style="background: #fdfcf0; border: 1px solid #fef9c3; border-radius: 10px; padding: 10px 12px;">
+                        <label for="inputRate20k" style="font-size: 0.75rem; font-weight: 800; color: #713f12; display: block; margin-bottom: 4px;">🟡 20K Gold (10g)</label>
+                        <input type="number" id="inputRate20k" class="form-input" style="font-weight: 800; font-size: 1rem; padding: 6px 10px;" placeholder="₹ 65,500">
+                    </div>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px;">
+                        <label for="inputRate18k" style="font-size: 0.75rem; font-weight: 800; color: #334155; display: block; margin-bottom: 4px;">🟡 18K Gold (10g)</label>
+                        <input type="number" id="inputRate18k" class="form-input" style="font-weight: 800; font-size: 1rem; padding: 6px 10px;" placeholder="₹ 59,000">
+                    </div>
+                    <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px 12px;">
+                        <label for="inputRateSilver" style="font-size: 0.75rem; font-weight: 800; color: #1e293b; display: block; margin-bottom: 4px;">⚪ Silver (1 kg)</label>
+                        <input type="number" id="inputRateSilver" class="form-input" style="font-weight: 800; font-size: 1rem; padding: 6px 10px;" placeholder="₹ 92,000">
+                    </div>
+                </div>
+
+                <!-- Action Bar -->
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; padding-top: 0.5rem; border-top: 1px dashed #e2e8f0;">
+                    <button type="button" id="btnSaveDailyRates" class="btn" style="background: var(--navy-header); color: #fff; padding: 8px 18px; font-size: 0.85rem; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+                        💾 Save Today's Rates
+                    </button>
+                    <button type="button" id="btnBroadcastRates" class="btn" style="background: linear-gradient(135deg, #d4af37, #b8972e); color: #0f172a; padding: 8px 18px; font-size: 0.85rem; font-weight: 800; border-radius: 8px; box-shadow: 0 4px 12px rgba(212,175,55,0.3); display: inline-flex; align-items: center; gap: 6px;">
+                        📢 Send Morning Rates Email to All Customers
+                    </button>
+                </div>
+            </div>
+
             <!-- Pending Admin Approvals Section (Visible in Admin Mode) -->
             <div id="pendingApprovalsBox" class="alert-card" style="background: #fff; border: 2px dashed #f59e0b; margin-bottom: 1.5rem;">
                 <div class="card-header">

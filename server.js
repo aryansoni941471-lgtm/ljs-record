@@ -909,6 +909,298 @@ async function sendCustomerOtpEmail({ customerEmail, customerName, otp, expiresI
     });
 }
 
+// ============================================
+// DAILY BULLION RATES (24K, 22K, 20K, 18K, Silver)
+// ============================================
+let currentDailyRates = {
+    gold_24k: 78500,
+    gold_22k: 72000,
+    gold_20k: 65500,
+    gold_18k: 59000,
+    silver_1kg: 92000,
+    silver_10g: 920,
+    updated_at: new Date().toISOString(),
+    notes: 'Sarafa Bazaar Opening Rates'
+};
+
+// Load saved rates from daily-rates.json if available
+try {
+    const ratesFilePath = path.join(__dirname, 'daily-rates.json');
+    if (fs.existsSync(ratesFilePath)) {
+        const raw = fs.readFileSync(ratesFilePath, 'utf8');
+        currentDailyRates = Object.assign(currentDailyRates, JSON.parse(raw));
+    }
+} catch (e) {
+    console.warn('[Rates] Using default in-memory rates:', e.message);
+}
+
+function saveDailyRatesToFile(rates) {
+    try {
+        const ratesFilePath = path.join(__dirname, 'daily-rates.json');
+        fs.writeFileSync(ratesFilePath, JSON.stringify(rates, null, 2), 'utf8');
+    } catch (e) {
+        try {
+            const tmpPath = path.join(os.tmpdir(), 'daily-rates.json');
+            fs.writeFileSync(tmpPath, JSON.stringify(rates, null, 2), 'utf8');
+        } catch(err) {}
+    }
+}
+
+async function sendDailyRatesEmailToCustomer(customer, rates) {
+    if (!customer.email || !customer.email.includes('@') || customer.email === 'N/A') return false;
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) return false;
+
+    const todayStr = new Date().toLocaleDateString('en-IN', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+    });
+
+    const formatINR = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
+
+    const mailOptions = {
+        from: `"LJS Jewellers" <${process.env.EMAIL_USER}>`,
+        to: customer.email,
+        subject: `🪙 Today's Gold & Silver Rates (24K, 22K, 20K, 18K) - LJS Jewellers`,
+        html: `
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="utf-8"></head>
+        <body style="margin:0; padding:16px; background-color:#f8fafc; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color:#0f172a;">
+          <div style="max-width:560px; margin:0 auto; background:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.08); border:1px solid #e2e8f0;">
+            
+            <!-- Royal Header -->
+            <div style="background:linear-gradient(135deg, #0b1329 0%, #1e293b 100%); color:#ffffff; padding:28px 20px; text-align:center; border-bottom:3px solid #d4af37;">
+              <div style="font-size:28px; line-height:1; margin-bottom:6px;">👑</div>
+              <h1 style="margin:0; font-size:24px; letter-spacing:2px; font-weight:800; color:#ffffff;">LAXMI NARAYAN JEWELLERS</h1>
+              <p style="margin:4px 0 0; font-size:11px; color:#d4af37; letter-spacing:2.5px; text-transform:uppercase; font-weight:700;">Daily Bullion Market Rates</p>
+              <div style="display:inline-block; margin-top:10px; background:rgba(212,175,55,0.15); border:1px solid rgba(212,175,55,0.4); border-radius:20px; padding:4px 14px; font-size:11px; color:#fde68a; font-weight:600;">
+                📅 ${todayStr} • 10:00 AM Update
+              </div>
+            </div>
+
+            <!-- Body Greeting -->
+            <div style="padding:24px 22px 10px;">
+              <p style="font-size:15px; margin:0 0 6px; color:#334155;">
+                Namaste <strong>${customer.name || 'Valued Customer'}</strong> ji,
+              </p>
+              <p style="font-size:13px; margin:0; color:#64748b; line-height:1.5;">
+                Here are today's Sarafa Bazaar opening gold and silver rates from LJS Jewellers:
+              </p>
+            </div>
+
+            <!-- Rates Grid / Cards -->
+            <div style="padding:10px 20px 20px;">
+              <table style="width:100%; border-collapse:separate; border-spacing:0 8px;">
+                
+                <!-- 24K -->
+                <tr style="background:#fffbeb; border-radius:10px; border:1px solid #fde68a;">
+                  <td style="padding:12px 16px; border-radius:10px 0 0 10px; border-left:4px solid #d4af37;">
+                    <strong style="font-size:14px; color:#92400e;">🟡 24K Pure Gold</strong>
+                    <div style="font-size:11px; color:#b45309;">99.9% Pure (Fine Gold) • per 10g</div>
+                  </td>
+                  <td style="padding:12px 16px; text-align:right; border-radius:0 10px 10px 0;">
+                    <span style="font-size:17px; font-weight:800; color:#0f172a; font-family:monospace;">${formatINR(rates.gold_24k)}</span>
+                  </td>
+                </tr>
+
+                <!-- 22K -->
+                <tr style="background:#fefce8; border-radius:10px; border:1px solid #fef08a;">
+                  <td style="padding:12px 16px; border-radius:10px 0 0 10px; border-left:4px solid #eab308;">
+                    <strong style="font-size:14px; color:#854d0e;">🟡 22K Hallmarked (916)</strong>
+                    <div style="font-size:11px; color:#a16207;">Standard Jewellery Gold • per 10g</div>
+                  </td>
+                  <td style="padding:12px 16px; text-align:right; border-radius:0 10px 10px 0;">
+                    <span style="font-size:17px; font-weight:800; color:#0f172a; font-family:monospace;">${formatINR(rates.gold_22k)}</span>
+                  </td>
+                </tr>
+
+                <!-- 20K (User requested) -->
+                <tr style="background:#fdfcf0; border-radius:10px; border:1px solid #fef9c3;">
+                  <td style="padding:12px 16px; border-radius:10px 0 0 10px; border-left:4px solid #ca8a04;">
+                    <strong style="font-size:14px; color:#713f12;">🟡 20K Gold (Traditional)</strong>
+                    <div style="font-size:11px; color:#854d0e;">83.3% Purity • per 10g</div>
+                  </td>
+                  <td style="padding:12px 16px; text-align:right; border-radius:0 10px 10px 0;">
+                    <span style="font-size:17px; font-weight:800; color:#0f172a; font-family:monospace;">${formatINR(rates.gold_20k)}</span>
+                  </td>
+                </tr>
+
+                <!-- 18K -->
+                <tr style="background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0;">
+                  <td style="padding:12px 16px; border-radius:10px 0 0 10px; border-left:4px solid #94a3b8;">
+                    <strong style="font-size:14px; color:#334155;">🟡 18K Gold (750)</strong>
+                    <div style="font-size:11px; color:#64748b;">Diamond & Modern Jewellery • per 10g</div>
+                  </td>
+                  <td style="padding:12px 16px; text-align:right; border-radius:0 10px 10px 0;">
+                    <span style="font-size:17px; font-weight:800; color:#0f172a; font-family:monospace;">${formatINR(rates.gold_18k)}</span>
+                  </td>
+                </tr>
+
+                <!-- Silver -->
+                <tr style="background:#f1f5f9; border-radius:10px; border:1px solid #cbd5e1;">
+                  <td style="padding:12px 16px; border-radius:10px 0 0 10px; border-left:4px solid #64748b;">
+                    <strong style="font-size:14px; color:#1e293b;">⚪ Pure Silver (Chandi)</strong>
+                    <div style="font-size:11px; color:#475569;">${formatINR(rates.silver_10g)} / 10g • per 1 kg</div>
+                  </td>
+                  <td style="padding:12px 16px; text-align:right; border-radius:0 10px 10px 0;">
+                    <span style="font-size:17px; font-weight:800; color:#0f172a; font-family:monospace;">${formatINR(rates.silver_1kg)}</span>
+                  </td>
+                </tr>
+
+              </table>
+
+              <!-- Notice note -->
+              <p style="font-size:11px; color:#94a3b8; margin:14px 0 0; line-height:1.4; text-align:center;">
+                * Rates are indicative bullion market opening rates. Making charges and 3% GST applicable on jewellery purchase.
+              </p>
+
+              <!-- CTA Button -->
+              <div style="text-align:center; margin-top:22px;">
+                <a href="https://laxminarayanjwellers.vercel.app/portal" style="display:inline-block; background:linear-gradient(135deg, #d4af37 0%, #b8972e 100%); color:#0f172a; font-weight:800; font-size:13px; text-decoration:none; padding:12px 24px; border-radius:24px; box-shadow:0 4px 14px rgba(212,175,55,0.4); text-transform:uppercase; letter-spacing:0.5px;">
+                  🔐 Access My Customer Portal
+                </a>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="background:#f8fafc; border-top:1px solid #e2e8f0; padding:16px 20px; text-align:center;">
+              <p style="margin:0 0 4px; font-size:12px; font-weight:700; color:#334155;">Laxmi Narayan Jewellers (LJS)</p>
+              <p style="margin:0; font-size:11px; color:#94a3b8;">Main Market • Call / WhatsApp: +91 9414713892</p>
+              <p style="margin:6px 0 0; font-size:10px; color:#cbd5e1;">&copy; ${new Date().getFullYear()} LJS Jewellers. All rights reserved.</p>
+            </div>
+
+          </div>
+        </body>
+        </html>
+        `
+    };
+
+    return new Promise((resolve) => {
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.error(`[Rates Email Error] Failed for ${customer.email}:`, error.message);
+                return resolve(false);
+            }
+            console.log(`[Rates Email Success] Sent to ${customer.email}`);
+            resolve(true);
+        });
+    });
+}
+
+async function broadcastDailyRatesToAllCustomers() {
+    return new Promise((resolve) => {
+        db.all('SELECT id, name, email, phone FROM customers ORDER BY id DESC', [], async (err, customers) => {
+            if (err || !customers) {
+                console.error('[Rates Broadcast] Error fetching customers:', err);
+                return resolve({ success: false, sentCount: 0, error: 'Database fetch error' });
+            }
+
+            const validRecipients = customers.filter(c => c.email && c.email.includes('@') && c.email !== 'N/A');
+            console.log(`[Rates Broadcast] Found ${validRecipients.length} customers with valid email addresses.`);
+
+            let sentCount = 0;
+            for (const cust of validRecipients) {
+                try {
+                    const sent = await sendDailyRatesEmailToCustomer(cust, currentDailyRates);
+                    if (sent) sentCount++;
+                    // 150ms gentle throttle between dispatches
+                    await new Promise(r => setTimeout(r, 150));
+                } catch (e) {
+                    console.error(`[Rates Broadcast] Failed for ${cust.email}:`, e.message);
+                }
+            }
+
+            console.log(`[Rates Broadcast Complete] Successfully sent to ${sentCount}/${validRecipients.length} customers.`);
+            resolve({ success: true, sentCount, totalEligible: validRecipients.length });
+        });
+    });
+}
+
+// Local cron trigger at 10:00 AM (skipped on Vercel where Vercel Crons handle it)
+if (!process.env.VERCEL) {
+    cron.schedule('0 10 * * *', () => {
+        console.log('[Daily Cron] Triggering 10:00 AM Daily Bullion Rates broadcast...');
+        broadcastDailyRatesToAllCustomers().catch(e => console.error('[Daily Cron Error]:', e));
+    });
+}
+
+// ============================================
+// DAILY RATES API ENDPOINTS
+// ============================================
+
+// GET Current Daily Rates
+app.get('/api/daily-rates', (req, res) => {
+    res.json({
+        success: true,
+        rates: currentDailyRates
+    });
+});
+
+// POST Update Daily Rates (Admin/Staff)
+app.post('/api/daily-rates', (req, res) => {
+    const { gold_24k, gold_22k, gold_20k, gold_18k, silver_1kg, silver_10g, notes } = req.body;
+    
+    if (gold_24k !== undefined) currentDailyRates.gold_24k = parseFloat(gold_24k) || currentDailyRates.gold_24k;
+    if (gold_22k !== undefined) currentDailyRates.gold_22k = parseFloat(gold_22k) || currentDailyRates.gold_22k;
+    if (gold_20k !== undefined) currentDailyRates.gold_20k = parseFloat(gold_20k) || currentDailyRates.gold_20k;
+    if (gold_18k !== undefined) currentDailyRates.gold_18k = parseFloat(gold_18k) || currentDailyRates.gold_18k;
+    if (silver_1kg !== undefined) {
+        currentDailyRates.silver_1kg = parseFloat(silver_1kg) || currentDailyRates.silver_1kg;
+        currentDailyRates.silver_10g = Math.round(currentDailyRates.silver_1kg / 100);
+    }
+    if (silver_10g !== undefined && silver_1kg === undefined) {
+        currentDailyRates.silver_10g = parseFloat(silver_10g) || currentDailyRates.silver_10g;
+        currentDailyRates.silver_1kg = currentDailyRates.silver_10g * 100;
+    }
+    if (notes) currentDailyRates.notes = String(notes);
+    currentDailyRates.updated_at = new Date().toISOString();
+
+    saveDailyRatesToFile(currentDailyRates);
+    console.log('[Rates Updated]:', currentDailyRates);
+
+    res.json({
+        success: true,
+        message: "Today's gold & silver rates updated successfully!",
+        rates: currentDailyRates
+    });
+});
+
+// POST Manual Broadcast Daily Rates Email to All Customers
+app.post('/api/daily-rates/broadcast', async (req, res) => {
+    try {
+        console.log('[Manual Broadcast] Admin initiated Daily Rates email broadcast...');
+        const result = await broadcastDailyRatesToAllCustomers();
+        res.json({
+            success: true,
+            sentCount: result.sentCount,
+            totalEligible: result.totalEligible,
+            message: `Rates broadcast successfully sent to ${result.sentCount} customer${result.sentCount !== 1 ? 's' : ''}!`
+        });
+    } catch (err) {
+        console.error('Error during rates broadcast:', err);
+        res.status(500).json({ success: false, error: 'Failed to broadcast daily rates email.' });
+    }
+});
+
+// GET /api/cron/daily-rates (Target for Vercel Cron at 10:00 AM IST)
+app.get('/api/cron/daily-rates', async (req, res) => {
+    try {
+        console.log('[Vercel Cron 10:00 AM] Triggering automatic Daily Rates broadcast...');
+        const result = await broadcastDailyRatesToAllCustomers();
+        res.json({
+            success: true,
+            timestamp: new Date().toISOString(),
+            sentCount: result.sentCount,
+            totalEligible: result.totalEligible
+        });
+    } catch (err) {
+        console.error('Error during cron rates broadcast:', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 // API Routes
 
 // Staff Submission API (Queues entries for Admin Approval)

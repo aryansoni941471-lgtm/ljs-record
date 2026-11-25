@@ -5,7 +5,7 @@
       "src": "server.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["*.html", "*.css", "*.js", "manifest.json", "sw.js", "*.svg", "*.png"]
+        "includeFiles": ["*.html", "*.css", "*.js", "manifest.json", "sw.js", "*.svg", "*.png", "daily-rates.json"]
       }
     }
   ],
@@ -13,6 +13,12 @@
     {
       "src": "/(.*)",
       "dest": "server.js"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/daily-rates",
+      "schedule": "30 4 * * *"
     }
   ]
 }

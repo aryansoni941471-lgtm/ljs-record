@@ -3776,4 +3776,136 @@ _Thank you for choosing LJS Jewellers_`
             alert('Failed to delete bill. Please check server connection.');
         }
     };
+
+    // ============================================
+    // 🪙 DAILY BULLION RATES (24K, 22K, 20K, 18K, Silver)
+    // ============================================
+    const input24k = document.getElementById('inputRate24k');
+    const input22k = document.getElementById('inputRate22k');
+    const input20k = document.getElementById('inputRate20k');
+    const input18k = document.getElementById('inputRate18k');
+    const inputSilver = document.getElementById('inputRateSilver');
+    const badgeRatesUpdated = document.getElementById('ratesLastUpdatedBadge');
+    const btnSaveRates = document.getElementById('btnSaveDailyRates');
+    const btnBroadcastRates = document.getElementById('btnBroadcastRates');
+
+    async function loadDailyRates() {
+        if (!input24k) return;
+        try {
+            const res = await fetch('/api/daily-rates');
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data && data.rates) {
+                const r = data.rates;
+                if (input24k) input24k.value = r.gold_24k || '';
+                if (input22k) input22k.value = r.gold_22k || '';
+                if (input20k) input20k.value = r.gold_20k || '';
+                if (input18k) input18k.value = r.gold_18k || '';
+                if (inputSilver) inputSilver.value = r.silver_1kg || '';
+
+                if (badgeRatesUpdated && r.updated_at) {
+                    const d = new Date(r.updated_at);
+                    badgeRatesUpdated.textContent = `🕒 Updated: ${d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}`;
+                }
+            }
+        } catch (e) {
+            console.error('Error loading daily rates:', e);
+        }
+    }
+
+    if (btnSaveRates) {
+        btnSaveRates.addEventListener('click', async () => {
+            const payload = {
+                gold_24k: parseFloat(input24k ? input24k.value : 0) || 0,
+                gold_22k: parseFloat(input22k ? input22k.value : 0) || 0,
+                gold_20k: parseFloat(input20k ? input20k.value : 0) || 0,
+                gold_18k: parseFloat(input18k ? input18k.value : 0) || 0,
+                silver_1kg: parseFloat(inputSilver ? inputSilver.value : 0) || 0
+            };
+
+            btnSaveRates.disabled = true;
+            btnSaveRates.textContent = '⏳ Saving...';
+
+            try {
+                const res = await fetch('/api/daily-rates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    alert('✅ Today\'s Gold & Silver rates saved successfully!');
+                    if (badgeRatesUpdated) {
+                        badgeRatesUpdated.textContent = `🕒 Updated: Just now`;
+                    }
+                } else {
+                    alert('❌ Failed to save rates: ' + (data.error || 'Server error'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Connection error while saving rates.');
+            } finally {
+                btnSaveRates.disabled = false;
+                btnSaveRates.textContent = '💾 Save Today\'s Rates';
+            }
+        });
+    }
+
+    if (btnBroadcastRates) {
+        btnBroadcastRates.addEventListener('click', async () => {
+            const r24 = input24k ? input24k.value : '';
+            const r22 = input22k ? input22k.value : '';
+            const r20 = input20k ? input20k.value : '';
+            const r18 = input18k ? input18k.value : '';
+            const rAg = inputSilver ? inputSilver.value : '';
+
+            const confirmMsg = `📢 Broadcast Today's Rates Email to All Customers?\n\n` +
+                `• 24K Pure: ₹${Number(r24||0).toLocaleString('en-IN')}\n` +
+                `• 22K 916: ₹${Number(r22||0).toLocaleString('en-IN')}\n` +
+                `• 20K Gold: ₹${Number(r20||0).toLocaleString('en-IN')}\n` +
+                `• 18K Gold: ₹${Number(r18||0).toLocaleString('en-IN')}\n` +
+                `• Silver (1kg): ₹${Number(rAg||0).toLocaleString('en-IN')}\n\n` +
+                `This will send a branded morning rate update email to all registered customers. Proceed?`;
+
+            if (!confirm(confirmMsg)) return;
+
+            btnBroadcastRates.disabled = true;
+            btnBroadcastRates.textContent = '📤 Sending Broadcast Emails...';
+
+            try {
+                // First save rates to ensure latest rates are broadcast
+                await fetch('/api/daily-rates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        gold_24k: parseFloat(r24) || 0,
+                        gold_22k: parseFloat(r22) || 0,
+                        gold_20k: parseFloat(r20) || 0,
+                        gold_18k: parseFloat(r18) || 0,
+                        silver_1kg: parseFloat(rAg) || 0
+                    })
+                });
+
+                const res = await fetch('/api/daily-rates/broadcast', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    alert(`✅ ${data.message || 'Rates email broadcast sent successfully!'}`);
+                } else {
+                    alert('❌ Broadcast failed: ' + (data.error || 'Server error'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Connection error while sending broadcast.');
+            } finally {
+                btnBroadcastRates.disabled = false;
+                btnBroadcastRates.textContent = '📢 Send Morning Rates Email to All Customers';
+            }
+        });
+    }
+
+    // Load rates on initialization
+    loadDailyRates();
 });
