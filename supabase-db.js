@@ -1104,6 +1104,12 @@ async function handleRun(sql, params) {
         return { lastID: 0, changes: 0 };
     }
 
+    // DDL commands (ALTER TABLE, CREATE TABLE) — handled directly in DB, safely ignore in REST adapter
+    if (/ALTER TABLE|CREATE TABLE/i.test(cleanSql)) {
+        if (typeof cb === 'function') cb(null);
+        return { lastID: 0, changes: 0 };
+    }
+
     console.log('Unrecognized run command:', cleanSql);
     return { lastID: 0, changes: 0 };
 }

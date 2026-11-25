@@ -484,7 +484,10 @@ const transporter = nodemailer.createTransport({
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
-    }
+    },
+    connectionTimeout: 10000, // 10s timeout for serverless
+    greetingTimeout: 10000,
+    socketTimeout: 15000
 });
 
 function formatCurrency(val) {
@@ -2633,7 +2636,7 @@ app.post('/api/portal/login', (req, res) => {
     db.all(
         'SELECT * FROM customers WHERE username = ? OR phone = ? OR REPLACE(phone, " ", "") = ? OR REPLACE(phone, "-", "") = ?',
         [cleanInput, cleanInput, phoneClean, phoneClean],
-        (err, customers) => {
+        async (err, customers) => {
             if (err) {
                 console.error('Portal Login Error:', err);
                 return res.status(500).json({ error: 'Database query error.' });
@@ -2662,10 +2665,46 @@ app.post('/api/portal/login', (req, res) => {
                 });
             }
 
+            // Verify customer has a registered email address
+            const hasEmail = customer.email && customer.email.includes('@') && customer.email !== 'N/A';
+            if (!hasEmail) {
+                return res.status(400).json({
+                    error: 'No registered email address found for this account. Please contact LJS Jewellers counter staff to register your email address for OTP verification.',
+                    reloadCaptcha: true
+                });
+            }
+
+            // Check if server has email credentials configured
+            if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+                console.error('[MFA Error] EMAIL_USER or EMAIL_PASS environment variable is missing on this server!');
+                return res.status(500).json({
+                    error: 'Email service configuration missing on server (EMAIL_USER / EMAIL_PASS). Please configure environment variables in Vercel settings.'
+                });
+            }
+
             // Step 1 Success: Generate 6-Digit MFA OTP
             clearFailedLogin(ip); // Clear brute-force counter on successful credentials
             const otp = Math.floor(100000 + Math.random() * 900000).toString();
             console.log(`[Customer MFA OTP] Generated code for ${customer.name} (${customer.phone}): ${otp}`);
+
+            // Await email delivery (critical for Vercel serverless functions so execution is not frozen prematurely)
+            let emailSent = false;
+            try {
+                emailSent = await sendCustomerOtpEmail({
+                    customerEmail: customer.email,
+                    customerName: customer.name,
+                    otp: otp,
+                    expiresInMinutes: 10
+                });
+            } catch (mailErr) {
+                console.error('[MFA Email Send Error]:', mailErr);
+            }
+
+            if (!emailSent) {
+                return res.status(500).json({
+                    error: `Unable to deliver OTP email to ${customer.email}. Please verify your email or check server settings.`
+                });
+            }
 
             const mfaToken = signMfaChallenge({
                 customerId: customer.id,
@@ -2675,31 +2714,14 @@ app.post('/api/portal/login', (req, res) => {
                 name: customer.name
             });
 
-            // Send OTP email if customer email is present
-            if (customer.email && customer.email.includes('@') && customer.email !== 'N/A') {
-                sendCustomerOtpEmail({
-                    customerEmail: customer.email,
-                    customerName: customer.name,
-                    otp: otp,
-                    expiresInMinutes: 10
-                }).catch(e => console.error('[MFA Email Send Error]:', e));
-            }
-
-            let maskedContact = '';
-            if (customer.phone) {
-                const last4 = customer.phone.slice(-4);
-                maskedContact = `📱 ******${last4}`;
-            }
-            if (customer.email && customer.email.includes('@')) {
-                const maskedEmail = customer.email.replace(/(.{2})(.*)(@.*)/, '$1***$3');
-                maskedContact = maskedContact ? `📧 ${maskedEmail} | ${maskedContact}` : `📧 ${maskedEmail}`;
-            }
+            const maskedEmail = customer.email.replace(/(.{2})(.*)(@.*)/, '$1***$3');
+            const maskedContact = `📧 ${maskedEmail}`;
 
             res.json({
                 mfaRequired: true,
                 mfaToken: mfaToken,
-                maskedContact: maskedContact || 'your registered contact (Phone/Email)',
-                message: 'A 6-digit OTP has been sent to your registered contact.'
+                maskedContact: maskedContact,
+                message: `6-digit OTP code has been sent to your email: ${maskedEmail}`
             });
         }
     );
@@ -2760,13 +2782,41 @@ app.post('/api/portal/resend-otp', (req, res) => {
         return res.status(400).json({ error: 'Invalid token data.' });
     }
 
-    db.get('SELECT * FROM customers WHERE id = ?', [payload.cid], (err, customer) => {
+    db.get('SELECT * FROM customers WHERE id = ?', [payload.cid], async (err, customer) => {
         if (err || !customer) {
             return res.status(404).json({ error: 'Customer record not found.' });
         }
 
+        const hasEmail = customer.email && customer.email.includes('@') && customer.email !== 'N/A';
+        if (!hasEmail) {
+            return res.status(400).json({ error: 'No registered email address found for this customer.' });
+        }
+
+        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+            return res.status(500).json({
+                error: 'Email service configuration missing on server (EMAIL_USER / EMAIL_PASS). Please configure environment variables in Vercel settings.'
+            });
+        }
+
         const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
         console.log(`[Customer MFA] Resent OTP for ${customer.name} (${customer.phone}): ${newOtp}`);
+
+        // Await email delivery for Vercel serverless environment
+        let emailSent = false;
+        try {
+            emailSent = await sendCustomerOtpEmail({
+                customerEmail: customer.email,
+                customerName: customer.name,
+                otp: newOtp,
+                expiresInMinutes: 10
+            });
+        } catch (mailErr) {
+            console.error('[MFA Resend Email Error]:', mailErr);
+        }
+
+        if (!emailSent) {
+            return res.status(500).json({ error: 'Failed to deliver new OTP email. Please try again or contact store.' });
+        }
 
         const newMfaToken = signMfaChallenge({
             customerId: customer.id,
@@ -2776,29 +2826,13 @@ app.post('/api/portal/resend-otp', (req, res) => {
             name: customer.name
         });
 
-        if (customer.email && customer.email.includes('@') && customer.email !== 'N/A') {
-            sendCustomerOtpEmail({
-                customerEmail: customer.email,
-                customerName: customer.name,
-                otp: newOtp,
-                expiresInMinutes: 10
-            }).catch(e => console.error('[MFA Resend Email Error]:', e));
-        }
-
-        let maskedContact = '';
-        if (customer.phone) {
-            const last4 = customer.phone.slice(-4);
-            maskedContact = `📱 ******${last4}`;
-        }
-        if (customer.email && customer.email.includes('@')) {
-            const maskedEmail = customer.email.replace(/(.{2})(.*)(@.*)/, '$1***$3');
-            maskedContact = maskedContact ? `📧 ${maskedEmail} | ${maskedContact}` : `📧 ${maskedEmail}`;
-        }
+        const maskedEmail = customer.email.replace(/(.{2})(.*)(@.*)/, '$1***$3');
+        const maskedContact = `📧 ${maskedEmail}`;
 
         res.json({
-            message: 'A new 6-digit OTP has been sent successfully.',
+            message: `A new 6-digit OTP has been sent to ${maskedEmail}`,
             mfaToken: newMfaToken,
-            maskedContact: maskedContact || 'your registered contact'
+            maskedContact: maskedContact
         });
     });
 });
