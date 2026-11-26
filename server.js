@@ -1091,7 +1091,7 @@ async function sendDailyRatesEmailToCustomer(customer, rates) {
 
 async function broadcastDailyRatesToAllCustomers() {
     return new Promise((resolve) => {
-        db.all('SELECT id, name, email, phone FROM customers ORDER BY id DESC', [], async (err, customers) => {
+        db.all('SELECT * FROM customers ORDER BY id DESC', [], async (err, customers) => {
             if (err || !customers) {
                 console.error('[Rates Broadcast] Error fetching customers:', err);
                 return resolve({ success: false, sentCount: 0, error: 'Database fetch error' });

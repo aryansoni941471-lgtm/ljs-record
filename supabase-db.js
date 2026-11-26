@@ -169,8 +169,8 @@ async function handleQuery(sql, params) {
         return [];
     }
 
-    // 1. SELECT * FROM customers ORDER BY id DESC
-    if (/SELECT \* FROM customers ORDER BY id DESC/i.test(cleanSql)) {
+    // 1. SELECT * FROM customers ORDER BY id DESC (or any column selection)
+    if (/SELECT (?:.+|\*) FROM customers ORDER BY id DESC/i.test(cleanSql)) {
         const { data, error } = await supabase.from('customers').select('*').order('id', { ascending: false });
         if (error) throw error;
         return data.map(normalizeCustomer);
